@@ -34,9 +34,9 @@
 
 "use client";
 
-import { motion, useAnimation, easeInOut } from "framer-motion";
-import { useInView } from "react-intersection-observer";
+import { easeInOut, motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 
 export default function JoinBanner() {
   const controls = useAnimation();
@@ -122,7 +122,7 @@ export default function JoinBanner() {
         >
           <div className="w-4 h-4 xs:w-5 xs:h-5 bg-cy-300 rounded-full shadow-sm"></div>
           <span className="text-base xs:text-lg font-medium">
-            r.alevelserver@gmail.com
+            support@ralevel.com
           </span>
         </motion.a>
 
@@ -158,7 +158,7 @@ export default function JoinBanner() {
               duration: 6 + Math.random() * 4,
               repeat: Infinity,
               repeatType: "mirror",
-              delay: Math.random()/4 ,
+              delay: Math.random() / 4,
             }}
           />
         ))}
