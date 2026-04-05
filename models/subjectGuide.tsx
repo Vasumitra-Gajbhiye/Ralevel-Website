@@ -105,6 +105,9 @@ export interface SubjectGuideType {
       subtopics: string[];
     }[];
   }[];
+
+  board: string;
+  // level: string;
 }
 
 const subjectGuideSchema = new Schema<SubjectGuideType>({
@@ -138,6 +141,8 @@ const subjectGuideSchema = new Schema<SubjectGuideType>({
       ],
     },
   ],
+  board: { type: String, required: true },
+  // level: { type: String, required: true },
 });
 subjectGuideSchema.index({ examCode: 1, "chapters.slug": 1 });
 export default models.SubjectGuide ||

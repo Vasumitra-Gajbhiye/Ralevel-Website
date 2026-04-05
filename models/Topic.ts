@@ -84,6 +84,24 @@ const TopicSchema = new mongoose.Schema(
       default: true,
       index: true,
     },
+    // Example of how your Topic schema should look now:
+    flashcards: {
+      description: { type: String },
+      numberOfCards: { type: Number },
+      difficulty: {
+        type: String,
+        enum: ["Beginner", "Intermediate", "Advanced"],
+      },
+      cards: [
+        {
+          id: { type: String, required: true },
+          question: { type: String, required: true },
+          answer: { type: String, required: true },
+          hint: { type: String },
+          tags: [{ type: String }],
+        },
+      ],
+    },
   },
   {
     timestamps: true,

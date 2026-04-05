@@ -1,5 +1,6 @@
 "use client";
 
+import ExpandableExample from "@/components/ExpandableExample";
 import {
   AlertTriangle,
   BookOpen,
@@ -12,7 +13,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-
+// import BadgeCallout from "./BadgeCallout";
 type Props = {
   content: string;
 };
@@ -48,12 +49,12 @@ const TAG_MAP: Record<string, CalloutType> = {
 };
 
 const STYLES: Record<CalloutType, string> = {
-  definition: "border-cyan-500 bg-cyan-50",
-  formula: "border-indigo-500 bg-indigo-50",
-  example: "border-green-500 bg-green-50",
-  solved: "border-emerald-600 bg-emerald-50",
-  important: "border-amber-500 bg-amber-50",
-  exam: "border-purple-500 bg-purple-50",
+  definition: "border-cyan-500 bg-cyan-50 my-10",
+  formula: "border-indigo-500 bg-indigo-50 my-10",
+  example: "border-green-500 bg-green-50 my-10",
+  solved: "border-emerald-600 bg-emerald-50 my-10",
+  important: "border-amber-500 bg-amber-50 my-10",
+  exam: "border-purple-500 bg-purple-50 my-10",
 };
 
 const TITLES: Record<CalloutType, string> = {
@@ -138,7 +139,7 @@ function parseBlocks(markdown: string): Block[] {
   return blocks;
 }
 
-const MD_PROPS = {
+export const MD_PROPS = {
   remarkPlugins: [remarkGfm, remarkMath],
   rehypePlugins: [rehypeKatex],
   components: {
@@ -148,7 +149,7 @@ const MD_PROPS = {
       </h2>
     ),
     h3: ({ children }: any) => (
-      <h3 className="text-2xl font-semibold mt-10 mb-4 text-cyan-700">
+      <h3 className="text-2xl font-semibold mt-16 mb-4 text-cyan-700">
         {children}
       </h3>
     ),
@@ -189,7 +190,7 @@ const MD_PROPS = {
       </a>
     ),
     blockquote: ({ children }: any) => (
-      <blockquote className="border-l-4 border-cyan-500 bg-cyan-50 px-6 py-4 my-8 rounded-r-lg text-neutral-700">
+      <blockquote className="border-l-4 border-cyan-500 bg-cyan-50 px-6 py-4 my-16 rounded-r-lg text-neutral-700">
         {children}
       </blockquote>
     ),
@@ -224,7 +225,41 @@ const MD_PROPS = {
   },
 };
 
-function CalloutBox({
+// function CalloutBox({
+//   calloutType,
+//   body,
+// }: {
+//   calloutType: CalloutType;
+//   body: string;
+// }) {
+//   const Icon = ICONS[calloutType];
+//   return (
+//     <div
+//       className={`border-l-4 ${STYLES[calloutType]} px-6 py-5 my-16 rounded-r-xl shadow-sm`}
+//     >
+//       <div className="flex items-center gap-2 mb-3">
+//         <Icon className="w-5 h-5 text-neutral-700" />
+//         <div className="text-sm font-semibold tracking-wide uppercase text-neutral-700">
+//           {TITLES[calloutType]}
+//         </div>
+//       </div>
+//       <div className="text-neutral-700 space-y-3 text-[17px] leading-relaxed">
+//         <ReactMarkdown {...(MD_PROPS as any)}>{body}</ReactMarkdown>
+//       </div>
+//     </div>
+//   );
+// }
+
+const BOX_STYLES: Record<CalloutType, { bg: string; border: string }> = {
+  definition: { bg: "bg-cyan-50/40", border: "border-cyan-200" },
+  formula: { bg: "bg-indigo-50/40", border: "border-indigo-200" },
+  example: { bg: "bg-green-50/40", border: "border-green-200" },
+  solved: { bg: "bg-emerald-50/40", border: "border-emerald-200" },
+  important: { bg: "bg-amber-50/40", border: "border-amber-200" },
+  exam: { bg: "bg-purple-50/40", border: "border-purple-200" },
+};
+
+export function CalloutBox({
   calloutType,
   body,
 }: {
@@ -232,16 +267,20 @@ function CalloutBox({
   body: string;
 }) {
   const Icon = ICONS[calloutType];
+  const style = BOX_STYLES[calloutType];
+
   return (
     <div
-      className={`border-l-4 ${STYLES[calloutType]} px-6 py-5 my-8 rounded-r-xl shadow-sm`}
+      className={`my-16 rounded-xl border ${style.border} ${style.bg} p-6 shadow-sm`}
     >
       <div className="flex items-center gap-2 mb-3">
-        <Icon className="w-5 h-5 text-neutral-700" />
-        <div className="text-sm font-semibold tracking-wide uppercase text-neutral-700">
+        <Icon className="w-5 h-5 text-neutral-800" />
+        <div className="text-sm font-bold tracking-wide uppercase text-neutral-800">
           {TITLES[calloutType]}
         </div>
       </div>
+
+      {/* Restored your exact markdown implementation */}
       <div className="text-neutral-700 space-y-3 text-[17px] leading-relaxed">
         <ReactMarkdown {...(MD_PROPS as any)}>{body}</ReactMarkdown>
       </div>
@@ -251,16 +290,35 @@ function CalloutBox({
 
 export default function MarkdownRenderer({ content }: Props) {
   const blocks = parseBlocks(content);
+  let exampleCount = 0;
 
   return (
     <div className="max-w-4xl mx-auto pb-10 [&_.katex-display]:my-10 [&_.katex-display]:bg-neutral-50 [&_.katex-display]:border [&_.katex-display]:border-neutral-200 [&_.katex-display]:rounded-lg [&_.katex-display]:py-4 [&_.katex-display]:px-6 [&_.katex-display]:overflow-x-auto">
       {blocks.map((block, idx) =>
         block.type === "callout" ? (
-          <CalloutBox
-            key={idx}
-            calloutType={block.calloutType}
-            body={block.body}
-          />
+          block.calloutType === "solved" ? (
+            (() => {
+              exampleCount++;
+              // simple split: first paragraph = question, rest = solution
+              const parts = block.body.split("\n\n");
+              const question = parts[0] || "";
+              const solution = parts.slice(1).join("\n\n") || "";
+              return (
+                <ExpandableExample
+                  key={idx}
+                  number={exampleCount}
+                  question={question}
+                  solution={solution}
+                />
+              );
+            })()
+          ) : (
+            <CalloutBox
+              key={idx}
+              calloutType={block.calloutType}
+              body={block.body}
+            />
+          )
         ) : (
           <ReactMarkdown key={idx} {...(MD_PROPS as any)}>
             {block.body}

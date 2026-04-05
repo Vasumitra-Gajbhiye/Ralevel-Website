@@ -80,7 +80,7 @@ export default async function TopicPage({
     index < chapterTopics.length - 1 ? chapterTopics[index + 1] : null;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 pb-16 mt-12">
+    <div className="max-w-3xl mx-auto px-6 pb-16 mt-12">
       <Breadcrumb className="my-4">
         <BreadcrumbList>
           <BreadcrumbItem>
