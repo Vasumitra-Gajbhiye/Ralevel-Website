@@ -13,7 +13,7 @@ import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
 import { AddCertificateModal } from "./add-certificate-modal";
 
-type Certificate = {
+export type Certificate = {
   _id: string;
   admin: string;
   certId: string;
@@ -48,24 +48,28 @@ const mockCertificates: Certificate[] = [
   },
 ];
 
-const initialCertificates: Certificate[] = [
-  {
-    _id: "6989f2416329125a6c3547fe",
-    admin: "scrim",
-    certId: "2i00sd238bye",
-    certType: "helper",
-    issueDate: "9 Feb 2026",
-    name: "Mohammad Touhid Hossain",
-    owner: "vas",
-    email: "touhid@email.com",
-    discordUserId: "482938492384923",
-    certificateDesigned: true,
-    certificateDelivered: false,
-    dateGiven: "10 Feb 2026",
-  },
-];
+// const initialCertificates: Certificate[] = [
+//   {
+//     _id: "6989f2416329125a6c3547fe",
+//     admin: "scrim",
+//     certId: "2i00sd238bye",
+//     certType: "helper",
+//     issueDate: "9 Feb 2026",
+//     name: "Mohammad Touhid Hossain",
+//     owner: "vas",
+//     email: "touhid@email.com",
+//     discordUserId: "482938492384923",
+//     certificateDesigned: true,
+//     certificateDelivered: false,
+//     dateGiven: "10 Feb 2026",
+//   },
+// ];
 
-export default function CertificatesAdminPage() {
+type Props = {
+  initialCertificates: Certificate[];
+};
+
+export default function CertificatesAdminPage({ initialCertificates }: Props) {
   const [certificates, setCertificates] =
     useState<Certificate[]>(initialCertificates);
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -126,7 +130,7 @@ export default function CertificatesAdminPage() {
           </TableHeader>
 
           <TableBody>
-            {mockCertificates.map((cert) => {
+            {initialCertificates.map((cert) => {
               const expanded = openRow === cert._id;
 
               return (
