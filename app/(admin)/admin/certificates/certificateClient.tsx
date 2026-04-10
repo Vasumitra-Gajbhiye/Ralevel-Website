@@ -9,16 +9,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
+import { generateAndDownloadCertificate } from "@/lib/generateCertificate";
+import { ChevronDown, ChevronUp, Download, Pencil, Trash2 } from "lucide-react";
 import { Fragment, useState } from "react";
+import { toast } from "sonner";
+import {
+  createCertificate,
+  deleteCertificate,
+  updateCertificate,
+} from "./actions";
 import { AddCertificateModal } from "./add-certificate-modal";
-
+import { EditCertificateModal } from "./EditCertificateModal";
 export type Certificate = {
   _id: string;
   admin: string;
   certId: string;
   certType: string;
-  issueDate: string;
+  issueDate: Date | null;
   name: string;
   owner: string;
 
@@ -26,27 +33,31 @@ export type Certificate = {
   email?: string;
   discordUserId?: string;
   certificateDesigned?: boolean;
+  handler?: string | null;
+  hasCustomMessage?: boolean;
+  message?: string;
+  applicationID?: string;
   certificateDelivered?: boolean;
   dateGiven?: string;
 };
 
-const mockCertificates: Certificate[] = [
-  {
-    _id: "6989f2416329125a6c3547fe",
-    admin: "scrim",
-    certId: "2i00sd238bye",
-    certType: "helper",
-    issueDate: "9 Feb 2026",
-    name: "Mohammad Touhid Hossain",
-    owner: "vas",
+// const mockCertificates: Certificate[] = [
+//   {
+//     _id: "6989f2416329125a6c3547fe",
+//     admin: "scrim",
+//     certId: "2i00sd238bye",
+//     certType: "helper",
+//     issueDate: "9 Feb 2026",
+//     name: "Mohammad Touhid Hossain",
+//     owner: "vas",
 
-    email: "touhid@email.com",
-    discordUserId: "482938492384923",
-    certificateDesigned: true,
-    certificateDelivered: false,
-    dateGiven: "10 Feb 2026",
-  },
-];
+//     email: "touhid@email.com",
+//     discordUserId: "482938492384923",
+//     certificateDesigned: true,
+//     certificateDelivered: false,
+//     dateGiven: "10 Feb 2026",
+//   },
+// ];
 
 // const initialCertificates: Certificate[] = [
 //   {
@@ -67,39 +78,183 @@ const mockCertificates: Certificate[] = [
 
 type Props = {
   initialCertificates: Certificate[];
+  handler: string | null | undefined;
 };
 
-export default function CertificatesAdminPage({ initialCertificates }: Props) {
+function randomDigit() {
+  return Math.floor(Math.random() * 10).toString();
+}
+
+function randomLetter() {
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  return letters[Math.floor(Math.random() * letters.length)];
+}
+
+function generateCertId(): string {
+  return (
+    randomDigit() + // 1
+    randomLetter() + // 2
+    randomDigit() +
+    randomDigit() + // 3-4
+    randomLetter() +
+    randomLetter() + // 5-6
+    randomDigit() +
+    randomDigit() +
+    randomDigit() + // 7-9
+    randomLetter() +
+    randomLetter() +
+    randomLetter() // 10-12
+  );
+}
+
+export default function CertificatesAdminPage({
+  initialCertificates,
+  handler,
+}: Props) {
+  if (!handler) {
+    return <h1>No Handler Session Found</h1>;
+  }
   const [certificates, setCertificates] =
     useState<Certificate[]>(initialCertificates);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState<Certificate | null>(null);
 
-  function handleAddCertificate(data: {
+  function generateUniqueCertId(existingIds: string[]): string {
+    let id;
+
+    do {
+      id = generateCertId();
+    } while (existingIds.includes(id));
+
+    return id;
+  }
+
+  async function handleDeleteCertificate(id: string) {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this certificate?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteCertificate(id);
+
+      setCertificates((prev) => prev.filter((c) => c._id !== id));
+    } catch (err) {
+      console.error("Failed to delete certificate:", err);
+    }
+  }
+
+  async function handleEditCertificate(updated: Certificate) {
+    try {
+      const saved = await updateCertificate({
+        _id: updated._id,
+        name: updated.name,
+        email: updated.email,
+        certType: updated.certType,
+        applicationID: updated.applicationID,
+        discordUserId: updated.discordUserId,
+        owner: updated.owner,
+        admin: updated.admin,
+        handler: updated.handler,
+        hasCustomMessage: updated.hasCustomMessage,
+        message: updated.message,
+        certificateDelivered: updated.certificateDelivered,
+        issueDate: updated.issueDate, // ✅ important
+      });
+
+      setCertificates((prev) =>
+        prev.map((c) => (c._id === saved._id ? saved : c))
+      );
+
+      setEditOpen(false);
+    } catch (err) {
+      console.error("Failed to update certificate:", err);
+    }
+  }
+  async function handleAddCertificate(data: {
     name: string;
     email: string;
     certType: string;
+    applicationID: string;
+    discordUserId: string;
+    hasCustomMessage?: boolean;
+    message?: string;
   }) {
-    const newCert: Certificate = {
-      _id: crypto.randomUUID(),
-      certId: Math.random().toString(36).slice(2, 12),
-      admin: "vas", // later from session
-      issueDate: new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      owner: "vas",
-      name: data.name,
-      email: data.email,
-      certType: data.certType,
-      certificateDesigned: false,
-      certificateDelivered: false,
-    };
+    let attempts = 0;
+    let created = null;
 
-    setCertificates((prev) => [newCert, ...prev]);
+    while (attempts < 5) {
+      try {
+        const certId = generateCertId(); // 🔥 don't rely on existingIds
+        let payload;
+        data.hasCustomMessage
+          ? (payload = {
+              certId,
+              name: data.name,
+              email: data.email,
+              certType: data.certType,
+              applicationID: data.applicationID,
+              discordUserId: data.discordUserId,
+              admin: "scrim",
+              owner: "vas",
+              hasCustomMessage: data.hasCustomMessage,
+              message: data.message,
+              handler: handler,
+            })
+          : (payload = {
+              certId,
+              name: data.name,
+              email: data.email,
+              certType: data.certType,
+              applicationID: data.applicationID,
+              discordUserId: data.discordUserId,
+              admin: "scrim",
+              owner: "vas",
+              handler: handler,
+            });
+
+        console.log("Trying ID:", certId);
+
+        created = await createCertificate(payload);
+
+        console.log("Saved to DB:", created);
+        break; // ✅ success
+      } catch (err: any) {
+        if (err.message === "DUPLICATE_CERT_ID") {
+          console.warn("Duplicate ID, retrying...");
+          attempts++;
+        } else {
+          console.error("Error creating certificate:", err);
+          return;
+        }
+      }
+    }
+
+    if (!created) {
+      console.error("Failed after multiple attempts");
+      return;
+    }
+
+    setCertificates((prev) => [created, ...prev]);
     setModalOpen(false);
   }
+
+  const handleDownload = async (cert: Certificate) => {
+    if (!cert.issueDate) {
+      toast.error(`Invalid Issue Date for ${cert.name}`);
+    } else {
+      await generateAndDownloadCertificate({
+        name: cert.name,
+        certId: cert.certId,
+        issueDate: String(cert.issueDate),
+        message:
+          "FOR MAKING ACADEMIC RESOURCES AND HELPING THE STUDENTS OF R/ALEVEL COMMUNITY",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -123,20 +278,27 @@ export default function CertificatesAdminPage({ initialCertificates }: Props) {
               <TableHead>Name</TableHead>
               <TableHead>Cert ID</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Delivered?</TableHead>
               <TableHead>Issued</TableHead>
-              <TableHead>Admin</TableHead>
+              <TableHead>Handler</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
-            {initialCertificates.map((cert) => {
+            {certificates.map((cert) => {
               const expanded = openRow === cert._id;
-
               return (
                 <Fragment key={cert._id}>
                   {/* Main row */}
-                  <TableRow key={cert._id} className="bg-background">
+                  <TableRow
+                    key={cert._id}
+                    className={` ${
+                      cert.certificateDelivered
+                        ? "bg-green-50"
+                        : "bg-background"
+                    } `}
+                  >
                     <TableCell>
                       <Button
                         size="icon"
@@ -161,16 +323,55 @@ export default function CertificatesAdminPage({ initialCertificates }: Props) {
                       <Badge variant="secondary">{cert.certType}</Badge>
                     </TableCell>
 
-                    <TableCell>{cert.issueDate}</TableCell>
+                    <TableCell>
+                      {cert.certificateDelivered ? "yes" : "no"}
+                    </TableCell>
 
-                    <TableCell>{cert.admin}</TableCell>
+                    <TableCell>
+                      {cert.issueDate
+                        ? new Date(cert.issueDate).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "Not Issued"}
+                    </TableCell>
+
+                    <TableCell>{cert.handler?.split(" ")[0]}</TableCell>
 
                     <TableCell className="text-right space-x-2">
-                      <Button size="icon" variant="ghost">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedCert(cert);
+                          setEditOpen(true);
+                        }}
+                      >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="ghost">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteCertificate(cert._id)}
+                      >
                         <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+
+                      {/* <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => downloadQRCode(cert.certId)}
+                      >
+                        <Download />
+                      </Button> */}
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDownload(cert)}
+                      >
+                        <Download />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -181,21 +382,25 @@ export default function CertificatesAdminPage({ initialCertificates }: Props) {
                       <TableCell colSpan={7} className="p-0">
                         <div className="bg-muted/30 px-8 py-6">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                            <Info label="Owner" value={cert.owner} />
+                            <Info label="Lead" value={cert.owner} />
                             <Info label="Email" value={cert.email} />
                             <Info
                               label="Discord User ID"
                               value={cert.discordUserId}
                             />
+                            <Info label="Admin" value={cert.admin} />
                             <Info
-                              label="Certificate Designed"
-                              value={cert.certificateDesigned ? "Yes" : "No"}
+                              label="applicationID"
+                              value={
+                                cert.applicationID
+                                  ? cert.applicationID
+                                  : "No ID provided"
+                              }
                             />
                             <Info
                               label="Certificate Delivered"
                               value={cert.certificateDelivered ? "Yes" : "No"}
                             />
-                            <Info label="Date Given" value={cert.dateGiven} />
                           </div>
                         </div>
                       </TableCell>
@@ -212,6 +417,12 @@ export default function CertificatesAdminPage({ initialCertificates }: Props) {
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSubmit={handleAddCertificate}
+      />
+      <EditCertificateModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        certificate={selectedCert}
+        onSubmit={handleEditCertificate}
       />
     </div>
   );
