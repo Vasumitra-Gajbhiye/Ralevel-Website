@@ -56,7 +56,10 @@
 // }
 
 // app/api/upload-certificate/route.ts
+import { authOptions } from "@/lib/auth";
+import { requireRoles } from "@/lib/requireRoles";
 import { v2 as cloudinary } from "cloudinary";
+import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Configure Cloudinary with your environment variables
@@ -67,6 +70,13 @@ cloudinary.config({
 });
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  try {
+    requireRoles(session, ["owner", "admin"]);
+  } catch {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;

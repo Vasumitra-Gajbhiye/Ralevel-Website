@@ -103,6 +103,15 @@ function Sidebar({ roles }: { roles: string[] }) {
             </a>
           </>
         )}
+
+        {hasAnyRole(roles as any, ["owner", "admin", "mod_dep_head"]) && (
+          <a
+            href="/admin/qotd"
+            className="block px-3 py-2 rounded hover:bg-gray-100"
+          >
+            Discord QOTD
+          </a>
+        )}
       </nav>
     </aside>
   );
