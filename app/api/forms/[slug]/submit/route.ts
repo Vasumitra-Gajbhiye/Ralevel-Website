@@ -1,6 +1,7 @@
 import { authOptions } from "@/lib/auth";
 import { confirmationEmail } from "@/lib/emails/confirmationEmail";
 import connectDB from "@/lib/mongodb";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { uploadFileToR2 } from "@/lib/r2Upload";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import Form from "@/models/Form";
@@ -410,6 +411,21 @@ export async function POST(
   // 4️⃣ Increment response count
   form.responseCount++;
   await form.save();
+
+  // Track server-side form submission
+  const posthog = getPostHogClient();
+  const distinctId = sessionEmail ?? submission._id.toString();
+  posthog.capture({
+    distinctId,
+    event: "form_submitted",
+    properties: {
+      form_slug: slug,
+      form_title: form.title,
+      form_type: form.formType,
+      has_files: uploadedFiles.length > 0,
+      submitter_email: submitterEmail,
+    },
+  });
 
   return NextResponse.json(
     {

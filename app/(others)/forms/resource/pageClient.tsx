@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import ResourceTable from "@/components/resources/ResourceTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -146,6 +147,9 @@ export default function ResourceFormPageClient() {
       }
 
       toast.success("Resources submitted successfully");
+      posthog.capture("resource_submitted", {
+        resource_count: validIndex,
+      });
 
       // Optional reset
       setResources([
@@ -164,6 +168,7 @@ export default function ResourceFormPageClient() {
       setIsSubmitting(false);
     } catch (err) {
       console.error(err);
+      posthog.captureException(err);
       toast.error("Something went wrong");
       setIsSubmitting(false);
     }
