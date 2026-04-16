@@ -1,5 +1,6 @@
 import clientPromise from "@/lib/mongoClient";
 import connectDB from "@/lib/mongodb";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { Role } from "@/lib/roles";
 import UserData from "@/models/userData";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
@@ -25,8 +26,9 @@ export const authOptions: NextAuthOptions = {
       await connectDB();
 
       const existing = await UserData.findOne({ email: user.email });
+      const isNewUser = !existing;
 
-      if (!existing) {
+      if (isNewUser) {
         await UserData.create({
           name: user.name,
           email: user.email,
@@ -37,6 +39,24 @@ export const authOptions: NextAuthOptions = {
           receiveEmails: false,
         });
       }
+
+      const posthog = getPostHogClient();
+      const distinctId = user.email!;
+      posthog.identify({
+        distinctId,
+        properties: {
+          email: user.email,
+          name: user.name,
+        },
+      });
+      posthog.capture({
+        distinctId,
+        event: "user_signed_in",
+        properties: {
+          is_new_user: isNewUser,
+          provider: "google",
+        },
+      });
 
       return true;
     },

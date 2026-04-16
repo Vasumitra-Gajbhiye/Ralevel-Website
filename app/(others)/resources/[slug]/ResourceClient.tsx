@@ -3,6 +3,7 @@
 import { cldImage } from "@/lib/cloudinary";
 import { motion } from "framer-motion";
 import Image, { type ImageProps } from "next/image";
+import posthog from "posthog-js";
 import { useMemo, useState } from "react";
 
 /* -------------------------
@@ -432,6 +433,13 @@ export default function ResourceClient({ resource }: Props) {
                     key={idx}
                     href={n.link}
                     target="_blank"
+                    onClick={() =>
+                      posthog.capture("resource_link_clicked", {
+                        resource_type: "notes",
+                        resource_title: n.title,
+                        subject: resource.subject,
+                      })
+                    }
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
@@ -790,6 +798,14 @@ export default function ResourceClient({ resource }: Props) {
                             className="text-[var(--primary-accent)] underline"
                             target="_blank"
                             href={p.link}
+                            onClick={() =>
+                              posthog.capture("resource_link_clicked", {
+                                resource_type: "past_paper",
+                                paper_year: p.year,
+                                paper_board: p.board,
+                                subject: resource.subject,
+                              })
+                            }
                           >
                             Download ZIP
                           </a>

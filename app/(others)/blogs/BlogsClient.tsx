@@ -3,6 +3,7 @@
 import { cldImage } from "@/lib/cloudinary";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import BlogGrid from "./LatestBlogs";
 
@@ -97,6 +98,13 @@ export default function BlogsClient({ data }: { data: any[] }) {
                     <a
                       href={`/blogs/${featuredBlogs[current].slug}`}
                       className="block rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all mx-auto max-w-4xl"
+                      onClick={() =>
+                        posthog.capture("blog_post_clicked", {
+                          blog_slug: featuredBlogs[current].slug,
+                          blog_title: featuredBlogs[current].mainTitle,
+                          source: "featured",
+                        })
+                      }
                     >
                       <Image
                         src={cldImage(
@@ -139,6 +147,13 @@ export default function BlogsClient({ data }: { data: any[] }) {
                       <a
                         href={`/blogs/${featuredBlogs[current].slug}`}
                         className="hover:text-sky-700 transition-colors"
+                        onClick={() =>
+                          posthog.capture("blog_post_clicked", {
+                            blog_slug: featuredBlogs[current].slug,
+                            blog_title: featuredBlogs[current].mainTitle,
+                            source: "featured_title",
+                          })
+                        }
                       >
                         {featuredBlogs[current].mainTitle}
                       </a>
@@ -187,7 +202,14 @@ export default function BlogsClient({ data }: { data: any[] }) {
           </h2>
           {data.length > 8 && (
             <button
-              onClick={() => setShowAll((prev) => !prev)}
+              onClick={() => {
+                const next = !showAll;
+                setShowAll(next);
+                posthog.capture("blog_show_all_clicked", {
+                  action: next ? "view_all" : "show_less",
+                  total_blogs: data.length,
+                });
+              }}
               className="text-sky-700 hover:text-sky-900 font-medium text-sm border border-sky-200 px-4 py-1.5 rounded-full hover:border-sky-400 transition"
             >
               {showAll ? "Show Less" : "View All"}

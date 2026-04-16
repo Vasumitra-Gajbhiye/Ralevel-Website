@@ -3,6 +3,7 @@ import { cldImage } from "@/lib/cloudinary";
 
 import { motion, useScroll, useSpring } from "framer-motion";
 import Image from "next/image";
+import posthog from "posthog-js";
 import { useEffect, useRef, useState } from "react";
 
 type BlogPostLayoutProps = {
@@ -36,6 +37,15 @@ export default function BlogPostLayout({
 
   const [activeHeading, setActiveHeading] = useState("");
   const [toc, setToc] = useState<{ id: string; text: string }[]>([]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    posthog.capture("blog_post_viewed", {
+      blog_title: metadata.title,
+      blog_author: metadata.author,
+      blog_date: metadata.date,
+    });
+  }, []);
 
   useEffect(() => {
     const headings = Array.from(document.querySelectorAll("h2"));

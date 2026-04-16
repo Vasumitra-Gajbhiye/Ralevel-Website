@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown } from "lucide-react";
+import posthog from "posthog-js";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,10 @@ export default function GlossarySearch({ terms }: any) {
                 key={term.slug}
                 value={term.term}
                 onSelect={() => {
+                  posthog.capture("glossary_term_searched", {
+                    term: term.term,
+                    term_slug: term.slug,
+                  });
                   window.location.hash = term.term[0].toUpperCase();
                   setOpen(false);
                 }}

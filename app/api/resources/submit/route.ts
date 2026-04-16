@@ -1,4 +1,5 @@
 import connectDB from "@/lib/mongodb";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { uploadFileToR2 } from "@/lib/r2Upload";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import Contributor from "@/models/Contributor";
@@ -241,6 +242,26 @@ export async function POST(req: Request) {
     }
 
     await submission.save();
+
+    // Track server-side resource submission
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: email,
+      event: "resource_submitted",
+      properties: {
+        resource_count: resources.length,
+        contributor_email: email,
+        is_returning_contributor: contributor.totalSubmissions > 1,
+      },
+    });
+    posthog.identify({
+      distinctId: email,
+      properties: {
+        name: fullName,
+        email,
+        discord_or_reddit_id: discordOrRedditId,
+      },
+    });
 
     // =============================
     // 7️⃣ Done

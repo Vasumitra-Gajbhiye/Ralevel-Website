@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import ErrorPopover from "@/components/form/ErrorPopover";
 import {
   AlertDialog,
@@ -338,9 +339,15 @@ export default function FormPageClient({ form }: FormPageProps) {
       }
 
       setShowConfirmation(true);
+      posthog.capture("form_submitted", {
+        form_slug: form.slug,
+        form_title: form.title,
+        form_type: form.formType,
+      });
       reset();
     } catch (err) {
       console.error(err);
+      posthog.captureException(err);
       toast.error("Something went wrong");
     }
   };
