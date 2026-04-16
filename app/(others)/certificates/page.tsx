@@ -336,6 +336,8 @@ export default function CertificatesPage() {
                   "Admins verify your impact before issuing the certificate",
               },
             ]}
+            actionLink="http://ralevel.com/forms/helper-intake-1"
+            actionText="Apply as Writer"
           />
 
           <CertificateBlock
@@ -356,7 +358,7 @@ export default function CertificatesPage() {
               { label: "Publish 5 approved posts on r/alevel Blogs" },
               {
                 label:
-                  "Receive a Writer Certificate after your 10th publication",
+                  "Receive a Writer Certificate after your 5th publication",
               },
             ]}
             actionLink="https://docs.google.com/forms/d/e/1FAIpQLSeQ7LAYUjRtWunMRPPwdZyAtBN1lCXZt2A-tbcz_psc-DTC8Q/viewform?usp=sf_link"

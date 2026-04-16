@@ -39,12 +39,12 @@ export const ROLE_LABELS: Record<Role, string> = {
   writer: "Writer",
   bot_dev: "Bot Developer",
   former_staff: "Former Staff",
-  informative_team: "Informative Team",
+  informative_team: "Community Team",
   helper: "Helper",
   mod_dep_head: "MOD Dep. Head",
   helper_dep_head: "HLP Dep. Head",
   graphic_dep_head: "GFX Dep. Head",
-  info_dep_head: "INFO Dep. Head",
+  info_dep_head: "COMM Dep. Head",
 };
 
 export const ROLE_META: Record<

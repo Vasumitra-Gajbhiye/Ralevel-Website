@@ -75,7 +75,7 @@ export type Behaviour =
   | "degraded_record"
   | "disregarded";
 
-export type State = "active" | "loa";
+export type State = "active" | "loa" | "discharged";
 
 /* ------------------------------------------------------------------ */
 /* CONSTANTS */
@@ -114,6 +114,7 @@ export const BEHAVIOURS = [
 export const STATES = [
   { value: "active", label: "Active" },
   { value: "loa", label: "LOA" },
+  { value: "discharged", label: "N/A" },
 ] as const;
 
 const ACTIVITY_COLORS: Record<Activity, string> = {
@@ -136,6 +137,7 @@ export const BEHAVIOUR_COLORS: Record<Behaviour, string> = {
 export const STATE_COLORS: Record<State, string> = {
   active: "bg-emerald-100 text-emerald-800",
   loa: "bg-blue-100 text-blue-800",
+  discharged: "bg-gray-100 text-gray-800",
 };
 
 function dateToInputValue(date?: string) {
