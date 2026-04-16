@@ -39,8 +39,8 @@ export async function PATCH(
     const { id } = await context.params;
 
     const body = await req.json();
-
     console.log(body, id);
+
     const staff = await StaffMember.findById(id);
     if (!staff) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -73,7 +73,8 @@ export async function PATCH(
 
     await staff.save();
     return NextResponse.json(staff);
-  } catch {
+  } catch (err) {
+    console.log(err);
     return new Response("Forbidden", { status: 403 });
   }
 }

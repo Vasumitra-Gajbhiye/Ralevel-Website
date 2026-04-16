@@ -121,6 +121,8 @@ export default async function AdminFormsPage() {
         {forms.map((form: any) => {
           const stats = submissionMap[form.slug];
 
+          console.log(form);
+
           return (
             <Link
               key={form._id}

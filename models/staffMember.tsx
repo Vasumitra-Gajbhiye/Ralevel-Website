@@ -52,7 +52,7 @@ const staffMemberSchema = new Schema(
 
     state: {
       type: String,
-      enum: ["active", "loa"],
+      enum: ["active", "loa", "discharged"],
       default: "active",
     },
 
