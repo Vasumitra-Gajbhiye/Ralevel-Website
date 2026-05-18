@@ -7,8 +7,18 @@ import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
+const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
+
+if (!authSecret) {
+  throw new Error("Missing NEXTAUTH_SECRET (or AUTH_SECRET) environment variable");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
+  secret: authSecret,
+  session: {
+    strategy: "database",
+  },
 
   providers: [
     GoogleProvider({
