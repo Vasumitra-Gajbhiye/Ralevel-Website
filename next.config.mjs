@@ -74,8 +74,7 @@ const nextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' https: data:",
       "font-src 'self' https: data:",
@@ -84,7 +83,7 @@ const nextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'", // prevents plugin injection
-      "frame-src 'self'", // blocks embedding external frames
+      "frame-src 'self' https://js.stripe.com",
     ].join("; ");
 
     return [
