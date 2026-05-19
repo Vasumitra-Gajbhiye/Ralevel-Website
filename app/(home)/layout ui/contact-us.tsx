@@ -459,6 +459,7 @@ const MainContact = () => {
       title: "r.alevelserver@gmail.com",
       link: "mailto:r.alevelserver@gmail.com",
     },
+    { title: "Minecraft", link: "https://www.ralevel.com/minecraft-funding" },
   ];
 
   const navigationItems = [
