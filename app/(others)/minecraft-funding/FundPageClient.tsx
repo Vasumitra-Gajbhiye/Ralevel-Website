@@ -223,11 +223,11 @@ export default function FundPageClient({
               fun — together. Your support keeps it running.
             </p>
 
-            <ProgressBar
+            {/* <ProgressBar
               raised={initialRaised}
               goal={goal}
               noContributors={noContributors}
-            />
+            /> */}
 
             <div className="flex flex-wrap gap-3 pt-2">
               <a

@@ -342,10 +342,18 @@ export default async function SuccessPage({
                 ${amountPaid.toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center border-b border-gray-200 pb-3">
               <span className="text-sm text-gray-500 font-medium">Tier</span>
               <span className="text-sm font-semibold text-[#0891b2] bg-cyan-50 px-3 py-1 rounded-full">
                 {tierLabel}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500 font-medium">
+                Transaction Id
+              </span>
+              <span className="text-sm font-semibold text-gray-900">
+                {transactionId}
               </span>
             </div>
           </div>
