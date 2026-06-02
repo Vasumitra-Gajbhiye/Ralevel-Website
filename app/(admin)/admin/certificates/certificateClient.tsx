@@ -18,6 +18,7 @@ import {
   deleteCertificate,
   updateCertificate,
 } from "./actions";
+import { getCertificateMessage } from "@/lib/certificate-messages";
 import { AddCertificateModal } from "./add-certificate-modal";
 import { EditCertificateModal } from "./EditCertificateModal";
 export type Certificate = {
@@ -36,6 +37,7 @@ export type Certificate = {
   handler?: string | null;
   hasCustomMessage?: boolean;
   message?: string;
+  customMessage?: string;
   applicationID?: string;
   certificateDelivered?: boolean;
   dateGiven?: string;
@@ -114,8 +116,16 @@ export default function CertificatesAdminPage({
   if (!handler) {
     return <h1>No Handler Session Found</h1>;
   }
-  const [certificates, setCertificates] =
-    useState<Certificate[]>(initialCertificates);
+  function normalizeCertificateMessage(cert: any): Certificate {
+    return {
+      ...cert,
+      message: cert.message ?? cert.customMessage ?? undefined,
+    };
+  }
+
+  const [certificates, setCertificates] = useState<Certificate[]>(
+    initialCertificates.map(normalizeCertificateMessage),
+  );
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -133,7 +143,7 @@ export default function CertificatesAdminPage({
 
   async function handleDeleteCertificate(id: string) {
     const confirmDelete = confirm(
-      "Are you sure you want to delete this certificate?"
+      "Are you sure you want to delete this certificate?",
     );
 
     if (!confirmDelete) return;
@@ -166,7 +176,9 @@ export default function CertificatesAdminPage({
       });
 
       setCertificates((prev) =>
-        prev.map((c) => (c._id === saved._id ? saved : c))
+        prev.map((c) =>
+          c._id === saved._id ? normalizeCertificateMessage(saved) : c,
+        ),
       );
 
       setEditOpen(false);
@@ -238,7 +250,7 @@ export default function CertificatesAdminPage({
       return;
     }
 
-    setCertificates((prev) => [created, ...prev]);
+    setCertificates((prev) => [normalizeCertificateMessage(created), ...prev]);
     setModalOpen(false);
   }
 
@@ -250,8 +262,7 @@ export default function CertificatesAdminPage({
         name: cert.name,
         certId: cert.certId,
         issueDate: String(cert.issueDate),
-        message:
-          "FOR MAKING ACADEMIC RESOURCES AND HELPING THE STUDENTS OF R/ALEVEL COMMUNITY",
+        message: getCertificateMessage(cert) || "No message provided",
       });
     }
   };
@@ -421,7 +432,9 @@ export default function CertificatesAdminPage({
       <EditCertificateModal
         open={editOpen}
         onOpenChange={setEditOpen}
-        certificate={selectedCert}
+        certificate={
+          selectedCert ? normalizeCertificateMessage(selectedCert) : selectedCert
+        }
         onSubmit={handleEditCertificate}
       />
     </div>

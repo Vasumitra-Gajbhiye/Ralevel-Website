@@ -1,5 +1,9 @@
 import { CertImgSkeleton } from "@/app/skeleton";
 import { cldImage, cldRaw } from "@/lib/cloudinary";
+import {
+  getCertificateMessage,
+  splitCertificateMessageLines,
+} from "@/lib/certificate-messages";
 import { AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -59,6 +63,9 @@ interface Certificate {
   __v: Int32Array;
   admin: string;
   owner: string;
+  hasCustomMessage?: boolean;
+  customMessage?: string;
+  message?: string;
 }
 
 function InvalidCertificate({ id }: { id: string }) {
@@ -140,49 +147,9 @@ async function CertificateDisplay({ id }: { id: string }) {
 
   const src = adminSign ? `/certificateImages/${adminSign}` : "/fallback.png";
 
-  const typeMessage = function () {
-    if (cert?.certType === "helper")
-      return {
-        lineOne: "FOR HELPING AND GUIDING THE STUDENTS OF",
-        lineTwo: "THE r/alevel COMMUNITY",
-      };
-
-    if (cert?.certType === "resource")
-      return {
-        lineOne: "FOR MAKING ACADEMIC RESOURCES AND HELPING",
-        lineTwo: "THE STUDENTS OF r/alevel COMMUNITY",
-      };
-
-    if (cert?.certType === "moderation")
-      return {
-        lineOne: "FOR MODERATING AND ENSURING SAFETY WITHIN",
-        lineTwo: "THE r/alevel ACADEMIC COMMUNITY",
-      };
-
-    if (cert?.certType === "management")
-      return {
-        lineOne: "FOR MANAGING AND DIRECTING",
-        lineTwo: "THE r/alevel ACADEMIC COMMUNITY",
-      };
-
-    if (cert?.certType === "writer")
-      return {
-        lineOne: "FOR WRITING INFORMATIVE AND CERATIVE PIECES",
-        lineTwo: "FOR THE r/alevel ACADEMIC COMMUNITY",
-      };
-
-    if (cert?.certType === "graphic")
-      return {
-        lineOne: "FOR ARTISTICALLY DEVELOPING GRAPHIC DESIGN",
-        lineTwo: "FOR THE r/alevel ACADEMIC COMMUNITY",
-      };
-
-    if (cert?.certType === "2024WriterCompFirstPlace")
-      return {
-        lineOne: "FOR FIRST PLACE IN",
-        lineTwo: "THE r/alevel 2024 CREATIVE & ESSAY WRITING COMPETITION",
-      };
-  };
+  const { lineOne, lineTwo } = splitCertificateMessageLines(
+    getCertificateMessage(cert),
+  );
 
   // 🔹 ACTUAL CONTENT
   return (
@@ -279,7 +246,13 @@ async function CertificateDisplay({ id }: { id: string }) {
                   className="c-subtitle text-themBlue-200 text-center text-2xl font-medium"
                   style={{ lineHeight: "2.3rem" }}
                 >
-                  {typeMessage()?.lineOne} <br></br> {typeMessage()?.lineTwo}
+                  {lineOne}
+                  {lineTwo ? (
+                    <>
+                      <br />
+                      {lineTwo}
+                    </>
+                  ) : null}
                 </h2>
                 <div
                   className="auth w-full grid grid-cols-3 place-items-center content-center items-center  justify-center pb-80 pt-24 "

@@ -47,6 +47,7 @@ export default async function Certificates() {
     email: doc.email,
     handler: doc.handler,
     customMessage: doc.customMessage,
+    message: doc.customMessage,
     hasCustomMessage: doc.hasCustomMessage,
     discordUserId: doc.discordUserId,
     certificateDesigned: doc.certificateDesigned,

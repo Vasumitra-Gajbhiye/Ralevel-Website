@@ -204,24 +204,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CERTIFICATE_DEFAULT_MESSAGES } from "@/lib/certificate-messages";
 import { Edit2 } from "lucide-react"; // Using Lucide icons, standard with shadcn
 import { useState } from "react";
-
-// Map your standard messages into a dictionary for easy lookups
-const DEFAULT_MESSAGES: Record<string, string> = {
-  helper: "FOR HELPING AND GUIDING THE STUDENTS OF THE r/alevel COMMUNITY",
-  resource:
-    "FOR MAKING ACADEMIC RESOURCES AND HELPING THE STUDENTS OF r/alevel COMMUNITY",
-  moderation:
-    "FOR MODERATING AND ENSURING SAFETY WITHIN THE r/alevel ACADEMIC COMMUNITY",
-  management: "FOR MANAGING AND DIRECTING THE r/alevel ACADEMIC COMMUNITY",
-  writer:
-    "FOR WRITING INFORMATIVE AND CREATIVE PIECES FOR THE r/alevel ACADEMIC COMMUNITY",
-  graphic:
-    "FOR ARTISTICALLY DEVELOPING GRAPHIC DESIGN FOR THE r/alevel ACADEMIC COMMUNITY",
-  "2024WriterCompFirstPlace":
-    "FOR FIRST PLACE IN THE r/alevel 2024 CREATIVE & ESSAY WRITING COMPETITION",
-};
 
 type Props = {
   open: boolean;
@@ -265,7 +250,7 @@ export function AddCertificateModal({ open, onOpenChange, onSubmit }: Props) {
     } else {
       setIsCustom(false);
       setCertType(value);
-      setMessage(DEFAULT_MESSAGES[value] || "");
+      setMessage(CERTIFICATE_DEFAULT_MESSAGES[value] || "");
       setIsEditingMessage(false); // Lock it by default for standard types
     }
   }
@@ -275,7 +260,7 @@ export function AddCertificateModal({ open, onOpenChange, onSubmit }: Props) {
 
     // Show warning before unlocking
     const confirmEdit = window.confirm(
-      "Warning: You are about to edit a standardized community message. Are you sure you want to customize this?"
+      "Warning: You are about to edit a standardized community message. Are you sure you want to customize this?",
     );
 
     if (confirmEdit) {
@@ -312,14 +297,16 @@ export function AddCertificateModal({ open, onOpenChange, onSubmit }: Props) {
   function handleSubmit() {
     if (!validate()) return;
 
-    hasCustomMessage
+    const shouldPersistCustomMessage = hasCustomMessage || isCustom;
+
+    shouldPersistCustomMessage
       ? onSubmit({
           name,
           email,
           certType: isCustom ? customType : certType,
           discordUserId: discordID,
           applicationID,
-          hasCustomMessage: hasCustomMessage,
+          hasCustomMessage: true,
           message: message.trim(), // 👈 Pass the message up
         })
       : onSubmit({
