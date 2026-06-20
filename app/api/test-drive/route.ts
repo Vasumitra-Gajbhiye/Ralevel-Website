@@ -1,5 +1,5 @@
 import { authOptions } from "@/lib/auth";
-import { drive } from "@/lib/googleDrive";
+import { getDrive } from "@/lib/googleDrive";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -12,7 +12,7 @@ export async function GET() {
     if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -22,9 +22,10 @@ export async function GET() {
     if (origin && host && !origin.includes(host)) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
-        { status: 403 }
+        { status: 403 },
       );
     }
+    const drive = getDrive();
 
     const res = await drive.files.list({
       q: `'${process.env.DRIVE_ROOT_FOLDER_ID}' in parents`,
@@ -43,7 +44,7 @@ export async function GET() {
         success: false,
         error: error.message,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
