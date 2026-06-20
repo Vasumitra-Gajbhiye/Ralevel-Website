@@ -52,6 +52,16 @@ const nextConfig = {
         destination: "https://srv.adstxtmanager.com/19390/ralevel.com",
         permanent: true,
       },
+      {
+        source: "/forms",
+        destination: "/apply",
+        permanent: true,
+      },
+      {
+        source: "/forms/:path*",
+        destination: "/apply/:path*",
+        permanent: true,
+      },
     ];
   },
 

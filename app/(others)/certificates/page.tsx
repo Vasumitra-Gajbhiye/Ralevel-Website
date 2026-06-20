@@ -336,7 +336,7 @@ export default function CertificatesPage() {
                   "Admins verify your impact before issuing the certificate",
               },
             ]}
-            actionLink="http://ralevel.com/forms/helper-intake-1"
+            actionLink="http://ralevel.com/apply/helper-intake-1"
             actionText="Apply as Writer"
           />
 
@@ -378,7 +378,7 @@ export default function CertificatesPage() {
               },
               {
                 label: "Submit your resources using our official form",
-                link: `/forms/resource`,
+                link: `/apply/resource`,
               },
               {
                 label: "Wait for moderator approval.",
@@ -388,7 +388,7 @@ export default function CertificatesPage() {
                   "Earn a Contributor Certificate for accepted submissions",
               },
             ]}
-            actionLink={`/forms/resource`}
+            actionLink={`/apply/resource`}
             actionText="Submit a Resource"
           />
         </motion.div>

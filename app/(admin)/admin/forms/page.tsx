@@ -49,7 +49,7 @@
 //                 <div className="space-y-1">
 //                   <h2 className="font-medium">{form.title}</h2>
 //                   <p className="text-sm text-muted-foreground">
-//                     /forms/{form.slug}
+//                     /apply/{form.slug}
 //                   </p>
 //                 </div>
 
@@ -134,7 +134,7 @@ export default async function AdminFormsPage() {
                 <div className="space-y-1">
                   <h2 className="font-medium">{form.title}</h2>
                   <p className="text-sm text-muted-foreground">
-                    /forms/{form.slug}
+                    /apply/{form.slug}
                   </p>
                 </div>
 

@@ -206,7 +206,7 @@
 //   );
 // }
 
-// app/forms/page.tsx
+// app/apply/page.tsx
 import connectDB from "@/lib/mongodb";
 import FormIndex from "@/models/FormIndex";
 import type { LucideIcon } from "lucide-react";
@@ -239,8 +239,8 @@ export default async function FormsPage() {
           let herf;
           herf =
             form.slug === "resource"
-              ? `/forms/resource`
-              : `/forms/${form.slug}-intake-${form.activeCycleId}`;
+              ? `/apply/resource`
+              : `/apply/${form.slug}-intake-${form.activeCycleId}`;
           return (
             <div
               key={form.slug}

@@ -1326,7 +1326,7 @@ export default function Navigation() {
     { title: "Certificates", href: "/certificates" },
     { title: "Resources", href: "/resources" },
     { title: "Blogs", href: "/blogs" },
-    { title: "Apply", href: "/forms" },
+    { title: "Apply", href: "/apply" },
   ];
 
   // ✅ mobile overlay
