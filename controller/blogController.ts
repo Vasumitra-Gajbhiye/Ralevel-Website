@@ -1,10 +1,5 @@
-import connectDB from "@/lib/mongodb";
-import Blog from "@/models/blogsData";
+import { getCachedBlogList } from "@/lib/data/blogs";
 
 export default async function getBlogs() {
-  await connectDB();
-
-  const blogs = await Blog.find({}).sort({ createdAt: -1 }).lean();
-
-  return blogs;
+  return getCachedBlogList();
 }

@@ -1,5 +1,7 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { invalidateTags } from "@/lib/cache";
+import { getCachedLegacyResourceList } from "@/lib/data/resources";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
@@ -14,9 +16,8 @@ export async function GET(req: NextRequest) {
       windowSec: 60,
     });
     if (rlError) return rlError;
-    await connectDB();
 
-    const subjects = await ResourcesData.find();
+    const subjects = await getCachedLegacyResourceList();
 
     return NextResponse.json(
       {
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     await ResourcesData.create(newResourcesData);
+    await invalidateTags("resources-legacy");
 
     return NextResponse.json(
       {
@@ -97,11 +99,10 @@ export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.searchParams.get("id");
 
-    console.log(id);
-
     await connectDB();
 
     await ResourcesData.findByIdAndDelete(id);
+    await invalidateTags("resources-legacy");
 
     return NextResponse.json(
       {

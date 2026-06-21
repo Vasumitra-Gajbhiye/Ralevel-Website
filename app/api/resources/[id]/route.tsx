@@ -1,12 +1,13 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { getCachedLegacyResourceById } from "@/lib/data/resources";
 import mongoDBConnect from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import ResourcesData from "@/models/resourcesData";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET ALL SUBJECTS
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,16 +18,9 @@ export async function GET(
   });
   if (rlError) return rlError;
   const { id } = await params;
-  console.log(id);
+
   try {
-    // const searchParams = useSearchParams();
-
-    // const id = searchParams.get("id");
-    console.log(id);
-
-    await mongoDBConnect();
-
-    const subject = await ResourcesData.findOne({ _id: id });
+    const subject = await getCachedLegacyResourceById(id);
 
     return NextResponse.json(
       {
@@ -35,6 +29,7 @@ export async function GET(
       },
       {
         status: 200,
+        headers: CACHE_HEADERS,
       }
     );
   } catch (error) {
@@ -65,9 +60,8 @@ export async function PUT(
   if (csrfError) return csrfError;
 
   const { id } = await params;
+  const pramasID = id;
 
-  console.log(id);
-  let pramasID = id;
   try {
     const {
       newTitle: title,
@@ -82,11 +76,11 @@ export async function PUT(
       links: links,
       id: id,
     };
-    console.log(pramasID);
 
     await mongoDBConnect();
 
     await ResourcesData.findByIdAndUpdate(pramasID, newResourcesData);
+    await invalidateTags("resources-legacy");
 
     return NextResponse.json(
       {

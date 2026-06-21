@@ -1,5 +1,6 @@
 "use server";
 
+import { invalidateTags } from "@/lib/cache";
 import connectDB from "@/lib/mongodb";
 import CertData from "@/models/certsData";
 
@@ -25,6 +26,7 @@ export async function createCertificate(data: {
       certificateDesigned: false,
       certificateDelivered: false,
     });
+    await invalidateTags("certs", `cert:${data.certId}`);
     return JSON.parse(JSON.stringify(cert));
   } catch (err: any) {
     // Mongo duplicate key error
@@ -51,6 +53,9 @@ export async function updateCertificate(data: {
 }) {
   await connectDB();
 
+  const existing = (await CertData.findById(data._id).lean()) as {
+    certId?: string;
+  } | null;
   const updated = await CertData.findByIdAndUpdate(
     data._id,
     {
@@ -66,11 +71,15 @@ export async function updateCertificate(data: {
         hasCustomMessage: data.hasCustomMessage,
         customMessage: data.message,
         certificateDelivered: data.certificateDelivered,
-        issueDate: data.issueDate ?? null, // ✅ key line
+        issueDate: data.issueDate ?? null,
       },
     },
     { new: true }
   ).lean();
+
+  const tags = ["certs"];
+  if (existing?.certId) tags.push(`cert:${existing.certId}`);
+  await invalidateTags(...tags);
 
   return JSON.parse(JSON.stringify(updated));
 }
@@ -78,11 +87,17 @@ export async function updateCertificate(data: {
 export async function deleteCertificate(id: string) {
   await connectDB();
 
-  const deleted = await CertData.findByIdAndDelete(id).lean();
+  const deleted = (await CertData.findByIdAndDelete(id).lean()) as {
+    certId?: string;
+  } | null;
 
   if (!deleted) {
     throw new Error("NOT_FOUND");
   }
+
+  const tags = ["certs"];
+  if (deleted.certId) tags.push(`cert:${deleted.certId}`);
+  await invalidateTags(...tags);
 
   return { success: true };
 }

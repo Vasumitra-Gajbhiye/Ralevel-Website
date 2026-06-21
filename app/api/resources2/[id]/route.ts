@@ -1,18 +1,17 @@
-import dbConnect from "@/lib/mongodb";
-import Resources2Data from "@/models/resources2Data";
+import { CACHE_HEADERS } from "@/lib/cache";
+import { getCachedResource2ById } from "@/lib/data/resources";
 import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await dbConnect();
   const { id } = await params;
-  const resData = await Resources2Data.findById(id);
+  const resData = await getCachedResource2ById(id);
 
   if (!resData) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(resData);
+  return NextResponse.json(resData, { headers: CACHE_HEADERS });
 }

@@ -1,4 +1,6 @@
 import { getAuthSession } from "@/lib/getAuthSession";
+import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { getCachedBlogList } from "@/lib/data/blogs";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
@@ -9,30 +11,16 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   try {
     const rlError = await enforceRateLimit(req, "public-blogs-list", {
-      limit: 100, // 100 requests per minute per IP
+      limit: 100,
       windowSec: 60,
     });
     if (rlError) return rlError;
 
-    await connectDB();
-
-    const blogs = await BlogsData.find(
-      {}, // no filter
-      {
-        _id: 1,
-        slug: 1,
-        mainTitle: 1,
-        description: 1,
-        date: 1,
-        timeToRead: 1,
-        tag: 1,
-        author: 1,
-      }
-    ).lean(); // ← optional (faster)
+    const blogs = await getCachedBlogList();
 
     return NextResponse.json(
       { message: "Successfully fetched all blogs", data: blogs },
-      { status: 200 }
+      { status: 200, headers: CACHE_HEADERS }
     );
   } catch (error) {
     console.log(error);
@@ -53,17 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // const { mainTitle, date, author, introSection, sections, id } =
     const { mainTitle, description, date, timeToRead, tag, author, slug } =
       await req.json();
-
-    // const newBlogsData = {
-    //   mainTitle: mainTitle,
-    //   date: date,
-    //   author: author,
-    //   introSection: introSection,
-    //   sections: sections,
-    // };
 
     const newBlogsData = {
       mainTitle: mainTitle,
@@ -78,6 +57,9 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     await BlogsData.create(newBlogsData);
+    const tags = ["blogs"];
+    if (slug) tags.push(`blog:${slug}`);
+    await invalidateTags(...tags);
 
     return NextResponse.json(
       {
@@ -107,11 +89,16 @@ export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.searchParams.get("id");
 
-    console.log(id);
-
     await connectDB();
 
-    await BlogsData.findByIdAndDelete(id);
+    const deleted = (await BlogsData.findByIdAndDelete(id)) as {
+      slug?: string;
+    } | null;
+    const tags = ["blogs"];
+    if (deleted?.slug) {
+      tags.push(`blog:${deleted.slug}`);
+    }
+    await invalidateTags(...tags);
 
     return NextResponse.json(
       {

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
-
-const redis = Redis.fromEnv();
+import { getRedis } from "@/lib/redis";
 
 type WindowConfig = {
   limit: number;
@@ -17,6 +15,9 @@ export async function enforceRateLimit(
   routeKey: string,
   { limit, windowSec }: WindowConfig
 ) {
+  const redis = getRedis();
+  if (!redis) return null;
+
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     req.headers.get("x-real-ip") ??
@@ -26,18 +27,21 @@ export async function enforceRateLimit(
   const windowStart = Math.floor(now / windowSec) * windowSec;
   const key = `rl:${routeKey}:${ip}:${windowStart}`;
 
-  const current = (await redis.incr(key)) as number;
-  if (current === 1) {
-    await redis.expire(key, windowSec);
-  }
+  try {
+    const current = await redis.incr(key);
+    if (current === 1) {
+      await redis.expire(key, windowSec);
+    }
 
-  if (current > limit) {
-    return NextResponse.json(
-      { error: "Too many requests, please try again later." },
-      { status: 429 }
-    );
+    if (current > limit) {
+      return NextResponse.json(
+        { error: "Too many requests, please try again later." },
+        { status: 429 }
+      );
+    }
+  } catch (err) {
+    console.warn("[rateLimit] Redis error, allowing request:", err);
   }
 
   return null;
 }
-

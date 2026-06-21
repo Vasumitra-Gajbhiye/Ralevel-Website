@@ -1,4 +1,5 @@
 import { getAuthSession } from "@/lib/getAuthSession";
+import { invalidateTags } from "@/lib/cache";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest) {
 
     await CertData.create(newCertData);
 
+    const tags = ["certs"];
+    if (certId) tags.push(`cert:${certId}`);
+    await invalidateTags(...tags);
+
     return NextResponse.json(
       {
         message: "Successfully created a new cert",
@@ -93,11 +98,12 @@ export async function DELETE(req: NextRequest) {
   try {
     const id = req.nextUrl.searchParams.get("id");
 
-    console.log(id);
-
     await connectDB();
 
-    await CertData.findByIdAndDelete(id);
+    const deleted = await CertData.findByIdAndDelete(id);
+    const tags = ["certs"];
+    if (deleted?.certId) tags.push(`cert:${deleted.certId}`);
+    await invalidateTags(...tags);
 
     return NextResponse.json(
       {

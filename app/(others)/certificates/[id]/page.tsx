@@ -1,4 +1,5 @@
 import { CertImgSkeleton } from "@/app/skeleton";
+import { getCachedCertificateByCertId } from "@/lib/data/certificates";
 import { cldImage, cldRaw } from "@/lib/cloudinary";
 import {
   getCertificateMessage,
@@ -111,16 +112,7 @@ async function CertificateDisplay({ id }: { id: string }) {
   let cert: Certificate | null = null;
 
   try {
-    const apiLink = process.env.NEXT_PUBLIC_GETSINGLECERT!;
-    const res = await fetch(`${apiLink}/${id}`);
-
-    if (!res.ok) {
-      return <InvalidCertificate id={id} />;
-    }
-
-    const certi = await res.json();
-    const data: Certificate = certi.data;
-    cert = data;
+    cert = await getCachedCertificateByCertId(id);
   } catch (err) {
     console.error("Error loading certificate:", err);
   }

@@ -1,12 +1,12 @@
 import { getAuthSession } from "@/lib/getAuthSession";
+import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { getCachedBlogBySlug } from "@/lib/data/blogs";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import BlogsData from "@/models/blogsData";
 import { NextRequest, NextResponse } from "next/server";
-// import { useSearchParams } from "next/navigation";
 
-// GET ALL SUBJECTS
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,10 +19,7 @@ export async function GET(
   const { id } = await params;
 
   try {
-    await connectDB();
-
-    // ✅ slug-based lookup
-    const blog = await BlogsData.findOne({ slug: id });
+    const blog = await getCachedBlogBySlug(id);
 
     if (!blog) {
       return NextResponse.json({ message: "Blog not found" }, { status: 404 });
@@ -30,7 +27,7 @@ export async function GET(
 
     return NextResponse.json(
       { message: "Successfully fetched blog metadata", data: blog },
-      { status: 200 }
+      { status: 200, headers: CACHE_HEADERS }
     );
   } catch (error) {
     return NextResponse.json(
@@ -52,9 +49,8 @@ export async function PUT(
   }
 
   const { id } = await params;
+  const pramasID = id;
 
-  console.log(id);
-  let pramasID = id;
   try {
     const {
       newMainTitle: mainTitle,
@@ -73,11 +69,17 @@ export async function PUT(
       sections: sections,
       id: id,
     };
-    console.log(pramasID);
 
     await connectDB();
 
+    const existing = (await BlogsData.findById(pramasID).lean()) as {
+      slug?: string;
+    } | null;
     await BlogsData.findByIdAndUpdate(pramasID, newBlogsData);
+
+    const tags = ["blogs"];
+    if (existing?.slug) tags.push(`blog:${existing.slug}`);
+    await invalidateTags(...tags);
 
     return NextResponse.json(
       {
