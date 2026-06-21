@@ -1,21 +1,19 @@
-// import getAllBlogs from "@/app/controller/getAllBlogs";
-// import BlogsClient from "./BlogsClient";
-
-// export const revalidate = 60; // optional caching
-
-// export default async function BlogsPage() {
-//   const data = await getAllBlogs(); // ✅ FETCH ON SERVER
-
-//   return <BlogsClient data={data} />; // ✅ PASS TO CLIENT
-// }
-
 import getBlogs from "@/controller/blogController";
 import BlogsClient from "./BlogsClient";
 
-// export const revalidate = 60;
+export default async function BlogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const result = await getBlogs({ page, limit: 50 });
 
-export default async function BlogsPage() {
-  const blogs = await getBlogs();
-
-  return <BlogsClient data={JSON.parse(JSON.stringify(blogs))} />;
+  return (
+    <BlogsClient
+      data={JSON.parse(JSON.stringify(result.data))}
+      pagination={result.pagination}
+    />
+  );
 }

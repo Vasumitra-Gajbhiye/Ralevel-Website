@@ -1,10 +1,21 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { invalidateTags } from "@/lib/cache";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import CertData from "@/models/certsData";
 import { NextRequest, NextResponse } from "next/server";
+
+const CERT_LIST_PROJECTION = {
+  certId: 1,
+  name: 1,
+  certType: 1,
+  issueDate: 1,
+};
 
 // GET ALL SUBJECTS
 export async function GET(req: NextRequest) {
@@ -16,12 +27,21 @@ export async function GET(req: NextRequest) {
     if (rlError) return rlError;
     await connectDB();
 
-    const certs = await CertData.find();
+    const { page, limit, skip } = parsePaginationParams(req.nextUrl.searchParams);
+
+    const [certs, total] = await Promise.all([
+      CertData.find({}, CERT_LIST_PROJECTION)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CertData.countDocuments(),
+    ]);
 
     return NextResponse.json(
       {
-        message: "Successfully fetched all certs",
-        data: certs,
+        message: "Successfully fetched certs",
+        ...buildPaginatedResponse(certs, total, page, limit),
       },
       {
         status: 200,

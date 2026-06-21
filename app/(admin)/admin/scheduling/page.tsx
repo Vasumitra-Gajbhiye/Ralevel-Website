@@ -1,6 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -337,15 +339,25 @@ function ScheduleCard({
 
 export default function SchedulingPage() {
   const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  async function load() {
-    const res = await fetch("/api/admin/scheduling");
+  async function load(currentPage = page) {
+    const res = await fetch(`/api/admin/scheduling?page=${currentPage}&limit=50`);
     if (!res.ok) {
-      // Access denied or other error
       setItems([]);
       return;
     }
-    setItems(await res.json());
+    const result = await res.json();
+    setItems(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
   }
 
   async function addItem() {
@@ -364,8 +376,8 @@ export default function SchedulingPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
 
   return (
     <div className="max-w-[1600px] mx-auto p-8 space-y-6">
@@ -403,6 +415,12 @@ export default function SchedulingPage() {
           />
         ))}
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

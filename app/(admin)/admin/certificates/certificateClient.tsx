@@ -10,7 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { generateAndDownloadCertificate } from "@/lib/generateCertificate";
+import type { PaginationMeta } from "@/lib/pagination";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { ChevronDown, ChevronUp, Download, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -80,6 +83,7 @@ export type Certificate = {
 
 type Props = {
   initialCertificates: Certificate[];
+  pagination: PaginationMeta;
   handler: string | null | undefined;
 };
 
@@ -111,8 +115,10 @@ function generateCertId(): string {
 
 export default function CertificatesAdminPage({
   initialCertificates,
+  pagination,
   handler,
 }: Props) {
+  const router = useRouter();
   if (!handler) {
     return <h1>No Handler Session Found</h1>;
   }
@@ -423,6 +429,14 @@ export default function CertificatesAdminPage({
           </TableBody>
         </Table>
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={(nextPage) => {
+          router.push(`/admin/certificates?page=${nextPage}`);
+        }}
+      />
 
       <AddCertificateModal
         open={modalOpen}

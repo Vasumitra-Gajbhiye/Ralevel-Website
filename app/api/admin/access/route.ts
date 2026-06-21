@@ -1,8 +1,12 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { requireRoles } from "@/lib/requireRoles";
-import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
+import { Role, ROLES, highestAuthorityRole, roleRank } from "@/lib/roles";
 import {
   findClerkUserIdByEmail,
   syncClerkUserMetadata,
@@ -10,29 +14,67 @@ import {
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
+function buildRoleRankSwitch() {
+  return {
+    $switch: {
+      branches: ROLES.map((role, index) => ({
+        case: { $in: [role, "$roles"] },
+        then: index,
+      })),
+      default: ROLES.length,
+    },
+  };
+}
+
 /* ================= GET ================= */
-export async function GET() {
+export async function GET(req: Request) {
   await connectDB();
   const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);
 
-    const users = await UserData.find({
-      roles: { $exists: true, $not: { $size: 0 } },
-    })
-      .select("name email roles")
-      .lean();
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-    users.sort((a, b) => {
-      const aHighest = highestAuthorityRole(a.roles);
-      const bHighest = highestAuthorityRole(b.roles);
+    const [result] = await UserData.aggregate([
+      {
+        $match: {
+          roles: { $exists: true, $not: { $size: 0 } },
+        },
+      },
+      {
+        $addFields: {
+          roleRank: buildRoleRankSwitch(),
+        },
+      },
+      {
+        $sort: {
+          roleRank: 1,
+          email: 1,
+        },
+      },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                name: 1,
+                email: 1,
+                roles: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
 
-      const diff = roleRank(aHighest) - roleRank(bHighest);
-      return diff !== 0 ? diff : a.email.localeCompare(b.email);
-    });
+    const total = result.metadata[0]?.total ?? 0;
+    const users = result.data;
 
-    return NextResponse.json(users);
+    return NextResponse.json(buildPaginatedResponse(users, total, page, limit));
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

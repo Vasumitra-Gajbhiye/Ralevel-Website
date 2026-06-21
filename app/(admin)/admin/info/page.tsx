@@ -1,5 +1,7 @@
 "use client";
 
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -166,10 +168,21 @@ function InfoCard({
 
 export default function InfoPage() {
   const [members, setMembers] = useState<InfoMember[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  async function load() {
-    const res = await fetch("/api/admin/info");
-    setMembers(await res.json());
+  async function load(currentPage = page) {
+    const res = await fetch(`/api/admin/info?page=${currentPage}&limit=50`);
+    const result = await res.json();
+    setMembers(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
   }
 
   async function addMember() {
@@ -188,8 +201,8 @@ export default function InfoPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-6">
@@ -227,6 +240,12 @@ export default function InfoPage() {
           />
         ))}
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

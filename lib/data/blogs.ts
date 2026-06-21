@@ -13,12 +13,29 @@ const BLOG_LIST_PROJECTION = {
   author: 1,
 };
 
-export async function getCachedBlogList() {
+type BlogListOptions = {
+  page?: number;
+  limit?: number;
+};
+
+export async function getCachedBlogList(options: BlogListOptions = {}) {
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 50;
+  const skip = (page - 1) * limit;
+
   return getOrSet(
-    buildKey("blogs", "list"),
+    buildKey("blogs", "list", String(page), String(limit)),
     async () => {
       await connectDB();
-      return BlogsData.find({}, BLOG_LIST_PROJECTION).lean();
+      const [data, total] = await Promise.all([
+        BlogsData.find({}, BLOG_LIST_PROJECTION)
+          .sort({ _id: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        BlogsData.countDocuments(),
+      ]);
+      return { data, total, page, limit };
     },
     { ttlSec: 600, tags: ["blogs"] }
   );

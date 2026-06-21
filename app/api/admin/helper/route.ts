@@ -1,6 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { Role } from "@/lib/roles";
 import HelperMember from "@/models/helperMember";
 import { NextResponse } from "next/server";
@@ -21,19 +25,28 @@ function requireHelperAdmin(session: any): Role[] {
 }
 
 /* ================= GET ================= */
-export async function GET() {
+export async function GET(req: Request) {
   await connectDB();
   const session = await getAuthSession();
 
   try {
     requireHelperAdmin(session);
 
-    const helpers = await HelperMember.find().sort({
-      rank: 1, // junior -> senior
-      createdAt: 1,
-    });
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-    return NextResponse.json(helpers);
+    const [helpers, total] = await Promise.all([
+      HelperMember.find()
+        .sort({
+          rank: 1,
+          createdAt: 1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      HelperMember.countDocuments(),
+    ]);
+
+    return NextResponse.json(buildPaginatedResponse(helpers, total, page, limit));
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

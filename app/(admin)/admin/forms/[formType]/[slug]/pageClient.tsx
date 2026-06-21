@@ -1,10 +1,13 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { PaginationMeta } from "@/lib/pagination";
 import { FormDocument } from "@/types/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ResponsesTable from "./ResponsesTable";
 import Summary from "./Summary";
 
@@ -12,14 +15,19 @@ type Props = {
   form: FormDocument;
   totalResponses: number;
   submissions: any[];
+  summarySubmissions: any[];
+  pagination: PaginationMeta;
 };
 
 export default function AdminFormPageClient({
   form,
   totalResponses,
   submissions,
+  summarySubmissions,
+  pagination,
 }: Props) {
-  console.log(submissions);
+  const router = useRouter();
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* BACK */}
@@ -58,7 +66,7 @@ export default function AdminFormPageClient({
           </TabsList>
 
           <TabsContent value="summary">
-            <Summary submissions={submissions} />
+            <Summary submissions={summarySubmissions} totalResponses={totalResponses} />
           </TabsContent>
 
           <TabsContent value="responses">
@@ -67,6 +75,16 @@ export default function AdminFormPageClient({
               formSlug={form.slug}
               submissions={submissions}
               formType={form.formType}
+              totalResponses={totalResponses}
+            />
+            <ListPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={(nextPage) => {
+                router.push(
+                  `/admin/forms/${form.formType}/${form.slug}?page=${nextPage}`
+                );
+              }}
             />
           </TabsContent>
         </Tabs>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -24,6 +26,15 @@ export default function AdminBlogsClient({
 
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
@@ -34,15 +45,16 @@ export default function AdminBlogsClient({
     session?.userData?.roles?.includes("owner");
 
   /* ---------------- fetch blogs ---------------- */
-  async function fetchBlogs() {
-    const res = await fetch("/api/admin/blogs");
-    const data = await res.json();
-    setBlogs(data);
+  async function fetchBlogs(currentPage = page) {
+    const res = await fetch(`/api/admin/blogs?page=${currentPage}&limit=50`);
+    const result = await res.json();
+    setBlogs(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
   }
 
   useEffect(() => {
-    fetchBlogs().finally(() => setLoading(false));
-  }, []);
+    fetchBlogs(page).finally(() => setLoading(false));
+  }, [page]);
 
   /* ---------------- create blog ---------------- */
   async function createBlog() {
@@ -222,6 +234,12 @@ export default function AdminBlogsClient({
           })}
         </div>
       )}
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

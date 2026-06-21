@@ -1,5 +1,9 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { Role } from "@/lib/roles";
 import Contributor from "@/models/Contributor";
 import ResourceSubmission from "@/models/ResourceSubmission";
@@ -29,6 +33,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query");
     const status = searchParams.get("status");
+
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
     const mongoQuery: any = {};
 
@@ -66,12 +72,18 @@ export async function GET(req: Request) {
       }
     }
 
-    const submissions = await ResourceSubmission.find(mongoQuery)
-      .populate("contributorId")
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const [submissions, total] = await Promise.all([
+      ResourceSubmission.find(mongoQuery)
+        .populate("contributorId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      ResourceSubmission.countDocuments(mongoQuery),
+    ]);
 
-    return NextResponse.json(submissions);
+    return NextResponse.json(
+      buildPaginatedResponse(submissions, total, page, limit)
+    );
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

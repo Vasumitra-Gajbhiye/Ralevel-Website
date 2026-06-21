@@ -1,6 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { requireRoles } from "@/lib/requireRoles";
 import { slugify } from "@/lib/slugify";
 import EditorBlog from "@/models/editorBlogs";
@@ -8,13 +12,15 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
 /* ================= LIST BLOGS ================= */
-export async function GET() {
+export async function GET(req: Request) {
   await connectDB();
   const session = await getAuthSession();
 
   try {
     // writers see own, admins see all
     requireRoles(session, ["owner", "admin", "writer"]);
+
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
     const isAdminLike = session!.userData!.roles.some(
       (r) => r === "admin" || r === "owner"
@@ -24,7 +30,7 @@ export async function GET() {
       ? {}
       : { ownerId: new mongoose.Types.ObjectId(session!.userData!.id) };
 
-    const blogs = await EditorBlog.aggregate([
+    const [result] = await EditorBlog.aggregate([
       { $match: match },
       {
         $lookup: {
@@ -46,9 +52,18 @@ export async function GET() {
         },
       },
       { $sort: { updatedAt: -1 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }],
+        },
+      },
     ]);
 
-    return NextResponse.json(blogs);
+    const total = result.metadata[0]?.total ?? 0;
+    const blogs = result.data;
+
+    return NextResponse.json(buildPaginatedResponse(blogs, total, page, limit));
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

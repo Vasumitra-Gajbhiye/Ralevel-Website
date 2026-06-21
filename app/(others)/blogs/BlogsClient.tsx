@@ -1,13 +1,22 @@
 "use client";
 
+import { ListPagination } from "@/components/ui/list-pagination";
 import { cldImage } from "@/lib/cloudinary";
+import type { PaginationMeta } from "@/lib/pagination";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import BlogGrid from "./LatestBlogs";
 
-export default function BlogsClient({ data }: { data: any[] }) {
+export default function BlogsClient({
+  data,
+  pagination,
+}: {
+  data: any[];
+  pagination: PaginationMeta;
+}) {
   const featuredIds = [
     "create-an-effective-timetable",
     "mastering-focus-and-avoid-procrastination",
@@ -20,7 +29,8 @@ export default function BlogsClient({ data }: { data: any[] }) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (isHovered || featuredBlogs.length === 0) return;
@@ -200,27 +210,21 @@ export default function BlogsClient({ data }: { data: any[] }) {
           <h2 className="text-2xl font-semibold border-l-4 border-sky-600 pl-3">
             Latest Articles
           </h2>
-          {data.length > 8 && (
-            <button
-              onClick={() => {
-                const next = !showAll;
-                setShowAll(next);
-                posthog.capture("blog_show_all_clicked", {
-                  action: next ? "view_all" : "show_less",
-                  total_blogs: data.length,
-                });
-              }}
-              className="text-sky-700 hover:text-sky-900 font-medium text-sm border border-sky-200 px-4 py-1.5 rounded-full hover:border-sky-400 transition"
-            >
-              {showAll ? "Show Less" : "View All"}
-            </button>
-          )}
         </div>
 
         <BlogGrid
-          blogs={data
-            .filter((b) => !featuredIds.includes(b.slug))
-            .slice(0, showAll ? data.length : 8)}
+          blogs={data.filter((b) => !featuredIds.includes(b.slug))}
+        />
+
+        <ListPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={(nextPage) => {
+            posthog.capture("blog_page_changed", { page: nextPage });
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("page", String(nextPage));
+            router.push(`/blogs?${params.toString()}`);
+          }}
         />
       </section>
     </main>

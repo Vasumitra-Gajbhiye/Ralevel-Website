@@ -3,6 +3,10 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { invalidateTags } from "@/lib/cache";
 import { getCachedLegacyResourceList } from "@/lib/data/resources";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import ResourcesData from "@/models/resourcesData";
@@ -17,12 +21,13 @@ export async function GET(req: NextRequest) {
     });
     if (rlError) return rlError;
 
-    const subjects = await getCachedLegacyResourceList();
+    const { page, limit } = parsePaginationParams(req.nextUrl.searchParams);
+    const result = await getCachedLegacyResourceList({ page, limit });
 
     return NextResponse.json(
       {
-        message: "Successfully fetched all subjects",
-        data: subjects,
+        message: "Successfully fetched subjects",
+        ...buildPaginatedResponse(result.data, result.total, page, limit),
       },
       {
         status: 200,

@@ -10,11 +10,11 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 9     |
+| High     | 6     |
 | Medium   | 15    |
 | Low      | 8     |
 
-**Top priorities:** add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
+**Top priorities:** split oversized client bundles and introduce a data caching layer (`unstable_cache` / ISR).
 
 ---
 
@@ -53,62 +53,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 ---
 
 ## 2. Database Queries
-
-### Issue 2.1 — Unbounded public list endpoints
-
-**Description:** Multiple GET endpoints return entire collections with no pagination, projection, or `.lean()`.
-
-**Severity:** High
-
-**Why it matters:** Response size, memory, and query time grow linearly with data. Public endpoints are rate-limited but still transfer full payloads.
-
-**Files involved:**
-- `app/api/certificates/route.tsx` (line 18) — `CertData.find()`
-- `app/api/resources/route.tsx` (line 19) — `ResourcesData.find()`
-- `app/api/blogs/route.tsx` — `BlogsData.find({})`
-- `app/api/team/route.tsx` (line 109) — `TeamData.find().select(...)`
-
-**Suggested fix:** Add cursor-based pagination (`limit`/`skip` or `_id` cursor), field projection, and `.lean()`. For public cert list, return only fields needed by the client (e.g. `certId`, `name`, `certType`).
-
----
-
-### Issue 2.2 — Unbounded admin list endpoints
-
-**Description:** Admin API routes fetch all records for scheduling, helper, graphic, info, team, blogs, and access management.
-
-**Severity:** High
-
-**Why it matters:** Admin dashboards will degrade as collections grow. `admin/access` loads all role-bearing users and sorts in memory.
-
-**Files involved:**
-- `app/api/admin/access/route.ts` (lines 17–29)
-- `app/api/admin/scheduling/route.ts` (lines 21–24)
-- `app/api/admin/helper/route.ts` (lines 31–34)
-- `app/api/admin/graphic/route.ts` (line 33)
-- `app/api/admin/info/route.ts` (line 33)
-- `app/api/admin/blogs/route.ts` (lines 27–49, aggregate without `$limit`)
-- `app/api/admin/team/route.ts` (lines 40–72, aggregate without `$limit`)
-- `app/(admin)/admin/certificates/page.tsx` — `CertData.find()` server-side
-
-**Suggested fix:** Server-side pagination with default page size (e.g. 50). Move sorting into MongoDB (`$sort`). For access search, keep the existing limited pattern in `app/api/admin/access/search/route.ts` (`.limit(5)`).
-
----
-
-### Issue 2.3 — Unbounded form submission load in admin
-
-**Description:** Admin form detail page loads all submissions for a form slug with no limit.
-
-**Severity:** High
-
-**Why it matters:** Popular forms (e.g. applications with thousands of responses) will cause slow page loads and large client payloads.
-
-**Files involved:**
-- `app/(admin)/admin/forms/[formType]/[slug]/page.tsx` (lines 25–30)
-- `app/(admin)/admin/forms/page.tsx` — full-collection aggregate
-
-**Suggested fix:** Paginate submissions (e.g. 50 per page). Add compound index `{ formSlug: 1, createdAt: -1 }` on `models/FormSubmission.ts`. Use `countDocuments` + paginated `find` in parallel via `Promise.all`.
-
----
 
 ### Issue 2.4 — Level page loads entire subjects collection
 
@@ -740,7 +684,8 @@ These patterns are worth replicating elsewhere:
 | Mongoose global connection cache with `bufferCommands: false` | `lib/mongodb.tsx` |
 | Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
 | Field projection + `.lean()` on blog list | `app/api/blogs/route.tsx` |
-| Paginated admin list (limit 50) | `app/api/admin/resource-submissions/route.ts` |
+| Shared pagination helpers (`page`/`limit`, default 50) | `lib/pagination.ts`, `components/ui/list-pagination.tsx` |
+| Paginated list endpoints (public + admin) | `app/api/certificates`, `app/api/blogs`, `app/api/admin/*` |
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | Server-fetch + client props (QOTD) | `app/(admin)/admin/qotd/page.tsx` |
@@ -754,7 +699,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P1 | 2.1–2.3 Pagination on lists | Prevents degradation as data grows |
 | P1 | 4.1–4.4 Data caching / ISR | Major reduction in DB load for content |
 | P1 | 5.1–5.2 Split large client pages | Faster TTI on high-traffic routes |
 | P2 | 4.5 Remove HTTP loopback | Eliminates self-fetch overhead |

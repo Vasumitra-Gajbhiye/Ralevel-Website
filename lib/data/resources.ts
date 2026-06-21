@@ -55,12 +55,27 @@ export async function getCachedResource2ById(id: string) {
   );
 }
 
-export async function getCachedLegacyResourceList() {
+type LegacyResourceListOptions = {
+  page?: number;
+  limit?: number;
+};
+
+export async function getCachedLegacyResourceList(
+  options: LegacyResourceListOptions = {}
+) {
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 50;
+  const skip = (page - 1) * limit;
+
   return getOrSet(
-    buildKey("resources", "legacy", "list"),
+    buildKey("resources", "legacy", "list", String(page), String(limit)),
     async () => {
       await connectDB();
-      return ResourcesData.find().lean();
+      const [data, total] = await Promise.all([
+        ResourcesData.find().sort({ _id: -1 }).skip(skip).limit(limit).lean(),
+        ResourcesData.countDocuments(),
+      ]);
+      return { data, total, page, limit };
     },
     { ttlSec: 1800, tags: ["resources-legacy"] }
   );

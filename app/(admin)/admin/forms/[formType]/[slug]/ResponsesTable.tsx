@@ -141,17 +141,16 @@ export default function ResponsesTable({
   formSlug,
   submissions,
   formType,
+  totalResponses,
 }: {
   form: any;
   formType: string;
   formSlug: string;
   submissions: Submission[];
+  totalResponses: number;
 }) {
-  console.log(submissions);
   const firstSection = form?.sections?.[0];
   const previewFields = firstSection?.fields?.slice(0, 3) ?? [];
-
-  console.log(submissions);
 
   if (!form?.sections?.length) {
     return <div>No sections found.</div>;
@@ -161,7 +160,7 @@ export default function ResponsesTable({
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">
-          Responses ({submissions.length})
+          Responses ({totalResponses})
         </h2>
 
         {/* Filters (UI only for now) */}

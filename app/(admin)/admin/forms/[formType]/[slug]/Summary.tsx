@@ -174,10 +174,11 @@ type FormSubmission = {
 
 type Props = {
   submissions: FormSubmission[];
+  totalResponses: number;
 };
 
-export default function Summary({ submissions }: Props) {
-  const total = submissions.length;
+export default function Summary({ submissions, totalResponses }: Props) {
+  const total = totalResponses;
 
   // 🔹 Calculate scores
   const scores = submissions.map((s) => {

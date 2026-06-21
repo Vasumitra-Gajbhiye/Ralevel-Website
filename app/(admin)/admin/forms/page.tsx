@@ -82,29 +82,45 @@
 //   );
 // }
 import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/ui/list-pagination";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import FormIndex from "@/models/FormIndex";
 import FormSubmission from "@/models/FormSubmission";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-export default async function AdminFormsPage() {
+export default async function AdminFormsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   await connectDB();
 
-  const forms = await FormIndex.find().lean();
+  const params = await searchParams;
+  const { page, limit, skip } = parsePaginationParams(
+    new URLSearchParams({ page: params.page ?? "1" })
+  );
 
-  const submissions = await FormSubmission.aggregate([
-    {
-      $group: {
-        _id: "$formType",
-        count: { $sum: 1 },
-        lastSubmissionAt: { $max: "$submittedAt" },
+  const [forms, total, submissions] = await Promise.all([
+    FormIndex.find().sort({ _id: -1 }).skip(skip).limit(limit).lean(),
+    FormIndex.countDocuments(),
+    FormSubmission.aggregate([
+      {
+        $group: {
+          _id: "$formType",
+          count: { $sum: 1 },
+          lastSubmissionAt: { $max: "$submittedAt" },
+        },
       },
-    },
+    ]),
   ]);
 
+  const pagination = buildPaginatedResponse(forms, total, page, limit).pagination;
   const submissionMap = Object.fromEntries(submissions.map((s) => [s._id, s]));
-  console.log(submissions);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
@@ -120,8 +136,6 @@ export default async function AdminFormsPage() {
       <div className="space-y-3">
         {forms.map((form: any) => {
           const stats = submissionMap[form.slug];
-
-          console.log(form);
 
           return (
             <Link
@@ -163,6 +177,32 @@ export default async function AdminFormsPage() {
           );
         })}
       </div>
+
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4 pt-4">
+          <p className="text-sm text-muted-foreground">
+            Page {pagination.page} of {pagination.totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            {pagination.hasPrevPage && (
+              <Link
+                href={`/admin/forms?page=${pagination.page - 1}`}
+                className="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-accent"
+              >
+                Previous
+              </Link>
+            )}
+            {pagination.hasNextPage && (
+              <Link
+                href={`/admin/forms?page=${pagination.page + 1}`}
+                className="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-accent"
+              >
+                Next
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -199,10 +201,21 @@ function HelperCard({
 
 export default function HelperPage() {
   const [helpers, setHelpers] = useState<Helper[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  async function load() {
-    const res = await fetch("/api/admin/helper");
-    setHelpers(await res.json());
+  async function load(currentPage = page) {
+    const res = await fetch(`/api/admin/helper?page=${currentPage}&limit=50`);
+    const result = await res.json();
+    setHelpers(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
   }
 
   async function addHelper() {
@@ -221,8 +234,8 @@ export default function HelperPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-6">
@@ -258,6 +271,12 @@ export default function HelperPage() {
           />
         ))}
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

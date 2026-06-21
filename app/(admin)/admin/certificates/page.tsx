@@ -1,10 +1,13 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import CertData from "@/models/certsData";
 import { Types } from "mongoose";
 import CertificatesAdminPage, { Certificate } from "./certificateClient";
 
-// 🔒 Define DB type explicitly (important)
 type CertDoc = {
   _id: Types.ObjectId;
   admin: string;
@@ -24,16 +27,24 @@ type CertDoc = {
   dateGiven?: string;
 };
 
-export default async function Certificates() {
+export default async function Certificates({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const session = await getAuthSession();
   await connectDB();
 
-  // ✅ lean + explicit type
-  const certificates = await CertData.find()
-    .sort({ createdAt: -1 })
-    .lean<CertDoc[]>();
+  const params = await searchParams;
+  const { page, limit, skip } = parsePaginationParams(
+    new URLSearchParams({ page: params.page ?? "1" })
+  );
 
-  // ✅ clean DTO mapping
+  const [certificates, total] = await Promise.all([
+    CertData.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean<CertDoc[]>(),
+    CertData.countDocuments(),
+  ]);
+
   const data: Certificate[] = certificates.map((doc) => ({
     _id: doc._id.toString(),
     admin: doc.admin,
@@ -54,9 +65,12 @@ export default async function Certificates() {
     dateGiven: doc.dateGiven,
   }));
 
+  const pagination = buildPaginatedResponse(data, total, page, limit).pagination;
+
   return (
     <CertificatesAdminPage
       initialCertificates={data}
+      pagination={pagination}
       handler={session?.user.name}
     />
   );

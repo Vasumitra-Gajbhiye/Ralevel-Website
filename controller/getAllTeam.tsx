@@ -1,32 +1,49 @@
+import type { PaginationMeta } from "@/lib/pagination";
+import { MAX_PAGE_SIZE } from "@/lib/pagination";
+
+const roleOrder: Record<string, number> = {
+  "Community Leader": 1,
+  "Chief Administrator": 2,
+  Administrator: 3,
+  "Sr. Moderator": 4,
+  "Jr. Moderator": 5,
+};
+
+function sortTeam(members: any[]) {
+  return members.sort((a, b) => {
+    const orderA = roleOrder[a.title] ?? 99;
+    const orderB = roleOrder[b.title] ?? 99;
+    return orderA - orderB;
+  });
+}
+
 export default async function getAllTeam() {
   try {
-        const apiLink =process.env.NEXT_PUBLIC_GETALLTEAM;
-        const res = await fetch(`${apiLink}`);
+    const apiLink = process.env.NEXT_PUBLIC_GETALLTEAM;
+    if (!apiLink) return [];
 
-    // const res = await fetch(`https://r-alevel.netlify.app/api/team`);
-    // const res = await fetch(`http://localhost:3000/api/team`);
-    const team = await res.json();
-  const roleOrder: Record<string, number> = {
-      "Community Leader": 1,
-      "Chief Administrator": 2,
-      "Administrator": 3,
-      "Sr. Moderator": 4,
-      "Jr. Moderator": 5,
-    };
+    const allMembers: any[] = [];
+    let page = 1;
+    let hasNextPage = true;
 
+    while (hasNextPage) {
+      const url = new URL(apiLink);
+      url.searchParams.set("page", String(page));
+      url.searchParams.set("limit", String(MAX_PAGE_SIZE));
 
-  
-    // ✅ Correct sort syntax
-    const sortedTeam = team.data.sort((a: any, b: any) => {
-      const orderA = roleOrder[a.title] ;
-      const orderB = roleOrder[b.title] ;
-      console.log(orderA, orderB)
-      return orderA - orderB;
-    });
+      const res = await fetch(url.toString());
+      const team = await res.json();
 
-    console.log(sortedTeam);
-    return sortedTeam;
+      if (!team?.data) break;
+
+      allMembers.push(...team.data);
+      hasNextPage = team.pagination?.hasNextPage ?? false;
+      page += 1;
+    }
+
+    return sortTeam(allMembers);
   } catch (error) {
     console.log(error);
+    return [];
   }
 }

@@ -1,6 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { Role } from "@/lib/roles";
 import GraphicMember from "@/models/graphicMember";
 import { NextResponse } from "next/server";
@@ -23,18 +27,27 @@ function requireGraphicAccess(session: any): Role[] {
 }
 
 /* ================= GET ================= */
-export async function GET() {
+export async function GET(req: Request) {
   await connectDB();
   const session = await getAuthSession();
 
   try {
     requireGraphicAccess(session);
 
-    const members = await GraphicMember.find().sort({
-      createdAt: -1,
-    });
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-    return NextResponse.json(members);
+    const [members, total] = await Promise.all([
+      GraphicMember.find()
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      GraphicMember.countDocuments(),
+    ]);
+
+    return NextResponse.json(buildPaginatedResponse(members, total, page, limit));
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

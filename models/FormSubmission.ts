@@ -145,5 +145,6 @@ FormSubmissionSchema.index(
     },
   }
 );
+FormSubmissionSchema.index({ formSlug: 1, createdAt: -1 });
 export default mongoose.models.FormSubmission ||
   mongoose.model("FormSubmission", FormSubmissionSchema);

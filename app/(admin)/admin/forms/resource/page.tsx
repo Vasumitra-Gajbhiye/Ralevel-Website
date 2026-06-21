@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import Link from "next/link";
 
 import {
@@ -34,13 +36,24 @@ export default function AdminResourcePage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [selected, setSelected] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(false);
   const [adminNotes, setAdminNotes] = useState("");
 
-  async function fetchSubmissions() {
+  async function fetchSubmissions(currentPage = page) {
     setLoading(true);
     const params = new URLSearchParams();
+    params.set("page", String(currentPage));
+    params.set("limit", "50");
     if (query) params.append("query", query);
     if (statusFilter && statusFilter !== "all") {
       params.append("status", statusFilter);
@@ -49,14 +62,15 @@ export default function AdminResourcePage() {
     const res = await fetch(
       `/api/admin/resource-submissions?${params.toString()}`
     );
-    const data = await res.json();
-    setSubmissions(data);
+    const result = await res.json();
+    setSubmissions(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
     setLoading(false);
   }
 
   useEffect(() => {
-    fetchSubmissions();
-  }, []);
+    fetchSubmissions(page);
+  }, [page]);
 
   async function updateSubmission(status: string) {
     if (!selected) return;
@@ -87,7 +101,7 @@ export default function AdminResourcePage() {
             </p>
           </div>
 
-          <Badge variant="secondary">{submissions.length} results</Badge>
+          <Badge variant="secondary">{pagination.total} results</Badge>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -115,7 +129,7 @@ export default function AdminResourcePage() {
               </SelectContent>
             </Select>
 
-            <Button onClick={fetchSubmissions} disabled={loading}>
+            <Button onClick={() => fetchSubmissions(1)} disabled={loading}>
               {loading ? "Searching..." : "Search"}
             </Button>
           </div>
@@ -163,6 +177,12 @@ export default function AdminResourcePage() {
               </div>
             ))}
           </div>
+
+          <ListPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 

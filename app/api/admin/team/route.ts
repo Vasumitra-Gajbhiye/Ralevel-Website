@@ -1,6 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { Role } from "@/lib/roles";
 import StaffMember from "@/models/staffMember";
 import { NextResponse } from "next/server";
@@ -30,16 +34,17 @@ const RANK_ORDER: Record<string, number> = {
 };
 
 /* ================= GET: LIST STAFF ================= */
-export async function GET() {
+export async function GET(req: Request) {
   await connectDB();
   const session = await getAuthSession();
 
   try {
     requireTeamAdmin(session);
 
-    const staff = await StaffMember.aggregate([
+    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
+
+    const [result] = await StaffMember.aggregate([
       {
-        // Assign numeric priority to each rank
         $addFields: {
           rankOrder: {
             $switch: {
@@ -57,21 +62,31 @@ export async function GET() {
         },
       },
       {
-        // Primary: hierarchy, Secondary: oldest first
         $sort: {
           rankOrder: 1,
           createdAt: 1,
         },
       },
       {
-        // Clean output
-        $project: {
-          rankOrder: 0,
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                rankOrder: 0,
+              },
+            },
+          ],
         },
       },
     ]);
 
-    return NextResponse.json(staff);
+    const total = result.metadata[0]?.total ?? 0;
+    const staff = result.data;
+
+    return NextResponse.json(buildPaginatedResponse(staff, total, page, limit));
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

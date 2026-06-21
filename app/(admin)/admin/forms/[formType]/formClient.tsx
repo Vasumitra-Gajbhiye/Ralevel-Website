@@ -1,14 +1,24 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { Switch } from "@/components/ui/switch";
+import type { PaginationMeta } from "@/lib/pagination";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export default function FormClient({ forms, formType }: any) {
+export default function FormClient({
+  forms,
+  formType,
+  pagination,
+}: {
+  forms: any[];
+  formType: string;
+  pagination: PaginationMeta;
+}) {
   const router = useRouter();
   const [localForms, setLocalForms] = useState(forms);
   //   const formType = forms.formType;
@@ -56,7 +66,6 @@ export default function FormClient({ forms, formType }: any) {
     }
   };
 
-  console.log(forms);
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* BACK */}
@@ -144,6 +153,14 @@ export default function FormClient({ forms, formType }: any) {
             </p>
           )}
         </div>
+
+        <ListPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={(nextPage) => {
+            router.push(`/admin/forms/${formType}?page=${nextPage}`);
+          }}
+        />
       </div>
     </div>
   );

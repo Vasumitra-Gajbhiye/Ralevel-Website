@@ -96,22 +96,36 @@ import { getAuthSession } from "@/lib/getAuthSession";
 // }
 
 import mongoDBConnect from "@/lib/mongodb";
+import {
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from "@/lib/pagination";
 import { requireRoles } from "@/lib/requireRoles";
 import TeamData from "@/models/teamData";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 
 /* ================= GET TEAM ================= */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await mongoDBConnect();
 
-    const members = await TeamData.find().select("name title discordId");
+    const { page, limit, skip } = parsePaginationParams(req.nextUrl.searchParams);
+
+    const [members, total] = await Promise.all([
+      TeamData.find()
+        .select("name title discordId")
+        .sort({ _id: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      TeamData.countDocuments(),
+    ]);
 
     return NextResponse.json(
       {
-        message: "Successfully fetched all members",
-        data: members,
+        message: "Successfully fetched members",
+        ...buildPaginatedResponse(members, total, page, limit),
       },
       { status: 200 }
     );

@@ -33,9 +33,10 @@ export default function SubmissionDetailPage() {
 
   async function fetchSubmission() {
     const res = await fetch(`/api/admin/resource-submissions?query=${id}`);
-    const data = await res.json();
+    const result = await res.json();
+    const data = result.data ?? result;
 
-    if (data.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       toast.error("Submission not found");
       router.push("/admin/forms/resource");
       return;

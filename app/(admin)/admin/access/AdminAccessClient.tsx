@@ -6,6 +6,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
 import { roleRank } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
@@ -233,6 +235,15 @@ export default function AdminAccessClient({
   session: AuthSession | null;
 }) {
   const [users, setUsers] = useState<AccessUser[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("writer");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -247,11 +258,12 @@ export default function AdminAccessClient({
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   /* ---------------- LOAD ACCESS LIST ---------------- */
-  async function load() {
+  async function load(currentPage = page) {
     try {
-      const res = await fetch("/api/admin/access");
-      const data = await res.json();
-      setUsers(data);
+      const res = await fetch(`/api/admin/access?page=${currentPage}&limit=50`);
+      const result = await res.json();
+      setUsers(result.data ?? []);
+      setPagination(result.pagination ?? pagination);
       setLoading(false);
     } catch (e) {
       console.log("Error ", e);
@@ -259,8 +271,8 @@ export default function AdminAccessClient({
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
 
   /* ---------------- AUTOCOMPLETE ---------------- */
   function handleEmailChange(value: string) {
@@ -305,7 +317,7 @@ export default function AdminAccessClient({
     setEmail("");
     setRole("writer");
     setSuggestions([]);
-    await load();
+    await load(page);
     setSaving(false);
   }
   async function updateRoles(email: string, roles: Role[]) {
@@ -322,7 +334,7 @@ export default function AdminAccessClient({
       console.log(e);
     }
 
-    await load();
+    await load(page);
   }
 
   async function revoke(email: string) {
@@ -332,7 +344,7 @@ export default function AdminAccessClient({
       body: JSON.stringify({ email }),
     });
 
-    await load();
+    await load(page);
   }
 
   /* ================= UI ================= */
@@ -475,6 +487,12 @@ export default function AdminAccessClient({
           </>
         )}
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
 
       {/* Confirm delete modal */}
       {confirmDelete && (

@@ -1,5 +1,7 @@
 "use client";
 
+import { ListPagination } from "@/components/ui/list-pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -424,11 +426,21 @@ function StaffCard({ member }: { member: Staff }) {
 
 export default function TeamPage() {
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
 
-  async function load() {
-    const res = await fetch("/api/admin/team");
-    const data = await res.json();
-    setStaff(data);
+  async function load(currentPage = page) {
+    const res = await fetch(`/api/admin/team?page=${currentPage}&limit=50`);
+    const result = await res.json();
+    setStaff(result.data ?? []);
+    setPagination(result.pagination ?? pagination);
   }
 
   async function addStaff() {
@@ -438,8 +450,8 @@ export default function TeamPage() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-6">
@@ -470,6 +482,12 @@ export default function TeamPage() {
           <StaffCard key={m._id} member={m} />
         ))}
       </div>
+
+      <ListPagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
