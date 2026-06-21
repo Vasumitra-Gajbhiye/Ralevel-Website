@@ -1,5 +1,6 @@
 import { getAuthSession } from "@/lib/getAuthSession";
-import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { CACHE_HEADERS } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import { getCachedBlogBySlug } from "@/lib/data/blogs";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
@@ -79,7 +80,7 @@ export async function PUT(
 
     const tags = ["blogs"];
     if (existing?.slug) tags.push(`blog:${existing.slug}`);
-    await invalidateTags(...tags);
+    revalidateDataTags(...tags);
 
     return NextResponse.json(
       {

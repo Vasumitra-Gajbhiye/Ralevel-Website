@@ -1,4 +1,4 @@
-import { buildKey, getOrSet } from "@/lib/cache";
+import { cachedQuery } from "@/lib/data-cache";
 import connectDB from "@/lib/mongodb";
 import BlogsData from "@/models/blogsData";
 
@@ -23,8 +23,8 @@ export async function getCachedBlogList(options: BlogListOptions = {}) {
   const limit = options.limit ?? 50;
   const skip = (page - 1) * limit;
 
-  return getOrSet(
-    buildKey("blogs", "list", String(page), String(limit)),
+  return cachedQuery(
+    ["blogs", "list", String(page), String(limit)],
     async () => {
       await connectDB();
       const [data, total] = await Promise.all([
@@ -37,17 +37,17 @@ export async function getCachedBlogList(options: BlogListOptions = {}) {
       ]);
       return { data, total, page, limit };
     },
-    { ttlSec: 600, tags: ["blogs"] }
+    { revalidate: 600, tags: ["blogs"] }
   );
 }
 
 export async function getCachedBlogBySlug(slug: string) {
-  return getOrSet(
-    buildKey("blogs", "slug", slug),
+  return cachedQuery(
+    ["blogs", "slug", slug],
     async () => {
       await connectDB();
       return BlogsData.findOne({ slug }).lean();
     },
-    { ttlSec: 600, tags: ["blogs", `blog:${slug}`] }
+    { revalidate: 600, tags: ["blogs", `blog:${slug}`] }
   );
 }

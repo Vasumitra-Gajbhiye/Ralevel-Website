@@ -7,13 +7,16 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import Topic from "@/models/Topic";
-import mongoose from "mongoose";
+import {
+  getTopicPageData,
+  getTopicPathsForStaticParams,
+} from "@/lib/data/curriculum";
 import Link from "next/link";
 
-async function connectDB() {
-  if (mongoose.connection.readyState === 1) return;
-  await mongoose.connect(process.env.MONGODB_URI as string);
+export const revalidate = 86400;
+
+export async function generateStaticParams() {
+  return getTopicPathsForStaticParams();
 }
 
 type Params = {
@@ -25,13 +28,6 @@ type Params = {
   topic: string;
 };
 
-type TopicDoc = {
-  title: string;
-  detailedNotesMarkdown: string;
-  topicId: string;
-  slug: string;
-};
-
 export default async function TopicPage({
   params,
 }: {
@@ -39,17 +35,14 @@ export default async function TopicPage({
 }) {
   const { board, level, subject, subjectCode, chapter, topic } = await params;
 
-  await connectDB();
-
-  const topicDoc = (await Topic.findOne({
+  const { topicDoc, chapterTopics } = await getTopicPageData(
     board,
     level,
     subject,
-    chapterSlug: chapter,
-    code: subjectCode,
-    slug: topic,
-    published: true,
-  }).lean()) as TopicDoc | null;
+    subjectCode,
+    chapter,
+    topic
+  );
 
   if (!topicDoc) {
     return (
@@ -61,17 +54,6 @@ export default async function TopicPage({
       </div>
     );
   }
-
-  const chapterTopics = await Topic.find({
-    board,
-    level,
-    subject,
-    chapterSlug: chapter,
-    code: subjectCode,
-    published: true,
-  })
-    .sort({ topicId: 1 })
-    .lean();
 
   const index = chapterTopics.findIndex((t: any) => t.slug === topic);
 

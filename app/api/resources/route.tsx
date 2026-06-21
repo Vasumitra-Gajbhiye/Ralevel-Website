@@ -1,6 +1,6 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
-import { invalidateTags } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import { getCachedLegacyResourceList } from "@/lib/data/resources";
 import connectDB from "@/lib/mongodb";
 import {
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     await ResourcesData.create(newResourcesData);
-    await invalidateTags("resources-legacy");
+    revalidateDataTags("resources-legacy");
 
     return NextResponse.json(
       {
@@ -107,7 +107,7 @@ export async function DELETE(req: NextRequest) {
     await connectDB();
 
     await ResourcesData.findByIdAndDelete(id);
-    await invalidateTags("resources-legacy");
+    revalidateDataTags("resources-legacy");
 
     return NextResponse.json(
       {

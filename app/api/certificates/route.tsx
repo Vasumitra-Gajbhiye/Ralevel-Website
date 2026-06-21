@@ -1,5 +1,5 @@
 import { getAuthSession } from "@/lib/getAuthSession";
-import { invalidateTags } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import connectDB from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 
     const tags = ["certs"];
     if (certId) tags.push(`cert:${certId}`);
-    await invalidateTags(...tags);
+    revalidateDataTags(...tags);
 
     return NextResponse.json(
       {
@@ -123,7 +123,7 @@ export async function DELETE(req: NextRequest) {
     const deleted = await CertData.findByIdAndDelete(id);
     const tags = ["certs"];
     if (deleted?.certId) tags.push(`cert:${deleted.certId}`);
-    await invalidateTags(...tags);
+    revalidateDataTags(...tags);
 
     return NextResponse.json(
       {

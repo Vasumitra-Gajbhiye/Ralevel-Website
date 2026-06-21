@@ -1,6 +1,8 @@
 import getBlogs from "@/controller/blogController";
 import BlogsClient from "./BlogsClient";
 
+export const revalidate = 300;
+
 export default async function BlogsPage({
   searchParams,
 }: {

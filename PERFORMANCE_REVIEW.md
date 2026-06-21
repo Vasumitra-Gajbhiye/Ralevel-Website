@@ -10,11 +10,11 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 6     |
-| Medium   | 15    |
+| High     | 4     |
+| Medium   | 13    |
 | Low      | 8     |
 
-**Top priorities:** split oversized client bundles and introduce a data caching layer (`unstable_cache` / ISR).
+**Top priorities:** split oversized client bundles (profile, MCQ quiz pages).
 
 ---
 
@@ -201,70 +201,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 ---
 
 ## 4. Caching Opportunities
-
-### Issue 4.1 — No Next.js data cache layer
-
-**Description:** Zero usage of `unstable_cache`, React `cache()` (except `getAuthSession`), or `revalidateTag` anywhere in the repo. Only `revalidatePath("/qotd")` in QOTD actions.
-
-**Severity:** High
-
-**Why it matters:** Every server render and API-backed page hits MongoDB fresh. Read-heavy curriculum and content routes cannot benefit from incremental static regeneration.
-
-**Files involved:**
-- Codebase-wide (grep confirms no matches)
-- `app/(admin)/admin/qotd/actions.ts` — only cache invalidation present
-
-**Suggested fix:** Wrap read-heavy helpers (`getBlogs`, `getResource`, `Topic.find`, team list) in `unstable_cache` with tags. Call `revalidateTag('blogs')` etc. on admin mutations.
-
----
-
-### Issue 4.2 — Blog slug pages force dynamic rendering
-
-**Description:** Blog posts use `generateStaticParams` for MDX files but also export `dynamic = "force-dynamic"`, negating static generation.
-
-**Severity:** High
-
-**Why it matters:** MDX content is file-based and rarely changes; forcing dynamic SSR on every request wastes compute.
-
-**Files involved:**
-- `app/(others)/blogs/[slug]/page.tsx` (lines 8–20, 94)
-
-**Suggested fix:** Remove `export const dynamic = "force-dynamic"`. Add `export const revalidate = 3600` (or longer). Keep `dynamicParams = false`.
-
----
-
-### Issue 4.3 — Blogs index has revalidate commented out
-
-**Description:** The blogs listing page fetches from MongoDB on every request with no ISR.
-
-**Severity:** Medium
-
-**Why it matters:** Blog list is public and changes infrequently.
-
-**Files involved:**
-- `app/(others)/blogs/page.tsx` (lines 15–20)
-
-**Suggested fix:** Uncomment/add `export const revalidate = 300`. Wrap `getBlogs()` in `unstable_cache`.
-
----
-
-### Issue 4.4 — Curriculum routes lack ISR / static params
-
-**Description:** Subject, chapter, topic, and glossary pages have no `revalidate` or `generateStaticParams`. Only resource slug pages use ISR (`revalidate = 864000`).
-
-**Severity:** Medium
-
-**Why it matters:** Curriculum content is read-heavy and mostly static. Every page view triggers cold SSR + DB.
-
-**Files involved:**
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/page.tsx`
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/[topic]/page.tsx`
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/glossary/page.tsx`
-- Reference (good pattern): `app/(others)/resources/[slug]/page.tsx`
-
-**Suggested fix:** Add `generateStaticParams` for known board/subject/chapter paths. Set `revalidate` (e.g. 86400). Tag-based invalidation on content admin changes.
-
----
 
 ### Issue 4.5 — HTTP loopback controllers bypass cache
 
@@ -688,6 +624,8 @@ These patterns are worth replicating elsewhere:
 | Paginated list endpoints (public + admin) | `app/api/certificates`, `app/api/blogs`, `app/api/admin/*` |
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
+| `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts` |
+| ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
 | Server-fetch + client props (QOTD) | `app/(admin)/admin/qotd/page.tsx` |
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
@@ -699,7 +637,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P1 | 4.1–4.4 Data caching / ISR | Major reduction in DB load for content |
 | P1 | 5.1–5.2 Split large client pages | Faster TTI on high-traffic routes |
 | P2 | 4.5 Remove HTTP loopback | Eliminates self-fetch overhead |
 | P2 | 6.1–6.2 Dedupe navigation/forms | Lower maintenance, smaller bundles |

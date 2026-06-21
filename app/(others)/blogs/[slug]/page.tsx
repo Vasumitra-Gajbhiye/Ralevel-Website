@@ -91,5 +91,5 @@ export default async function Page({
     return notFound();
   }
 }
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 export const dynamicParams = false;

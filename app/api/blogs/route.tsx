@@ -1,5 +1,6 @@
 import { getAuthSession } from "@/lib/getAuthSession";
-import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { CACHE_HEADERS } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import { getCachedBlogList } from "@/lib/data/blogs";
 import connectDB from "@/lib/mongodb";
 import {
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     await BlogsData.create(newBlogsData);
     const tags = ["blogs"];
     if (slug) tags.push(`blog:${slug}`);
-    await invalidateTags(...tags);
+    revalidateDataTags(...tags);
 
     return NextResponse.json(
       {
@@ -106,7 +107,7 @@ export async function DELETE(req: NextRequest) {
     if (deleted?.slug) {
       tags.push(`blog:${deleted.slug}`);
     }
-    await invalidateTags(...tags);
+    revalidateDataTags(...tags);
 
     return NextResponse.json(
       {

@@ -1,6 +1,6 @@
 "use server";
 
-import { invalidateTags } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import connectDB from "@/lib/mongodb";
 import CertData from "@/models/certsData";
 
@@ -26,7 +26,7 @@ export async function createCertificate(data: {
       certificateDesigned: false,
       certificateDelivered: false,
     });
-    await invalidateTags("certs", `cert:${data.certId}`);
+    revalidateDataTags("certs", `cert:${data.certId}`);
     return JSON.parse(JSON.stringify(cert));
   } catch (err: any) {
     // Mongo duplicate key error
@@ -79,7 +79,7 @@ export async function updateCertificate(data: {
 
   const tags = ["certs"];
   if (existing?.certId) tags.push(`cert:${existing.certId}`);
-  await invalidateTags(...tags);
+  revalidateDataTags(...tags);
 
   return JSON.parse(JSON.stringify(updated));
 }
@@ -97,7 +97,7 @@ export async function deleteCertificate(id: string) {
 
   const tags = ["certs"];
   if (deleted.certId) tags.push(`cert:${deleted.certId}`);
-  await invalidateTags(...tags);
+  revalidateDataTags(...tags);
 
   return { success: true };
 }

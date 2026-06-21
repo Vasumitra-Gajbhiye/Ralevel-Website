@@ -1,4 +1,4 @@
-import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { CACHE_HEADERS } from "@/lib/cache";
 import { getCachedCertificateByCertId } from "@/lib/data/certificates";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { NextRequest, NextResponse } from "next/server";

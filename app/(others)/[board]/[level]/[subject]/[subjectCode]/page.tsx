@@ -1,5 +1,7 @@
-import Topic from "@/models/Topic";
-import mongoose from "mongoose";
+import {
+  getSubjectPathsForStaticParams,
+  getSubjectTopics,
+} from "@/lib/data/curriculum";
 import Link from "next/link";
 
 import {
@@ -11,9 +13,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-async function connectDB() {
-  if (mongoose.connection.readyState === 1) return;
-  await mongoose.connect(process.env.MONGODB_URI as string);
+export const revalidate = 86400;
+
+export async function generateStaticParams() {
+  return getSubjectPathsForStaticParams();
 }
 
 type Params = {
@@ -30,17 +33,7 @@ export default async function SubjectHome({
 }) {
   const { board, level, subject, subjectCode } = await params;
 
-  await connectDB();
-
-  const topics = await Topic.find({
-    board,
-    level,
-    subject,
-    code: String(subjectCode),
-    published: true,
-  })
-    .sort({ topicId: 1 })
-    .lean();
+  const topics = await getSubjectTopics(board, level, subject, subjectCode);
 
   const chapters: Record<string, any[]> = {};
 

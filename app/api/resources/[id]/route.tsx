@@ -1,6 +1,7 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
-import { CACHE_HEADERS, invalidateTags } from "@/lib/cache";
+import { CACHE_HEADERS } from "@/lib/cache";
+import { revalidateDataTags } from "@/lib/data-cache";
 import { getCachedLegacyResourceById } from "@/lib/data/resources";
 import mongoDBConnect from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
@@ -80,7 +81,7 @@ export async function PUT(
     await mongoDBConnect();
 
     await ResourcesData.findByIdAndUpdate(pramasID, newResourcesData);
-    await invalidateTags("resources-legacy");
+    revalidateDataTags("resources-legacy");
 
     return NextResponse.json(
       {

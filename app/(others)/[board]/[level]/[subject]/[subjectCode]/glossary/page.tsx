@@ -1,5 +1,7 @@
-import Glossary from "@/models/Glossary";
-import mongoose from "mongoose";
+import {
+  getGlossaryTerms,
+  getSubjectPathsForStaticParams,
+} from "@/lib/data/curriculum";
 import Link from "next/link";
 
 import {
@@ -13,9 +15,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-async function connectDB() {
-  if (mongoose.connection.readyState === 1) return;
-  await mongoose.connect(process.env.MONGODB_URI as string);
+export const revalidate = 86400;
+
+export async function generateStaticParams() {
+  return getSubjectPathsForStaticParams();
 }
 
 type Params = {
@@ -32,16 +35,8 @@ export default async function ChapterGlossary({
 }) {
   const { board, level, subject, subjectCode } = await params;
 
-  await connectDB();
+  const terms = await getGlossaryTerms(board, level, subject, subjectCode);
 
-  const terms = await Glossary.find({
-    board,
-    level,
-    subject,
-    code: String(subjectCode),
-  }).lean();
-
-  // sort terms first to ensure deterministic rendering (prevents hydration mismatch)
   const sortedTerms = [...terms].sort((a: any, b: any) =>
     (a.term || "").localeCompare(b.term || "")
   );
@@ -106,7 +101,6 @@ export default async function ChapterGlossary({
         concepts.
       </p>
 
-      {/* Search bar with suggestions */}
       <div className="mb-10">
         <Input
           placeholder="Search glossary terms"
@@ -121,7 +115,6 @@ export default async function ChapterGlossary({
         </datalist>
       </div>
 
-      {/* Alphabet navigation */}
       <div className="flex flex-wrap gap-3 mb-12 text-sm font-medium">
         {letters.map((letter) => (
           <a
@@ -134,7 +127,6 @@ export default async function ChapterGlossary({
         ))}
       </div>
 
-      {/* Glossary list */}
       <div className="space-y-16">
         {letters.map((letter) => {
           const group = alphabetGroups[letter];
