@@ -10,11 +10,11 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 10    |
+| High     | 9     |
 | Medium   | 15    |
 | Low      | 8     |
 
-**Top priorities:** parallelize file uploads, add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
+**Top priorities:** add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
 
 ---
 
@@ -195,22 +195,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 ---
 
 ## 3. Sequential Async Operations
-
-### Issue 3.1 — Sequential R2 file uploads in resource submit
-
-**Description:** Resource submission uploads files to R2 one at a time in nested `for` loops. Form submit correctly uses `Promise.all`.
-
-**Severity:** High
-
-**Why it matters:** 10 files × ~500ms upload ≈ 5+ seconds of request time, consuming serverless execution budget.
-
-**Files involved:**
-- `app/api/resources/submit/route.ts` (lines 166–230)
-- Contrast: `app/api/forms/[slug]/submit/route.ts` (lines 314–341)
-
-**Suggested fix:** Collect upload tasks and `await Promise.all(tasks)`. Use a concurrency cap (e.g. `p-limit` with limit 5) if memory is a concern.
-
----
 
 ### Issue 3.2 — Redundant sequential DB writes in resource submit
 
@@ -769,7 +753,7 @@ These patterns are worth replicating elsewhere:
 | Pattern | Location |
 |---------|----------|
 | Mongoose global connection cache with `bufferCommands: false` | `lib/mongodb.tsx` |
-| Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts` |
+| Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
 | Field projection + `.lean()` on blog list | `app/api/blogs/route.tsx` |
 | Paginated admin list (limit 50) | `app/api/admin/resource-submissions/route.ts` |
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
@@ -785,7 +769,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P0 | 3.1 Parallel R2 uploads | 5–10× faster resource submissions |
 | P0 | 8.1 Protect theory-eval | Stop unbounded LLM cost |
 | P1 | 2.1–2.3 Pagination on lists | Prevents degradation as data grows |
 | P1 | 4.1–4.4 Data caching / ISR | Major reduction in DB load for content |

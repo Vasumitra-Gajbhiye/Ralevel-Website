@@ -161,7 +161,7 @@ export async function POST(req: Request) {
     await contributor.save();
 
     // =============================
-    // 6️⃣ Upload files per resource (bounded)
+    // 6️⃣ Validate and upload files per resource (bounded, parallel)
     // =============================
     for (let i = 0; i < resources.length; i++) {
       const res = resources[i];
@@ -176,8 +176,6 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-
-      const uploadedFiles = [];
 
       for (const file of res.files) {
         if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -201,14 +199,16 @@ export async function POST(req: Request) {
             { status: 400 }
           );
         }
+      }
+    }
 
+    const uploadTasks = resources.flatMap((res, resourceIndex) =>
+      res.files.map(async (file) => {
         const buffer = Buffer.from(await file.arrayBuffer());
-
         const ext = file.name.split(".").pop();
         const safeName = crypto.randomUUID();
-
         const key = `submissions/${submissionId}/resource_${
-          i + 1
+          resourceIndex + 1
         }/${safeName}.${ext}`;
 
         const uploaded = await uploadFileToR2(
@@ -219,16 +219,45 @@ export async function POST(req: Request) {
           process.env.R2_PUBLIC_URL!
         );
 
-        uploadedFiles.push({
-          fieldId: "files",
-          originalName: file.name,
-          size: file.size,
-          mimeType: file.type,
-          r2Key: key,
-          url: uploaded.url,
-        });
-      }
+        return {
+          resourceIndex,
+          file: {
+            fieldId: "files",
+            originalName: file.name,
+            size: file.size,
+            mimeType: file.type,
+            r2Key: key,
+            url: uploaded.url,
+          },
+        };
+      })
+    );
 
+    const uploadResults = await Promise.all(uploadTasks);
+
+    const filesByResource = new Map<
+      number,
+      {
+        fieldId: string;
+        originalName: string;
+        size: number;
+        mimeType: string;
+        r2Key: string;
+        url: string;
+      }[]
+    >();
+
+    for (const { resourceIndex, file } of uploadResults) {
+      const existing = filesByResource.get(resourceIndex);
+      if (existing) {
+        existing.push(file);
+      } else {
+        filesByResource.set(resourceIndex, [file]);
+      }
+    }
+
+    for (let i = 0; i < resources.length; i++) {
+      const res = resources[i];
       submission.resources.push({
         title: res.title,
         description: res.description,
@@ -237,7 +266,7 @@ export async function POST(req: Request) {
         boards: res.boards,
         madeByMe: res.madeByMe,
         links: res.links,
-        files: uploadedFiles,
+        files: filesByResource.get(i) ?? [],
       });
     }
 
