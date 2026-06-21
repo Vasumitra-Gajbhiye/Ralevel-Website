@@ -1,10 +1,8 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { getAdminSchedulingList } from "@/lib/data/admin/scheduling";
 import connectDB from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
 import ScheduleItem from "@/models/scheduleItem";
 import { NextResponse } from "next/server";
 
@@ -23,23 +21,11 @@ export async function GET(req: Request) {
   });
   if (auth instanceof Response) return auth;
 
-  await connectDB();
-
   const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-  const [items, total] = await Promise.all([
-    ScheduleItem.find()
-      .sort({
-        date: 1,
-        createdAt: -1,
-      })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    ScheduleItem.countDocuments(),
-  ]);
+  const result = await getAdminSchedulingList({ page, limit, skip });
 
-  return NextResponse.json(buildPaginatedResponse(items, total, page, limit));
+  return NextResponse.json(result);
 }
 
 /* ================= POST ================= */

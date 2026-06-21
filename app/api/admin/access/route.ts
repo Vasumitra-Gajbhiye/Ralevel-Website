@@ -1,29 +1,15 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { getAdminAccessList } from "@/lib/data/admin/access";
 import connectDB from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
-import { Role, ROLES, highestAuthorityRole, roleRank } from "@/lib/roles";
+import { parsePaginationParams } from "@/lib/pagination";
+import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
 import {
   findClerkUserIdByEmail,
   syncClerkUserMetadata,
 } from "@/lib/syncClerkUserMetadata";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
-
-function buildRoleRankSwitch() {
-  return {
-    $switch: {
-      branches: ROLES.map((role, index) => ({
-        case: { $in: [role, "$roles"] },
-        then: index,
-      })),
-      default: ROLES.length,
-    },
-  };
-}
 
 /* ================= GET ================= */
 export async function GET(req: Request) {
@@ -33,49 +19,11 @@ export async function GET(req: Request) {
   });
   if (auth instanceof Response) return auth;
 
-  await connectDB();
-
   const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-  const [result] = await UserData.aggregate([
-    {
-      $match: {
-        roles: { $exists: true, $not: { $size: 0 } },
-      },
-    },
-    {
-      $addFields: {
-        roleRank: buildRoleRankSwitch(),
-      },
-    },
-    {
-      $sort: {
-        roleRank: 1,
-        email: 1,
-      },
-    },
-    {
-      $facet: {
-        metadata: [{ $count: "total" }],
-        data: [
-          { $skip: skip },
-          { $limit: limit },
-          {
-            $project: {
-              name: 1,
-              email: 1,
-              roles: 1,
-            },
-          },
-        ],
-      },
-    },
-  ]);
+  const result = await getAdminAccessList({ page, limit, skip });
 
-  const total = result.metadata[0]?.total ?? 0;
-  const users = result.data;
-
-  return NextResponse.json(buildPaginatedResponse(users, total, page, limit));
+  return NextResponse.json(result);
 }
 
 /* ================= POST / PATCH ================= */

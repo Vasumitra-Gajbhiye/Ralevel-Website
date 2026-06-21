@@ -1,10 +1,8 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { getAdminInfoList } from "@/lib/data/admin/info";
 import connectDB from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
 import InformativeMember from "@/models/informativeMember";
 import { NextResponse } from "next/server";
 
@@ -23,22 +21,11 @@ export async function GET(req: Request) {
   });
   if (auth instanceof Response) return auth;
 
-  await connectDB();
-
   const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-  const [members, total] = await Promise.all([
-    InformativeMember.find()
-      .sort({
-        createdAt: -1,
-      })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    InformativeMember.countDocuments(),
-  ]);
+  const result = await getAdminInfoList({ page, limit, skip });
 
-  return NextResponse.json(buildPaginatedResponse(members, total, page, limit));
+  return NextResponse.json(result);
 }
 
 /* ================= POST ================= */

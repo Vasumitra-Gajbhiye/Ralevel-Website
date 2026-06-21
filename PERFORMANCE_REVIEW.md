@@ -11,7 +11,7 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 4     |
+| Medium   | 3     |
 | Low      | 3     |
 
 ---
@@ -250,25 +250,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 7. Bad Abstractions
 
-### Issue 7.1 — Client admin pages re-fetch data the server already has access to
-
-**Description:** Admin CRUD pages are `"use client"` components that fetch from API routes on mount instead of receiving server-fetched initial data.
-
-**Severity:** Medium
-
-**Why it matters:** Empty shell → loading spinner → client fetch → re-render. Blogs and access now receive server session props; other admin pages still fetch on mount.
-
-**Files involved:**
-- `app/(admin)/admin/blogs/page.tsx`
-- `app/(admin)/admin/access/page.tsx`
-- `app/(admin)/admin/info/page.tsx`
-- `app/(admin)/admin/graphic/page.tsx`
-- `app/(admin)/admin/scheduling/page.tsx`
-
-**Suggested fix:** Follow the QOTD pattern (`app/(admin)/admin/qotd/page.tsx`): server-fetch `initialData`, pass to client component. Mutations stay client-side.
-
----
-
 ### Issue 7.2 — Team page is client-side with HTTP loopback
 
 **Description:** Team page is `"use client"` and fetches via `getAllTeam()` which HTTP-calls the app's own API from the browser.
@@ -360,7 +341,8 @@ These patterns are worth replicating elsewhere:
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
-| Server-fetch + client props (QOTD, profile, MCQ quiz, team) | `app/(admin)/admin/qotd/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
+| Server-fetch + client props (QOTD, profile, MCQ quiz, team, admin lists) | `app/(admin)/admin/qotd/page.tsx`, `app/(admin)/admin/blogs/page.tsx`, `app/(admin)/admin/access/page.tsx`, `app/(admin)/admin/info/page.tsx`, `app/(admin)/admin/graphic/page.tsx`, `app/(admin)/admin/scheduling/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
+| Shared admin list data helpers | `lib/data/admin/blogs.ts`, `lib/data/admin/access.ts`, `lib/data/admin/info.ts`, `lib/data/admin/graphic.ts`, `lib/data/admin/scheduling.ts` |
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
 | Shared site Navigation + ContactUs (`variant` prop) | `components/site/Navigation.tsx`, `components/site/ContactUs.tsx` |
@@ -373,13 +355,10 @@ These patterns are worth replicating elsewhere:
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
 
-### Phase 4 — Eliminate client-side data fetching (2–3 PRs)
-
-Highest UX impact for admin and profile; follow the QOTD / team server-fetch pattern in §9.
+### Phase 4 — Profile API duplicate read (1 PR)
 
 | Batch | Issues | Why together |
 |-------|--------|--------------|
-| **4A** | **7.1** Server-fetch admin initial data (blogs, access, info, graphic, scheduling) | One pattern across `(admin)` pages: server page → `initialData` props → thin client for mutations |
 | **4B** | **1.3** Profile API duplicate `UserData` read | Profile page is already server-rendered; extend `getAuthSession` / `getUserProfile` so `POST /api/user` doesn't re-query on every profile update |
 
 ---
@@ -422,10 +401,10 @@ Highest UX impact for admin and profile; follow the QOTD / team server-fetch pat
 ### Suggested PR sequence (summary)
 
 ```
-4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
+**Highest impact next:** **4B** (profile duplicate `UserData` read) — profile page is server-rendered but `POST /api/user` still re-queries on every update.
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

@@ -1,10 +1,8 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { getAdminBlogsList } from "@/lib/data/admin/blogs";
 import connectDB from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
 import { slugify } from "@/lib/slugify";
 import EditorBlog from "@/models/editorBlogs";
 import mongoose from "mongoose";
@@ -18,52 +16,17 @@ export async function GET(req: Request) {
   });
   if (auth instanceof Response) return auth;
 
-  await connectDB();
-
   const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-  const isAdminLike = auth.userData.roles.some(
-    (r) => r === "admin" || r === "owner"
-  );
+  const result = await getAdminBlogsList({
+    page,
+    limit,
+    skip,
+    userId: auth.userData.id,
+    roles: auth.userData.roles,
+  });
 
-  const match = isAdminLike
-    ? {}
-    : { ownerId: new mongoose.Types.ObjectId(auth.userData.id) };
-
-  const [result] = await EditorBlog.aggregate([
-    { $match: match },
-    {
-      $lookup: {
-        from: "userdatas",
-        localField: "ownerId",
-        foreignField: "_id",
-        as: "owner",
-      },
-    },
-    { $unwind: "$owner" },
-    {
-      $project: {
-        title: 1,
-        slug: 1,
-        updatedAt: 1,
-        ownerId: 1,
-        ownerName: "$owner.name",
-        ownerEmail: "$owner.email",
-      },
-    },
-    { $sort: { updatedAt: -1 } },
-    {
-      $facet: {
-        metadata: [{ $count: "total" }],
-        data: [{ $skip: skip }, { $limit: limit }],
-      },
-    },
-  ]);
-
-  const total = result.metadata[0]?.total ?? 0;
-  const blogs = result.data;
-
-  return NextResponse.json(buildPaginatedResponse(blogs, total, page, limit));
+  return NextResponse.json(result);
 }
 
 /* ================= CREATE BLOG ================= */

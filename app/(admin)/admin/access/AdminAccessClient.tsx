@@ -7,10 +7,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ListPagination } from "@/components/ui/list-pagination";
+import type { AdminAccessUser } from "@/lib/data/admin/access";
 import type { PaginationMeta } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
 import { roleRank } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -231,23 +233,18 @@ function RoleMultiBadge({
 
 export default function AdminAccessClient({
   session,
+  initialUsers,
+  pagination,
 }: {
   session: AuthSession | null;
+  initialUsers: AdminAccessUser[];
+  pagination: PaginationMeta;
 }) {
-  const [users, setUsers] = useState<AccessUser[]>([]);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    limit: 50,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
+  const router = useRouter();
+  const [users, setUsers] = useState<AccessUser[]>(initialUsers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("writer");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -257,22 +254,9 @@ export default function AdminAccessClient({
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  /* ---------------- LOAD ACCESS LIST ---------------- */
-  async function load(currentPage = page) {
-    try {
-      const res = await fetch(`/api/admin/access?page=${currentPage}&limit=50`);
-      const result = await res.json();
-      setUsers(result.data ?? []);
-      setPagination(result.pagination ?? pagination);
-      setLoading(false);
-    } catch (e) {
-      console.log("Error ", e);
-    }
-  }
-
   useEffect(() => {
-    load(page);
-  }, [page]);
+    setUsers(initialUsers);
+  }, [initialUsers]);
 
   /* ---------------- AUTOCOMPLETE ---------------- */
   function handleEmailChange(value: string) {
@@ -317,7 +301,7 @@ export default function AdminAccessClient({
     setEmail("");
     setRole("writer");
     setSuggestions([]);
-    await load(page);
+    router.refresh();
     setSaving(false);
   }
   async function updateRoles(email: string, roles: Role[]) {
@@ -327,14 +311,14 @@ export default function AdminAccessClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          roles, // ✅ USE THE PARAMETER
+          roles,
         }),
       });
     } catch (e) {
       console.log(e);
     }
 
-    await load(page);
+    router.refresh();
   }
 
   async function revoke(email: string) {
@@ -344,7 +328,7 @@ export default function AdminAccessClient({
       body: JSON.stringify({ email }),
     });
 
-    await load(page);
+    router.refresh();
   }
 
   /* ================= UI ================= */
@@ -410,9 +394,7 @@ export default function AdminAccessClient({
 
       {/* Access list */}
       <div className="border rounded-xl bg-white overflow-hidden">
-        {loading ? (
-          <div className="p-4 text-sm text-gray-500">Loading…</div>
-        ) : users.length === 0 ? (
+        {users.length === 0 ? (
           <div className="p-6 text-sm text-gray-500 text-center">
             No access granted yet
           </div>
@@ -491,7 +473,9 @@ export default function AdminAccessClient({
       <ListPagination
         page={pagination.page}
         totalPages={pagination.totalPages}
-        onPageChange={setPage}
+        onPageChange={(nextPage) =>
+          router.push(`/admin/access?page=${nextPage}`)
+        }
       />
 
       {/* Confirm delete modal */}

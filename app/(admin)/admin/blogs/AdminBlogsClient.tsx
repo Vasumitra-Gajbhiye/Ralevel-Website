@@ -1,40 +1,25 @@
 "use client";
 
 import { ListPagination } from "@/components/ui/list-pagination";
+import type { AdminBlog } from "@/lib/data/admin/blogs";
 import type { PaginationMeta } from "@/lib/pagination";
 import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiTrash2 } from "react-icons/fi";
 
-type Blog = {
-  _id: string;
-  title: string;
-  slug: string;
-  updatedAt: string;
-  ownerId?: string;
-  ownerEmail?: string;
-  ownerName?: string;
-};
-
 export default function AdminBlogsClient({
   session,
+  initialBlogs,
+  pagination,
 }: {
   session: AuthSession | null;
+  initialBlogs: AdminBlog[];
+  pagination: PaginationMeta;
 }) {
   const router = useRouter();
 
-  const [blogs, setBlogs] = useState<Blog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    page: 1,
-    limit: 50,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
+  const [blogs, setBlogs] = useState(initialBlogs);
 
   const [editingSlug, setEditingSlug] = useState<string | null>(null);
   const [titleDraft, setTitleDraft] = useState("");
@@ -44,17 +29,9 @@ export default function AdminBlogsClient({
     session?.userData?.roles?.includes("admin") ||
     session?.userData?.roles?.includes("owner");
 
-  /* ---------------- fetch blogs ---------------- */
-  async function fetchBlogs(currentPage = page) {
-    const res = await fetch(`/api/admin/blogs?page=${currentPage}&limit=50`);
-    const result = await res.json();
-    setBlogs(result.data ?? []);
-    setPagination(result.pagination ?? pagination);
-  }
-
   useEffect(() => {
-    fetchBlogs(page).finally(() => setLoading(false));
-  }, [page]);
+    setBlogs(initialBlogs);
+  }, [initialBlogs]);
 
   /* ---------------- create blog ---------------- */
   async function createBlog() {
@@ -83,7 +60,7 @@ export default function AdminBlogsClient({
 
     setEditingSlug(null);
     setSavingSlug(null);
-    fetchBlogs();
+    router.refresh();
   }
 
   /* ---------------- delete blog ---------------- */
@@ -99,11 +76,11 @@ export default function AdminBlogsClient({
       method: "DELETE",
     });
 
-    fetchBlogs();
+    router.refresh();
   }
 
   // Group blogs by ownerId
-  const blogsByOwner = blogs.reduce<Record<string, Blog[]>>((acc, blog) => {
+  const blogsByOwner = blogs.reduce<Record<string, AdminBlog[]>>((acc, blog) => {
     const key = blog.ownerId ?? "unknown";
     if (!acc[key]) acc[key] = [];
     acc[key].push(blog);
@@ -117,7 +94,7 @@ export default function AdminBlogsClient({
     (ownerId) => ownerId !== myUserId
   );
 
-  function renderBlogCard(blog: Blog) {
+  function renderBlogCard(blog: AdminBlog) {
     const isEditing = editingSlug === blog.slug;
 
     return (
@@ -193,9 +170,7 @@ export default function AdminBlogsClient({
         </div>
       )}
       {/* Content */}
-      {loading ? (
-        <div className="text-sm text-gray-500">Loading…</div>
-      ) : blogs.length === 0 ? (
+      {blogs.length === 0 ? (
         <div className="text-sm text-gray-500">
           No blogs yet. Create your first one.
         </div>
@@ -238,7 +213,9 @@ export default function AdminBlogsClient({
       <ListPagination
         page={pagination.page}
         totalPages={pagination.totalPages}
-        onPageChange={setPage}
+        onPageChange={(nextPage) =>
+          router.push(`/admin/blogs?page=${nextPage}`)
+        }
       />
     </div>
   );
