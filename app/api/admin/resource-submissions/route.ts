@@ -9,6 +9,10 @@ import ResourceSubmission from "@/models/ResourceSubmission";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /* ================= GET ================= */
 
 export async function GET(req: Request) {
@@ -26,40 +30,61 @@ export async function GET(req: Request) {
 
   const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-  const mongoQuery: any = {};
+  const statusFilter =
+    status && ["pending", "approved", "rejected"].includes(status)
+      ? status
+      : null;
 
-  // 🎯 Status filter
-  if (status && ["pending", "approved", "rejected"].includes(status)) {
-    mongoQuery.status = status;
+  if (query) {
+    const searchOr: mongoose.FilterQuery<unknown>[] = [
+      { "contributor.email": query },
+      { "contributor.discordOrRedditId": query },
+      {
+        "contributor.fullName": {
+          $regex: `^${escapeRegex(query)}`,
+          $options: "i",
+        },
+      },
+    ];
+
+    if (mongoose.Types.ObjectId.isValid(query)) {
+      searchOr.unshift({ _id: new mongoose.Types.ObjectId(query) });
+    }
+
+    const [result] = await ResourceSubmission.aggregate([
+      ...(statusFilter ? [{ $match: { status: statusFilter } }] : []),
+      {
+        $lookup: {
+          from: Contributor.collection.collectionName,
+          localField: "contributorId",
+          foreignField: "_id",
+          as: "contributor",
+        },
+      },
+      { $unwind: "$contributor" },
+      { $match: { $or: searchOr } },
+      { $addFields: { contributorId: "$contributor" } },
+      { $project: { contributor: 0 } },
+      { $sort: { createdAt: -1 } },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }],
+        },
+      },
+    ]);
+
+    const total = result.metadata[0]?.total ?? 0;
+    const submissions = result.data;
+
+    return NextResponse.json(
+      buildPaginatedResponse(submissions, total, page, limit)
+    );
   }
 
-  // 🔎 Search logic
-  if (query) {
-    const orConditions: any[] = [];
-
-    // 🔎 If valid submission ID
-    if (mongoose.Types.ObjectId.isValid(query)) {
-      orConditions.push({ _id: query });
-    }
-
-    // 🔎 Search contributors
-    const matchingContributors = await Contributor.find({
-      $or: [
-        { email: query },
-        { discordOrRedditId: query },
-        { fullName: { $regex: query, $options: "i" } },
-      ],
-    }).select("_id");
-
-    if (matchingContributors.length > 0) {
-      orConditions.push({
-        contributorId: { $in: matchingContributors.map((c) => c._id) },
-      });
-    }
-
-    if (orConditions.length > 0) {
-      mongoQuery.$or = orConditions;
-    }
+  const mongoQuery: mongoose.FilterQuery<typeof ResourceSubmission> = {};
+  if (statusFilter) {
+    mongoQuery.status = statusFilter;
   }
 
   const [submissions, total] = await Promise.all([

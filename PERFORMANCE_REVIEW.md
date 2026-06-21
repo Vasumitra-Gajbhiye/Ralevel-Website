@@ -10,75 +10,13 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 2     |
-| Medium   | 2     |
-| Low      | 3     |
-
----
-
-## 2. Database Queries
-
-### Issue 2.4 — Level page loads entire subjects collection
-
-**Description:** The board/level page runs `Subject.find()` with no filter on `board` or `level`, then deduplicates in JavaScript.
-
-**Severity:** Medium
-
-**Why it matters:** Every curriculum navigation hit loads all subjects regardless of the URL params.
-
-**Files involved:**
-- `app/(others)/[board]/[level]/page.tsx` (lines 15–18)
-
-**Suggested fix:** Query with `{ board, level }` filter. Add a compound index on the Subject model if not present.
-
----
-
-### Issue 2.7 — Two-step contributor search in resource submissions
-
-**Description:** When searching submissions by name, the route first queries `Contributor` with unanchored regex, then queries `ResourceSubmission` with `.populate()`.
-
-**Severity:** Medium
-
-**Why it matters:** Two round-trips per search; unanchored regex can trigger collection scans.
-
-**Files involved:**
-- `app/api/admin/resource-submissions/route.ts` (lines 50–72)
-
-**Suggested fix:** Single aggregation with `$lookup` + `$match`. Anchor regex (`^term`) or use Atlas Search / text index on contributor name fields.
+| High     | 0     |
+| Medium   | 5     |
+| Low      | 8     |
 
 ---
 
 ## 3. Sequential Async Operations
-
-### Issue 3.2 — Redundant sequential DB writes in resource submit
-
-**Description:** Contributor is saved twice (`contributor.save()` at lines 143 and 161). Submission document is created before uploads complete, leaving orphaned records on upload failure.
-
-**Severity:** Medium
-
-**Why it matters:** Extra writes add latency; partial failures require manual cleanup.
-
-**Files involved:**
-- `app/api/resources/submit/route.ts` (lines 131–161)
-
-**Suggested fix:** Single contributor update. Create submission only after uploads succeed, or use a `status: "pending"` field with a cleanup job.
-
----
-
-### Issue 3.3 — Sequential topic queries on topic page
-
-**Description:** Topic page runs `Topic.findOne()` then `Topic.find()` for chapter topics sequentially after a single `connectDB()`.
-
-**Severity:** Medium
-
-**Why it matters:** Waterfall latency equals sum of both query times.
-
-**Files involved:**
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/[topic]/page.tsx` (lines 42–74)
-
-**Suggested fix:** `Promise.all([findOne(...), find({ chapterId }).sort(...)])`, or fetch all chapter topics once and pick current in memory.
-
----
 
 ### Issue 3.4 — Sequential form + auth on apply page
 
@@ -321,6 +259,7 @@ These patterns are worth replicating elsewhere:
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
+| Filtered level-subject list + parallel topic page queries | `lib/data/curriculum.ts` (`getSubjectsForLevel`, `getTopicPageData` with `Promise.all`) |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
 | Server-fetch + client props (QOTD, profile, MCQ quiz, team, admin lists) | `app/(admin)/admin/qotd/page.tsx`, `app/(admin)/admin/blogs/page.tsx`, `app/(admin)/admin/access/page.tsx`, `app/(admin)/admin/info/page.tsx`, `app/(admin)/admin/graphic/page.tsx`, `app/(admin)/admin/scheduling/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
 | Request-scoped `fetchUserDataByEmail` + `getUserProfile` (page + API) | `lib/data/user-data.ts`, `lib/data/user-profile.ts`, `app/api/user/route.js` |
@@ -336,15 +275,6 @@ These patterns are worth replicating elsewhere:
 ## Recommended Fix Order
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
-
-### Phase 5 — Query efficiency on curriculum & submissions (1–2 PRs)
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **5A** | **2.4** Level page subject filter · **3.3** Parallel topic page queries | Curriculum navigation under `[board]/[level]/…`; both are read-path waterfalls |
-| **5B** | **3.2** Resource submit double-save / orphan records · **2.7** Contributor search aggregation | Both in resource-submission flow; fix write ordering and search in the same area |
-
----
 
 ### Phase 6 — Minor parallelization & connection hygiene (1 PR)
 
@@ -375,10 +305,10 @@ Issues below are the remaining backlog. Group items in the same batch when they 
 ### Suggested PR sequence (summary)
 
 ```
-5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+6A + 6B  →  7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **5A** (level page subject filter + parallel topic page queries) — curriculum navigation read-path waterfalls under `[board]/[level]/…`.
+**Highest impact next:** **6A + 6B** (parallelize independent queries + connection-pool hygiene).
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

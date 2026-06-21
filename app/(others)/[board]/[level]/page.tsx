@@ -1,6 +1,7 @@
-import connectDB from "@/lib/mongodb";
-import Subject from "@/models/subjectGuide";
+import { getSubjectsForLevel } from "@/lib/data/curriculum";
 import Link from "next/link";
+
+export const revalidate = 86400;
 
 type Props = {
   params: Promise<{
@@ -11,17 +12,7 @@ type Props = {
 
 export default async function LevelPage({ params }: Props) {
   const { board, level } = await params;
-
-  await connectDB();
-
-  // fetch all subjects for this board
-  const subjects = await Subject.find().lean();
-
-  // optional: filter if you store board/level later
-  // for now just map unique subjects
-  const uniqueSubjects = Array.from(
-    new Map(subjects.map((s: any) => [s.subjectName, s])).values()
-  );
+  const subjects = await getSubjectsForLevel(board, level);
 
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
@@ -36,7 +27,7 @@ export default async function LevelPage({ params }: Props) {
 
       {/* Subjects Grid */}
       <div className="mt-12 grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {uniqueSubjects.map((subject: any) => (
+        {subjects.map((subject) => (
           <Link
             key={subject.subjectName}
             href={`/${board}/${level}/${subject.subjectName.toLowerCase()}/${

@@ -21,6 +21,36 @@ type SubjectPath = {
   subjectCode: string;
 };
 
+type LevelSubject = {
+  subjectName: string;
+  examCode: string;
+};
+
+export async function getSubjectsForLevel(board: string, level: string) {
+  return cachedQuery(
+    ["curriculum", "level-subjects", board, level],
+    async () => {
+      await connectDB();
+      const topics = await Topic.find({ board, level, published: true })
+        .select("subject code")
+        .lean<{ subject: string; code: string }[]>();
+
+      const seen = new Set<string>();
+      return topics.reduce<LevelSubject[]>((acc, topic) => {
+        const key = `${topic.subject}:${topic.code}`;
+        if (seen.has(key)) return acc;
+        seen.add(key);
+        acc.push({
+          subjectName: topic.subject,
+          examCode: topic.code,
+        });
+        return acc;
+      }, []);
+    },
+    { revalidate: CURRICULUM_REVALIDATE, tags: ["curriculum"] }
+  );
+}
+
 export async function getPublishedCurriculumPaths() {
   return cachedQuery(
     ["curriculum", "paths"],

@@ -44,8 +44,6 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(formData);
-
     // =============================
     // 2️⃣ Parse resources dynamically
     // =============================
@@ -121,47 +119,7 @@ export async function POST(req: Request) {
     }
 
     // =============================
-    // 3️⃣ Generate submission ID
-    // =============================
-    const submissionId = new mongoose.Types.ObjectId();
-
-    // =============================
-    // 4️⃣ Find or Create Contributor
-    // =============================
-    let contributor = await Contributor.findOne({ email });
-
-    if (!contributor) {
-      contributor = await Contributor.create({
-        fullName,
-        email,
-        discordOrRedditId,
-        totalSubmissions: 0,
-      });
-    } else {
-      contributor.fullName = fullName;
-      contributor.discordOrRedditId = discordOrRedditId;
-      await contributor.save();
-    }
-
-    // =============================
-    // 5️⃣ Create submission
-    // =============================
-    const submission = await ResourceSubmission.create({
-      _id: submissionId,
-      contributorId: contributor._id,
-      resources: [],
-      status: "pending",
-      metadata: {
-        ip: req.headers.get("x-forwarded-for"),
-        userAgent: req.headers.get("user-agent"),
-      },
-    });
-
-    contributor.totalSubmissions += 1;
-    await contributor.save();
-
-    // =============================
-    // 6️⃣ Validate and upload files per resource (bounded, parallel)
+    // 3️⃣ Validate files (fail fast before DB/R2 writes)
     // =============================
     for (let i = 0; i < resources.length; i++) {
       const res = resources[i];
@@ -201,6 +159,11 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // =============================
+    // 4️⃣ Generate submission ID and upload files
+    // =============================
+    const submissionId = new mongoose.Types.ObjectId();
 
     const uploadTasks = resources.flatMap((res, resourceIndex) =>
       res.files.map(async (file) => {
@@ -256,21 +219,43 @@ export async function POST(req: Request) {
       }
     }
 
-    for (let i = 0; i < resources.length; i++) {
-      const res = resources[i];
-      submission.resources.push({
-        title: res.title,
-        description: res.description,
-        resourceType: res.resourceType,
-        levels: res.levels,
-        boards: res.boards,
-        madeByMe: res.madeByMe,
-        links: res.links,
-        files: filesByResource.get(i) ?? [],
-      });
-    }
+    const submissionResources = resources.map((res, i) => ({
+      title: res.title,
+      description: res.description,
+      resourceType: res.resourceType,
+      levels: res.levels,
+      boards: res.boards,
+      madeByMe: res.madeByMe,
+      links: res.links,
+      files: filesByResource.get(i) ?? [],
+    }));
 
-    await submission.save();
+    // =============================
+    // 5️⃣ Upsert contributor (single write)
+    // =============================
+    const contributor = await Contributor.findOneAndUpdate(
+      { email },
+      {
+        $set: { fullName, discordOrRedditId },
+        $inc: { totalSubmissions: 1 },
+        $setOnInsert: { email },
+      },
+      { upsert: true, new: true }
+    );
+
+    // =============================
+    // 6️⃣ Create submission with full payload
+    // =============================
+    const submission = await ResourceSubmission.create({
+      _id: submissionId,
+      contributorId: contributor._id,
+      resources: submissionResources,
+      status: "pending",
+      metadata: {
+        ip: req.headers.get("x-forwarded-for"),
+        userAgent: req.headers.get("user-agent"),
+      },
+    });
 
     // Track server-side resource submission
     const posthog = getPostHogClient();
