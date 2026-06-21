@@ -61,6 +61,8 @@ import { requireRoles } from "@/lib/requireRoles";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 // Configure Cloudinary with your environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
@@ -84,6 +86,17 @@ export async function POST(req: NextRequest) {
     if (!file || !certId) {
       return NextResponse.json(
         { error: "Missing file or certId" },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return NextResponse.json(
+        {
+          error: `File "${file.name}" is too large. Maximum size is ${Math.floor(
+            MAX_FILE_SIZE_BYTES / (1024 * 1024)
+          )}MB.`,
+        },
         { status: 400 }
       );
     }

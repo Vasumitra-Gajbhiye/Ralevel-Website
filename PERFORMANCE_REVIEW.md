@@ -11,7 +11,7 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 10    |
+| Medium   | 8     |
 | Low      | 8     |
 
 ---
@@ -441,37 +441,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 8. Scalability Limitations
 
-### Issue 8.2 — PostHog configured for immediate flush on every event
-
-**Description:** PostHog client uses `flushAt: 1` and `flushInterval: 0`, flushing synchronously during requests.
-
-**Severity:** Medium
-
-**Why it matters:** Every `capture()` in `ensureUserData`, form submit, resource submit, and Clerk webhook adds network I/O to request latency.
-
-**Files involved:**
-- `lib/posthog-server.ts` (lines 7–10)
-- Callers: `lib/ensureUserData.ts`, `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts`, `app/api/webhooks/clerk/route.ts`
-
-**Suggested fix:** Use defaults (`flushAt: 20`, `flushInterval: 10000`) or call `posthog.shutdown()` at end of serverless invocation. Fire-and-forget with `void posthog.capture(...)` where acceptable.
-
----
-
-### Issue 8.3 — Certificate upload has no file size limit
-
-**Description:** Certificate upload loads the entire file into memory with no max size validation.
-
-**Severity:** Medium
-
-**Why it matters:** Large uploads can exhaust serverless memory and execution time.
-
-**Files involved:**
-- `app/api/upload-certificate/route.ts`
-
-**Suggested fix:** Add max size check (consistent with form submit: 10 MB). Consider presigned R2 URLs for direct client upload.
-
----
-
 ### Issue 8.4 — Admin API routes have no rate limiting
 
 **Description:** Public routes use `enforceRateLimit`; admin routes do not.
@@ -545,11 +514,86 @@ These patterns are worth replicating elsewhere:
 
 ## Recommended Fix Order
 
-| Priority | Issue | Expected impact |
-|----------|-------|-----------------|
-| P2 | 7.1 Server-fetch admin data | Better admin UX, fewer round trips |
-| P3 | 2.5 `.lean()` everywhere | Incremental query speedup |
-| P3 | 8.2 PostHog flush tuning | Lower request tail latency |
+Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
+
+### Phase 2 — Database foundations (1–2 PRs)
+
+Indexes and read-shape fixes compound; do before caching layers or heavy refactors.
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **2A** | **2.6** Missing indexes (`slug`, `roles`) | One migration / model PR; unlocks faster lookups everywhere these fields are queried |
+| **2B** | **2.5** `.lean()` on read-only queries · **7.3** Remove `JSON.parse(JSON.stringify())` clones | Same API/controller files; lean results make deep clones unnecessary |
+| **2C** | **2.8** Blog `createdAt` / sort fix · **6.3** Consolidate blog fetch helpers | Same blog data layer; fix schema + single source of truth in one pass |
+
+---
+
+### Phase 3 — Auth & admin infrastructure (2 PRs)
+
+Centralize authorization before refactoring admin pages that depend on it.
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **3A** | **1.5** Middleware `auth.protect()` for `/admin` · **7.4** Collapse 10 admin section layouts · **6.5** Centralize `requireRoles` in admin APIs | All role-gating; parent `admin/layout.tsx` + `proxy.ts` + `lib/requireRoles.ts` should land together so checks aren't duplicated in three places |
+| **3B** | **8.5** Auth before `connectDB()` on admin routes · **8.4** Admin rate limiting | Same admin API routes; reorder handler flow, then add `enforceRateLimit` per-user on list/export endpoints |
+
+---
+
+### Phase 4 — Eliminate client-side data fetching (2–3 PRs)
+
+Highest UX impact for admin and profile; follow the QOTD / team server-fetch pattern in §9.
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **4A** | **7.1** Server-fetch admin initial data (blogs, access, info, graphic, scheduling) | One pattern across `(admin)` pages: server page → `initialData` props → thin client for mutations |
+| **4B** | **1.3** Profile API duplicate `UserData` read | Profile page is already server-rendered; extend `getAuthSession` / `getUserProfile` so `POST /api/user` doesn't re-query on every profile update |
+
+---
+
+### Phase 5 — Query efficiency on curriculum & submissions (1–2 PRs)
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **5A** | **2.4** Level page subject filter · **3.3** Parallel topic page queries | Curriculum navigation under `[board]/[level]/…`; both are read-path waterfalls |
+| **5B** | **3.2** Resource submit double-save / orphan records · **2.7** Contributor search aggregation | Both in resource-submission flow; fix write ordering and search in the same area |
+
+---
+
+### Phase 6 — Minor parallelization & connection hygiene (1 PR)
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **6A** | **3.4** Apply page `Promise.all` · **3.5** Form create `Promise.all` | Small independent-query fixes; same `Promise.all` pattern, low risk |
+| **6B** | **6.4** Replace inline `connectDB()` · **8.6** Delete `lib/mongoClient.ts` · **7.5** Unify QOTD Mongo client | Connection-pool hygiene; verify curriculum pages already on `lib/data/*` before editing |
+
+---
+
+### Phase 7 — Frontend bundle & static delivery (1–2 PRs)
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **7A** | **5.4** Scope KaTeX CSS · **5.5** Trim Poppins weights · **5.6** Named lucide imports | All layout/page import changes; measure `(others)` route bundle after |
+| **7B** | **5.3** Split Navigation mobile overlay · **4.7** `/_next/static` cache headers | Shell + `next.config.mjs` headers; improves repeat-visit load, not first paint |
+
+---
+
+### Phase 8 — Caching layer (1 PR, after Phase 2)
+
+| Batch | Issues | Why together |
+|-------|--------|--------------|
+| **8A** | **4.6** Redis query/auth caching | Redis infra already exists for rate limiting; indexes (2.6) and `.lean()` (2.5) should be in place first so cached payloads are correct and cheap to serialize |
+
+---
+
+### Suggested PR sequence (summary)
+
+```
+2A  →  2B + 2C  →  3A  →  3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+```
+
+**Highest impact next:** **3A** (admin auth consolidation) then **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
+
+**Defer until data layer is stable:** **4.6** Redis caching — premature if query shapes and indexes are still changing.
 
 ---
 
