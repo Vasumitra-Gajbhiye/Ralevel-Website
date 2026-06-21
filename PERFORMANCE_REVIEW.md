@@ -11,40 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 0     |
-| Medium   | 5     |
-| Low      | 8     |
-
----
-
-## 3. Sequential Async Operations
-
-### Issue 3.4 — Sequential form + auth on apply page
-
-**Description:** Apply form page runs `connectDB()` → `Form.findOne()` → `getAuthSession()` sequentially even though form lookup and auth are independent after DB connect.
-
-**Severity:** Low
-
-**Why it matters:** Adds unnecessary latency on every apply page visit.
-
-**Files involved:**
-- `app/(others)/apply/[slug]/page.tsx` (lines 16–19)
-
-**Suggested fix:** After `connectDB()`, run `Promise.all([Form.findOne(...), getAuthSession()])`.
-
----
-
-### Issue 3.5 — Independent queries not parallelized in form create
-
-**Description:** Form creation checks slug uniqueness and fetches latest form index sequentially.
-
-**Severity:** Low
-
-**Why it matters:** Minor added latency on write path.
-
-**Files involved:**
-- `app/api/forms/create/route.ts` (lines 101–107)
-
-**Suggested fix:** `Promise.all([Form.findOne({ slug }), Form.findOne({ formType }).sort(...)])`.
+| Medium   | 4     |
+| Low      | 4     |
 
 ---
 
@@ -147,27 +115,7 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ---
 
-## 6. Duplicate Code
-
-### Issue 6.4 — Inline `connectDB()` copies bypass shared connection cache
-
-**Description:** Several curriculum pages define local `connectDB()` using `mongoose.connection.readyState` instead of the global cached connection in `lib/mongodb.tsx`.
-
-**Severity:** Medium
-
-**Why it matters:** Race-prone under serverless concurrency; inconsistent connection handling. Flashcards page queries without calling connect at all.
-
-**Files involved:**
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/page.tsx` (lines 14–17)
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/glossary/page.tsx` (lines 16–19)
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/[topic]/page.tsx` (lines 14–17)
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/flashcards/page.tsx` (queries without connect)
-
-**Suggested fix:** Replace all with `import connectDB from "@/lib/mongodb"`.
-
----
-
-## 7. Bad Abstractions
+## 6. Bad Abstractions
 
 ### Issue 7.2 — Team page is client-side with HTTP loopback
 
@@ -206,47 +154,13 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ---
 
-### Issue 7.5 — Separate Mongo client for QOTD
-
-**Description:** QOTD actions maintain their own `MongoClient` + `global._mongoClientPromiseQotd` parallel to `lib/mongodb.tsx`.
-
-**Severity:** Low
-
-**Why it matters:** Two connection pools if both are active; confusing for operators.
-
-**Files involved:**
-- `app/(admin)/admin/qotd/actions.ts`
-- `lib/mongodb.tsx`
-
-**Suggested fix:** Unify on shared connection unless QOTD uses a separate cluster/URI by design.
-
----
-
-## 8. Scalability Limitations
-
-### Issue 8.6 — Unused duplicate Mongo connection module
-
-**Description:** `lib/mongoClient.ts` exists but is unused while `lib/mongodb.tsx` is used everywhere.
-
-**Severity:** Low
-
-**Why it matters:** Confusing for contributors; risk of introducing a second connection pool.
-
-**Files involved:**
-- `lib/mongoClient.ts`
-- `lib/mongodb.tsx`
-
-**Suggested fix:** Delete `lib/mongoClient.ts` or consolidate on one pattern.
-
----
-
-## 9. Positive Patterns (Keep & Extend)
+## 7. Positive Patterns (Keep & Extend)
 
 These patterns are worth replicating elsewhere:
 
 | Pattern | Location |
 |---------|----------|
-| Mongoose global connection cache with `bufferCommands: false` | `lib/mongodb.tsx` |
+| Mongoose global connection cache with `bufferCommands: false` + `getNativeMongoClient` | `lib/mongodb.tsx` |
 | Middleware `auth.protect()` on `/admin` + `/api/admin` | `proxy.ts` |
 | Centralized admin section role rules | `lib/adminAccess.ts`, `app/(admin)/admin/layout.tsx` |
 | Shared `requireRoles` helper for API authorization | `lib/requireRoles.ts` |
@@ -259,6 +173,8 @@ These patterns are worth replicating elsewhere:
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
+| Parallel independent queries after `connectDB()` | `app/(others)/apply/[slug]/page.tsx`, `app/api/forms/create/route.ts` |
+| Curriculum data layer + shared `connectDB` on all pages | `lib/data/curriculum.ts`, flashcards page |
 | Filtered level-subject list + parallel topic page queries | `lib/data/curriculum.ts` (`getSubjectsForLevel`, `getTopicPageData` with `Promise.all`) |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
 | Server-fetch + client props (QOTD, profile, MCQ quiz, team, admin lists) | `app/(admin)/admin/qotd/page.tsx`, `app/(admin)/admin/blogs/page.tsx`, `app/(admin)/admin/access/page.tsx`, `app/(admin)/admin/info/page.tsx`, `app/(admin)/admin/graphic/page.tsx`, `app/(admin)/admin/scheduling/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
@@ -274,16 +190,7 @@ These patterns are worth replicating elsewhere:
 
 ## Recommended Fix Order
 
-Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
-
-### Phase 6 — Minor parallelization & connection hygiene (1 PR)
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **6A** | **3.4** Apply page `Promise.all` · **3.5** Form create `Promise.all` | Small independent-query fixes; same `Promise.all` pattern, low risk |
-| **6B** | **6.4** Replace inline `connectDB()` · **8.6** Delete `lib/mongoClient.ts` · **7.5** Unify QOTD Mongo client | Connection-pool hygiene; verify curriculum pages already on `lib/data/*` before editing |
-
----
+Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §7).
 
 ### Phase 7 — Frontend bundle & static delivery (1–2 PRs)
 
@@ -305,10 +212,10 @@ Issues below are the remaining backlog. Group items in the same batch when they 
 ### Suggested PR sequence (summary)
 
 ```
-6A + 6B  →  7A  →  7B  →  8A
+7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **6A + 6B** (parallelize independent queries + connection-pool hygiene).
+**Highest impact next:** **7A** (scope KaTeX CSS, trim Poppins weights, named lucide imports).
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

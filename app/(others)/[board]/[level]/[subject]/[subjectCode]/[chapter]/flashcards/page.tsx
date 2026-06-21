@@ -93,6 +93,7 @@
 //     </section>
 //   );
 // }
+import connectDB from "@/lib/mongodb";
 import Topic from "@/models/Topic";
 import Back from "../components/back";
 const flashcardSets = [
@@ -136,6 +137,7 @@ type Props = {
 };
 export default async function FlashcardsHome({ params }: Props) {
   const { board, level, subject, subjectCode, chapter } = await params;
+  await connectDB();
   const flashcards = await Topic.find({
     board,
     level,

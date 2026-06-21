@@ -98,13 +98,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const existingSlug = await Form.findOne({ slug: body.slug });
+  const [existingSlug, prevForm] = await Promise.all([
+    Form.findOne({ slug: body.slug }),
+    Form.findOne({ formType: body.formType }).sort({ cycleId: -1 }),
+  ]);
   if (existingSlug) {
     return NextResponse.json({ error: "Slug already exists" }, { status: 400 });
   }
-  const prevForm = await Form.findOne({ formType: body.formType }).sort({
-    cycleId: -1,
-  });
 
   const prevCycleId = prevForm ? prevForm.cycleId : 0;
   // 🔥 Validate select fields

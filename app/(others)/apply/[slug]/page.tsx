@@ -15,8 +15,10 @@ export default async function FormPage({
 
   await connectDB();
 
-  const form = (await Form.findOne({ slug }).lean()) as FormDocument | null;
-  const session = await getAuthSession();
+  const [form, session] = await Promise.all([
+    Form.findOne({ slug }).lean() as Promise<FormDocument | null>,
+    getAuthSession(),
+  ]);
 
   if (!form) {
     notFound();

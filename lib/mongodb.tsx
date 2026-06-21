@@ -60,6 +60,7 @@
 // export default clientPromise;
 
 // lib/mongodb.tsx
+import { MongoClient } from "mongodb";
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
@@ -77,6 +78,8 @@ declare global {
     conn: typeof mongoose | null;
     promise: Promise<typeof mongoose> | null;
   };
+  // eslint-disable-next-line no-var
+  var mongoNativeClientCache: Map<string, Promise<MongoClient>> | undefined;
 }
 
 let cached = global.mongooseCache;
@@ -102,4 +105,26 @@ export default async function connectDB() {
 
   cached.conn = await cached.promise;
   return cached.conn;
+}
+
+/** Native MongoDB driver client — reuses the Mongoose pool when URI matches. */
+export async function getNativeMongoClient(
+  uri: string = MONGODB_URI
+): Promise<MongoClient> {
+  if (uri === MONGODB_URI) {
+    await connectDB();
+    return mongoose.connection.getClient() as unknown as MongoClient;
+  }
+
+  if (!global.mongoNativeClientCache) {
+    global.mongoNativeClientCache = new Map();
+  }
+
+  let promise = global.mongoNativeClientCache.get(uri);
+  if (!promise) {
+    promise = new MongoClient(uri).connect();
+    global.mongoNativeClientCache.set(uri, promise);
+  }
+
+  return promise;
 }
