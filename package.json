@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:standalone": "node .next/standalone/server.js",
     "lint": "next lint",
     "postbuild": "next-sitemap"
   },
@@ -108,6 +109,9 @@
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=20.19.5"
+  },
   "bugs": {
     "url": "https://github.com/Vasumitra-Gajbhiye/r-alevel/issues"
   },

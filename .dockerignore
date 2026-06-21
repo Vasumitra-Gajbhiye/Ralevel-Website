@@ -1,0 +1,57 @@
+# Dependencies and build output
+node_modules
+.next
+out
+build
+coverage
+
+# Secrets and local environment files
+.env
+.env.*
+*.pem
+auth-trial-*.json
+.clerk
+
+# Version control and IDE
+.git
+.github
+.vscode
+.cursor
+.idea
+
+# Documentation and reviews (not needed at build time)
+*.md
+docs
+PERFORMANCE_REVIEW.md
+
+# Dev-only assets (not referenced by app source)
+assets-local
+json_files
+scripts
+Json files
+
+# Docker meta (not needed inside build context)
+Dockerfile*
+docker-compose.yml
+.dockerignore
+
+# Logs, OS files, and TypeScript caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+*.tsbuildinfo
+
+# Vercel and local tooling
+.vercel
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Generated sitemap files (recreated by postbuild during image build)
+public/sitemap.xml
+public/sitemap-0.xml
+public/robots.txt
+
+# Syllabus JSON and other local data
+lib/syllabusJson
