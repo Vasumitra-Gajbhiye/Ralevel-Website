@@ -209,9 +209,25 @@
 // app/apply/page.tsx
 import connectDB from "@/lib/mongodb";
 import FormIndex from "@/models/FormIndex";
-import type { LucideIcon } from "lucide-react";
-import * as Icons from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  LifeBuoy,
+  Palette,
+  PenLine,
+  Shield,
+  type LucideIcon,
+} from "lucide-react";
 import Image from "next/image";
+
+const FORM_ICONS: Record<string, LucideIcon> = {
+  Shield,
+  PenLine,
+  BookOpen,
+  LifeBuoy,
+  Palette,
+  FileText,
+};
 
 export default async function FormsPage() {
   await connectDB();
@@ -234,8 +250,7 @@ export default async function FormsPage() {
       {/* FORM CARDS */}
       <div className="space-y-12">
         {forms.map((form: any) => {
-          const Icon = (Icons[form.icon as keyof typeof Icons] ??
-            Icons.FileText) as LucideIcon;
+          const Icon = FORM_ICONS[form.icon] ?? FileText;
           let herf;
           herf =
             form.slug === "resource"

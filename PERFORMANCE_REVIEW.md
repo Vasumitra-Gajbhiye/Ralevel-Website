@@ -11,8 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 0     |
-| Medium   | 4     |
-| Low      | 4     |
+| Medium   | 3     |
+| Low      | 2     |
 
 ---
 
@@ -65,53 +65,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `components/site/Navigation.tsx`
 
 **Suggested fix:** Split mobile overlay into a dynamically imported sub-component. Target ~200 lines in the always-loaded shell.
-
----
-
-### Issue 5.4 — Global KaTeX CSS in `(others)` layout
-
-**Description:** `katex/dist/katex.min.css` is imported in the `(others)` layout, loading on every route in the group.
-
-**Severity:** Medium
-
-**Why it matters:** KaTeX CSS is unnecessary on certificates, apply, team, and other non-math routes.
-
-**Files involved:**
-- `app/(others)/layout.tsx` (line 1)
-
-**Suggested fix:** Import KaTeX CSS only in markdown/math components or specific quiz/content routes.
-
----
-
-### Issue 5.5 — All Poppins font weights loaded in multiple layouts
-
-**Description:** Root and nested layouts load Poppins with weights 100–900. Nested layouts re-declare fonts already set in root.
-
-**Severity:** Low
-
-**Why it matters:** ~9 font files downloaded; duplicate font setup in nested layouts.
-
-**Files involved:**
-- `app/layout.tsx` (lines 9–11)
-- `app/(others)/layout.tsx` (lines 6–8)
-- `app/(home)/layout.tsx` (lines 6–8)
-
-**Suggested fix:** Load only `["400", "500", "600", "700"]` in root layout. Remove duplicate font declarations from nested layouts.
-
----
-
-### Issue 5.6 — `import * as Icons from "lucide-react"` on server pages
-
-**Description:** Apply and forms listing pages import the entire lucide-react namespace.
-
-**Severity:** Low
-
-**Why it matters:** Can prevent tree-shaking and inflate the server bundle.
-
-**Files involved:**
-- `app/(others)/apply/page.tsx` (line 213)
-
-**Suggested fix:** Import only the icons used (`Shield`, `PenLine`, etc.) by name.
 
 ---
 
@@ -192,11 +145,10 @@ These patterns are worth replicating elsewhere:
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §7).
 
-### Phase 7 — Frontend bundle & static delivery (1–2 PRs)
+### Phase 7 — Frontend bundle & static delivery (1 PR)
 
 | Batch | Issues | Why together |
 |-------|--------|--------------|
-| **7A** | **5.4** Scope KaTeX CSS · **5.5** Trim Poppins weights · **5.6** Named lucide imports | All layout/page import changes; measure `(others)` route bundle after |
 | **7B** | **5.3** Split Navigation mobile overlay · **4.7** `/_next/static` cache headers | Shell + `next.config.mjs` headers; improves repeat-visit load, not first paint |
 
 ---
@@ -212,10 +164,10 @@ Issues below are the remaining backlog. Group items in the same batch when they 
 ### Suggested PR sequence (summary)
 
 ```
-7A  →  7B  →  8A
+7B  →  8A
 ```
 
-**Highest impact next:** **7A** (scope KaTeX CSS, trim Poppins weights, named lucide imports).
+**Highest impact next:** **7B** (split Navigation mobile overlay + `/_next/static` cache headers).
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

@@ -1,5 +1,6 @@
 'use client';
 
+import 'katex/dist/katex.min.css';
 import { type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';

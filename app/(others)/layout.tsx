@@ -1,12 +1,6 @@
-import "katex/dist/katex.min.css";
-import { Poppins } from "next/font/google";
 import "../globals.css";
 import ContactUs from "@/components/site/ContactUs";
 import Navigation from "@/components/site/Navigation";
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-});
 
 export const metadata = {
   title: "r/alevel ",
@@ -36,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <main className={poppins.className + " tracking-widest pt-5	"}>
+    <main className="tracking-widest pt-5">
       <Navigation />
       <div className="pt-11 min-h-screen">{children}</div>
       <ContactUs />

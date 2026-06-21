@@ -1,5 +1,6 @@
 "use client";
 
+import "katex/dist/katex.min.css";
 import katex from "katex";
 
 const safeRenderKatex = (latex: string) => {

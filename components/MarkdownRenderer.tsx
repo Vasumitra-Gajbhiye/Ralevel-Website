@@ -1,5 +1,6 @@
 "use client";
 
+import "katex/dist/katex.min.css";
 import ExpandableExample from "@/components/ExpandableExample";
 import {
   AlertTriangle,
