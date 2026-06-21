@@ -90,19 +90,24 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
 
   async headers() {
+    const clerkOrigins = [
+      "https://*.clerk.accounts.dev",
+      "https://clerk.ralevel.com",
+    ].join(" ");
+
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com https://va.vercel-scripts.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
-      "style-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev",
+      `script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com https://va.vercel-scripts.com ${clerkOrigins} https://challenges.cloudflare.com`,
+      `style-src 'self' 'unsafe-inline' ${clerkOrigins}`,
       "img-src 'self' https: data: https://img.clerk.com https://images.clerk.dev",
       "font-src 'self' https: data:",
-      "connect-src 'self' https: https://*.clerk.accounts.dev",
+      `connect-src 'self' https: ${clerkOrigins}`,
       "worker-src 'self' blob:",
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
-      "frame-src 'self' https://js.stripe.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+      `frame-src 'self' https://js.stripe.com ${clerkOrigins} https://challenges.cloudflare.com`,
     ].join("; ");
 
     return [
