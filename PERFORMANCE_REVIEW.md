@@ -11,8 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 8     |
-| Low      | 8     |
+| Medium   | 6     |
+| Low      | 6     |
 
 ---
 
@@ -67,43 +67,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ---
 
-### Issue 2.5 — Missing `.lean()` on read-only queries
-
-**Description:** Many read paths return full Mongoose documents instead of plain objects.
-
-**Severity:** Medium
-
-**Why it matters:** Mongoose documents carry change-tracking overhead and slower JSON serialization.
-
-**Files involved:**
-- `app/api/certificates/route.tsx` (line 18)
-- `app/api/resources/route.tsx` (line 19)
-- `app/api/resources/[id]/route.tsx`
-- `app/api/blogs/[id]/route.tsx`
-- `app/api/admin/blogs/[slug]/route.ts`
-- `app/api/resources2/[id]/route.ts`
-
-**Suggested fix:** Append `.lean()` to all read-only queries.
-
----
-
-### Issue 2.6 — Missing indexes on frequently queried fields
-
-**Description:** Several models lack indexes on fields used in lookups or filters.
-
-**Severity:** Medium
-
-**Why it matters:** Collection scans become expensive as data grows.
-
-**Files involved:**
-- `models/blogsData.tsx` — `slug` queried but not indexed (line 32)
-- `models/resources2Data.tsx` — `slug` required but no unique index; used heavily in `controller/resourceController.ts`
-- `models/userData.tsx` — `roles` used in `admin/access` filter, not indexed
-
-**Suggested fix:** Add `{ slug: 1 }` unique indexes on `BlogsData` and `resources2Data`. Add index on `UserData.roles` or use a dedicated `isAdmin` flag with index.
-
----
-
 ### Issue 2.7 — Two-step contributor search in resource submissions
 
 **Description:** When searching submissions by name, the route first queries `Contributor` with unanchored regex, then queries `ResourceSubmission` with `.populate()`.
@@ -116,23 +79,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `app/api/admin/resource-submissions/route.ts` (lines 50–72)
 
 **Suggested fix:** Single aggregation with `$lookup` + `$match`. Anchor regex (`^term`) or use Atlas Search / text index on contributor name fields.
-
----
-
-### Issue 2.8 — `getBlogs` sorts by non-existent `createdAt`
-
-**Description:** `lib/db/getBlogs.ts` and `controller/blogController.ts` sort by `createdAt`, but `models/blogsData.tsx` has no `timestamps: true` and no `createdAt` field in the schema.
-
-**Severity:** Low
-
-**Why it matters:** Sort is ineffective; results may appear in insertion order unpredictably.
-
-**Files involved:**
-- `lib/db/getBlogs.ts` (line 7)
-- `controller/blogController.ts`
-- `models/blogsData.tsx`
-
-**Suggested fix:** Add `timestamps: true` to schema or sort by `_id` / explicit `date` field. Consolidate duplicate helpers into one module.
 
 ---
 
@@ -299,22 +245,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 6. Duplicate Code
 
-### Issue 6.3 — Duplicate blog fetching helpers
-
-**Description:** `lib/db/getBlogs.ts` and `controller/blogController.ts` contain identical `Blog.find({}).sort(...).lean()` logic.
-
-**Severity:** Low
-
-**Why it matters:** Two sources of truth; changes may be applied to one but not the other.
-
-**Files involved:**
-- `lib/db/getBlogs.ts`
-- `controller/blogController.ts`
-
-**Suggested fix:** Consolidate into one exported helper; delete the duplicate.
-
----
-
 ### Issue 6.4 — Inline `connectDB()` copies bypass shared connection cache
 
 **Description:** Several curriculum pages define local `connectDB()` using `mongoose.connection.readyState` instead of the global cached connection in `lib/mongodb.tsx`.
@@ -400,9 +330,13 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 **Why it matters:** Extra CPU and allocation on every call; often unnecessary when data is already plain objects.
 
 **Files involved:**
-- `controller/resourceController.ts` (line 28)
-- `app/(others)/blogs/page.tsx` (line 20)
-- `app/(admin)/admin/forms/[formType]/[slug]/page.tsx` (lines 32–34)
+- `lib/data/certificates.ts`
+- `app/(admin)/admin/certificates/actions.ts`
+- `app/(admin)/admin/forms/[formType]/page.tsx`
+- `app/(others)/apply/[slug]/page.tsx`
+- `app/(others)/apply/resource/page.tsx`
+- `app/(admin)/admin/forms/[formType]/[slug]/responses/[submissionId]/page.tsx`
+- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/flashcards/[set]/page.tsx`
 
 **Suggested fix:** Return `.lean()` results directly. Use `structuredClone` only when mutation safety is required.
 
@@ -497,7 +431,8 @@ These patterns are worth replicating elsewhere:
 |---------|----------|
 | Mongoose global connection cache with `bufferCommands: false` | `lib/mongodb.tsx` |
 | Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
-| Field projection + `.lean()` on blog list | `app/api/blogs/route.tsx` |
+| Field projection + `.lean()` on blog list | `lib/data/blogs.ts`, `app/api/blogs/route.tsx` |
+| Canonical paginated blog list helper | `lib/data/blogs.ts` (`getPaginatedBlogList`) |
 | Shared pagination helpers (`page`/`limit`, default 50) | `lib/pagination.ts`, `components/ui/list-pagination.tsx` |
 | Paginated list endpoints (public + admin) | `app/api/certificates`, `app/api/blogs`, `app/api/admin/*` |
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
@@ -509,24 +444,13 @@ These patterns are worth replicating elsewhere:
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
 | Shared site Navigation + ContactUs (`variant` prop) | `components/site/Navigation.tsx`, `components/site/ContactUs.tsx` |
 | Compound indexes on content models | `models/Topic.ts`, `models/MCQ.ts`, `models/Glossary.ts` |
+| Slug unique indexes + roles index on lookup models | `models/blogsData.tsx`, `models/resources2Data.tsx`, `models/userData.tsx` |
 
 ---
 
 ## Recommended Fix Order
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
-
-### Phase 2 — Database foundations (1–2 PRs)
-
-Indexes and read-shape fixes compound; do before caching layers or heavy refactors.
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **2A** | **2.6** Missing indexes (`slug`, `roles`) | One migration / model PR; unlocks faster lookups everywhere these fields are queried |
-| **2B** | **2.5** `.lean()` on read-only queries · **7.3** Remove `JSON.parse(JSON.stringify())` clones | Same API/controller files; lean results make deep clones unnecessary |
-| **2C** | **2.8** Blog `createdAt` / sort fix · **6.3** Consolidate blog fetch helpers | Same blog data layer; fix schema + single source of truth in one pass |
-
----
 
 ### Phase 3 — Auth & admin infrastructure (2 PRs)
 
@@ -577,23 +501,23 @@ Highest UX impact for admin and profile; follow the QOTD / team server-fetch pat
 
 ---
 
-### Phase 8 — Caching layer (1 PR, after Phase 2)
+### Phase 8 — Caching layer (1 PR, after database indexes and lean read paths are in place)
 
 | Batch | Issues | Why together |
 |-------|--------|--------------|
-| **8A** | **4.6** Redis query/auth caching | Redis infra already exists for rate limiting; indexes (2.6) and `.lean()` (2.5) should be in place first so cached payloads are correct and cheap to serialize |
+| **8A** | **4.6** Redis query/auth caching | Redis infra already exists for rate limiting; lean read paths and slug/roles indexes are in place so cached payloads are correct and cheap to serialize |
 
 ---
 
 ### Suggested PR sequence (summary)
 
 ```
-2A  →  2B + 2C  →  3A  →  3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+3A  →  3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
 ```
 
 **Highest impact next:** **3A** (admin auth consolidation) then **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
 
-**Defer until data layer is stable:** **4.6** Redis caching — premature if query shapes and indexes are still changing.
+**Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 
 ---
 

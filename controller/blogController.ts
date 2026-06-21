@@ -1,5 +1,4 @@
-import { getCachedBlogList } from "@/lib/data/blogs";
-import { buildPaginatedResponse } from "@/lib/pagination";
+import { getPaginatedBlogList } from "@/lib/data/blogs";
 
 type GetBlogsOptions = {
   page?: number;
@@ -7,8 +6,5 @@ type GetBlogsOptions = {
 };
 
 export default async function getBlogs(options: GetBlogsOptions = {}) {
-  const page = options.page ?? 1;
-  const limit = options.limit ?? 50;
-  const result = await getCachedBlogList({ page, limit });
-  return buildPaginatedResponse(result.data, result.total, page, limit);
+  return getPaginatedBlogList(options);
 }

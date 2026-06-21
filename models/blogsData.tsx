@@ -22,15 +22,20 @@ import { Schema, model, models } from "mongoose";
 //   ],
 // });
 
-const blogsDataSchema = new Schema({
-  mainTitle: String,
-  description: String,
-  date: String,
-  timeToRead: String,
-  tag: String,
-  author: String,
-  slug:String,
-});
+const blogsDataSchema = new Schema(
+  {
+    mainTitle: String,
+    description: String,
+    date: String,
+    timeToRead: String,
+    tag: String,
+    author: String,
+    slug: String,
+  },
+  { timestamps: true }
+);
+
+blogsDataSchema.index({ slug: 1 }, { unique: true });
 
 const BlogsData = models.BlogsData || model("BlogsData", blogsDataSchema);
 

@@ -29,7 +29,7 @@ export async function GET(
           ownerId: new mongoose.Types.ObjectId(session!.userData!.id),
         };
 
-    const blog = await EditorBlog.findOne(query);
+    const blog = await EditorBlog.findOne(query).lean();
 
     if (!blog) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

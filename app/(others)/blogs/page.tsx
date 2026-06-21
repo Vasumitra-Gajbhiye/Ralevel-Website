@@ -14,7 +14,7 @@ export default async function BlogsPage({
 
   return (
     <BlogsClient
-      data={JSON.parse(JSON.stringify(result.data))}
+      data={result.data}
       pagination={result.pagination}
     />
   );

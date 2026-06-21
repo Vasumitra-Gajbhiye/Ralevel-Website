@@ -1,5 +1,6 @@
 import { cachedQuery } from "@/lib/data-cache";
 import connectDB from "@/lib/mongodb";
+import { buildPaginatedResponse } from "@/lib/pagination";
 import BlogsData from "@/models/blogsData";
 
 const BLOG_LIST_PROJECTION = {
@@ -50,4 +51,11 @@ export async function getCachedBlogBySlug(slug: string) {
     },
     { revalidate: 600, tags: ["blogs", `blog:${slug}`] }
   );
+}
+
+export async function getPaginatedBlogList(options: BlogListOptions = {}) {
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 50;
+  const result = await getCachedBlogList({ page, limit });
+  return buildPaginatedResponse(result.data, result.total, page, limit);
 }

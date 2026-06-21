@@ -37,7 +37,7 @@ export async function getCachedResourceBySlug(slug: string) {
     async () => {
       await connectDB();
       const resource = await resources2Data.findOne({ slug }).lean();
-      return JSON.parse(JSON.stringify(resource));
+      return resource;
     },
     { revalidate: 3600, tags: ["resources", `resource:${slug}`] }
   );
@@ -49,7 +49,7 @@ export async function getCachedResource2ById(id: string) {
     async () => {
       await connectDB();
       const doc = await resources2Data.findById(id).lean();
-      return doc ? JSON.parse(JSON.stringify(doc)) : null;
+      return doc ?? null;
     },
     { revalidate: 3600, tags: ["resources"] }
   );

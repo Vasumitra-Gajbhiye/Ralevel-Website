@@ -27,5 +27,7 @@ const userDataSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+userDataSchema.index({ roles: 1 });
+
 export default mongoose.models.UserData ||
   mongoose.model("UserData", userDataSchema);

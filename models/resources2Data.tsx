@@ -103,5 +103,7 @@ const resources2dataSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+resources2dataSchema.index({ slug: 1 }, { unique: true });
+
 export default mongoose.models.resources2data ||
   mongoose.model("resources2data", resources2dataSchema);

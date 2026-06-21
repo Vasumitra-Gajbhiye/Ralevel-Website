@@ -50,16 +50,12 @@ export default async function AdminFormPage({
     limit
   ).pagination;
 
-  const plainSubmissions = JSON.parse(JSON.stringify(submissions));
-  const plainSummarySubmissions = JSON.parse(JSON.stringify(summarySubmissions));
-  const plainForm = JSON.parse(JSON.stringify(form));
-
   return (
     <AdminFormPageClient
-      form={plainForm}
+      form={form}
       totalResponses={totalResponses}
-      submissions={plainSubmissions}
-      summarySubmissions={plainSummarySubmissions}
+      submissions={submissions}
+      summarySubmissions={summarySubmissions}
       pagination={pagination}
     />
   );

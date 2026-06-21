@@ -1,12 +1,9 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { CACHE_HEADERS } from "@/lib/cache";
 import { revalidateDataTags } from "@/lib/data-cache";
-import { getCachedBlogList } from "@/lib/data/blogs";
+import { getPaginatedBlogList } from "@/lib/data/blogs";
 import connectDB from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import BlogsData from "@/models/blogsData";
@@ -22,12 +19,12 @@ export async function GET(req: NextRequest) {
     if (rlError) return rlError;
 
     const { page, limit } = parsePaginationParams(req.nextUrl.searchParams);
-    const result = await getCachedBlogList({ page, limit });
+    const result = await getPaginatedBlogList({ page, limit });
 
     return NextResponse.json(
       {
         message: "Successfully fetched blogs",
-        ...buildPaginatedResponse(result.data, result.total, page, limit),
+        ...result,
       },
       { status: 200, headers: CACHE_HEADERS }
     );
