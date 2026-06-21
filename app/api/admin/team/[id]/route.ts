@@ -1,24 +1,9 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
-import { Role } from "@/lib/roles";
+import { requireRoles } from "@/lib/requireRoles";
 import StaffMember from "@/models/staffMember";
 import { NextResponse } from "next/server";
-
-/* ================= HELPERS ================= */
-
-function requireTeamAdmin(session: any): Role[] {
-  const roles = session?.userData?.roles as Role[] | undefined;
-
-  if (
-    !roles ||
-    !roles.some((r) => ["owner", "admin", "mod_dep_head"].includes(r))
-  ) {
-    throw new Error("FORBIDDEN");
-  }
-
-  return roles;
-}
 
 /* ================= PATCH ================= */
 export async function PATCH(
@@ -29,7 +14,7 @@ export async function PATCH(
   const session = await getAuthSession();
 
   try {
-    const actorRoles = requireTeamAdmin(session);
+    const actorRoles = requireRoles(session, ["owner", "admin", "mod_dep_head"]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;
@@ -87,7 +72,7 @@ export async function DELETE(
   const session = await getAuthSession();
 
   try {
-    requireTeamAdmin(session);
+    requireRoles(session, ["owner", "admin", "mod_dep_head"]);
 
     // ✅ FIX: await params
     const { id } = await context.params;

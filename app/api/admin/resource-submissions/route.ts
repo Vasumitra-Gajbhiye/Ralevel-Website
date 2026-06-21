@@ -4,22 +4,11 @@ import {
   buildPaginatedResponse,
   parsePaginationParams,
 } from "@/lib/pagination";
-import { Role } from "@/lib/roles";
+import { requireRoles } from "@/lib/requireRoles";
 import Contributor from "@/models/Contributor";
 import ResourceSubmission from "@/models/ResourceSubmission";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-/* ================= HELPERS ================= */
-
-function requireResourceAdminAccess(session: any): Role[] {
-  const roles = session?.userData?.roles as Role[] | undefined;
-
-  if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {
-    throw new Error("FORBIDDEN");
-  }
-
-  return roles;
-}
 
 /* ================= GET ================= */
 
@@ -28,7 +17,7 @@ export async function GET(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireResourceAdminAccess(session);
+    requireRoles(session, ["owner", "admin"]);
 
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("query");

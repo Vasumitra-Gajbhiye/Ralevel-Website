@@ -5,26 +5,9 @@ import {
   buildPaginatedResponse,
   parsePaginationParams,
 } from "@/lib/pagination";
-import { Role } from "@/lib/roles";
+import { requireRoles } from "@/lib/requireRoles";
 import GraphicMember from "@/models/graphicMember";
 import { NextResponse } from "next/server";
-
-/* ================= HELPERS ================= */
-
-function requireGraphicAccess(session: any): Role[] {
-  const roles = session?.userData?.roles as Role[] | undefined;
-
-  if (
-    !roles ||
-    !roles.some((r) =>
-      ["owner", "admin", "graphic_designer", "graphic_dep_head"].includes(r)
-    )
-  ) {
-    throw new Error("FORBIDDEN");
-  }
-
-  return roles;
-}
 
 /* ================= GET ================= */
 export async function GET(req: Request) {
@@ -32,7 +15,12 @@ export async function GET(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireGraphicAccess(session);
+    requireRoles(session, [
+      "owner",
+      "admin",
+      "graphic_designer",
+      "graphic_dep_head",
+    ]);
 
     const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
@@ -59,7 +47,12 @@ export async function POST(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireGraphicAccess(session);
+    requireRoles(session, [
+      "owner",
+      "admin",
+      "graphic_designer",
+      "graphic_dep_head",
+    ]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;
@@ -77,7 +70,12 @@ export async function PATCH(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireGraphicAccess(session);
+    requireRoles(session, [
+      "owner",
+      "admin",
+      "graphic_designer",
+      "graphic_dep_head",
+    ]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;
@@ -104,7 +102,12 @@ export async function DELETE(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireGraphicAccess(session);
+    requireRoles(session, [
+      "owner",
+      "admin",
+      "graphic_designer",
+      "graphic_dep_head",
+    ]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;

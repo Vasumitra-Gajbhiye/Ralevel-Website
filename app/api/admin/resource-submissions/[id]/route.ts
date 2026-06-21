@@ -1,22 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
-import { Role } from "@/lib/roles";
+import { requireRoles } from "@/lib/requireRoles";
 import ResourceSubmission from "@/models/ResourceSubmission";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
-
-/* ================= HELPERS ================= */
-
-function requireResourceAdminAccess(session: any): Role[] {
-  const roles = session?.userData?.roles as Role[] | undefined;
-
-  if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {
-    throw new Error("FORBIDDEN");
-  }
-
-  return roles;
-}
 
 /* ================= PATCH ================= */
 
@@ -28,7 +16,7 @@ export async function PATCH(
   const session = await getAuthSession();
 
   try {
-    requireResourceAdminAccess(session);
+    requireRoles(session, ["owner", "admin"]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;

@@ -11,8 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 6     |
-| Low      | 6     |
+| Medium   | 4     |
+| Low      | 5     |
 
 ---
 
@@ -32,21 +32,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `app/(others)/profile/page.tsx` (client fetch via `useEffect`)
 
 **Suggested fix:** Extend `getAuthSession` or add a `getUserProfile(email)` helper that returns full profile in one query. Better: server-render profile data and pass as props to a thin client form.
-
----
-
-### Issue 1.5 — Middleware does not gate admin routes
-
-**Description:** `proxy.ts` runs `clerkMiddleware()` with no route protection or role injection. All authorization is deferred to layouts and API handlers.
-
-**Severity:** Medium
-
-**Why it matters:** Unauthenticated requests still reach server components and may trigger partial DB work before failing. Role checks cannot be centralized at the edge.
-
-**Files involved:**
-- `proxy.ts`
-
-**Suggested fix:** Use `clerkMiddleware` with `auth.protect()` for `/admin(.*)`. Inject roles from JWT claims to skip layout-level DB reads.
 
 ---
 
@@ -263,27 +248,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ---
 
-### Issue 6.5 — Duplicate role-check helpers in admin API routes
-
-**Description:** Six admin API routes define their own `requireXxxAccess` functions instead of using `lib/requireRoles.ts`.
-
-**Severity:** Low
-
-**Why it matters:** Inconsistent authorization logic; harder to audit and update role rules.
-
-**Files involved:**
-- `app/api/admin/helper/route.ts` — `requireHelperAdmin`
-- `app/api/admin/graphic/route.ts` — `requireGraphicAccess`
-- `app/api/admin/info/route.ts` — `requireInformativeAccess`
-- `app/api/admin/team/route.ts` — `requireTeamAdmin`
-- `app/api/admin/resource-submissions/route.ts` — `requireResourceAdminAccess`
-- `app/api/admin/resource-submissions/[id]/route.ts` — duplicate of above
-- `lib/requireRoles.ts` (central helper, underused)
-
-**Suggested fix:** Extend `requireRoles(session, allowedRoles)` everywhere; delete inline copies.
-
----
-
 ## 7. Bad Abstractions
 
 ### Issue 7.1 — Client admin pages re-fetch data the server already has access to
@@ -339,21 +303,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/flashcards/[set]/page.tsx`
 
 **Suggested fix:** Return `.lean()` results directly. Use `structuredClone` only when mutation safety is required.
-
----
-
-### Issue 7.4 — Ten identical admin section layouts
-
-**Description:** Each admin section layout is a copy-paste wrapper calling `getAuthSession()` + `hasRequiredRole()` with different role arrays.
-
-**Severity:** Medium
-
-**Why it matters:** 10× auth overhead per nested navigation; maintenance burden.
-
-**Files involved:**
-- `app/(admin)/admin/{access,blogs,certificates,forms,graphic,helper,info,qotd,scheduling,team}/layout.tsx`
-
-**Suggested fix:** Role gating in parent `admin/layout.tsx` only, or a single configurable layout component.
 
 ---
 
@@ -430,6 +379,9 @@ These patterns are worth replicating elsewhere:
 | Pattern | Location |
 |---------|----------|
 | Mongoose global connection cache with `bufferCommands: false` | `lib/mongodb.tsx` |
+| Middleware `auth.protect()` on `/admin` + `/api/admin` | `proxy.ts` |
+| Centralized admin section role rules | `lib/adminAccess.ts`, `app/(admin)/admin/layout.tsx` |
+| Shared `requireRoles` helper for API authorization | `lib/requireRoles.ts` |
 | Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
 | Field projection + `.lean()` on blog list | `lib/data/blogs.ts`, `app/api/blogs/route.tsx` |
 | Canonical paginated blog list helper | `lib/data/blogs.ts` (`getPaginatedBlogList`) |
@@ -452,13 +404,12 @@ These patterns are worth replicating elsewhere:
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
 
-### Phase 3 — Auth & admin infrastructure (2 PRs)
+### Phase 3 — Auth & admin infrastructure (1 PR)
 
 Centralize authorization before refactoring admin pages that depend on it.
 
 | Batch | Issues | Why together |
 |-------|--------|--------------|
-| **3A** | **1.5** Middleware `auth.protect()` for `/admin` · **7.4** Collapse 10 admin section layouts · **6.5** Centralize `requireRoles` in admin APIs | All role-gating; parent `admin/layout.tsx` + `proxy.ts` + `lib/requireRoles.ts` should land together so checks aren't duplicated in three places |
 | **3B** | **8.5** Auth before `connectDB()` on admin routes · **8.4** Admin rate limiting | Same admin API routes; reorder handler flow, then add `enforceRateLimit` per-user on list/export endpoints |
 
 ---
@@ -512,10 +463,10 @@ Highest UX impact for admin and profile; follow the QOTD / team server-fetch pat
 ### Suggested PR sequence (summary)
 
 ```
-3A  →  3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **3A** (admin auth consolidation) then **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
+**Highest impact next:** **3B** (auth-before-DB + admin rate limiting) then **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

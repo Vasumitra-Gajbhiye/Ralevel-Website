@@ -1,7 +1,14 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export default clerkMiddleware((auth, req) => {
+const isAdminPage = createRouteMatcher(["/admin(.*)"]);
+const isAdminApi = createRouteMatcher(["/api/admin(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isAdminPage(req) || isAdminApi(req)) {
+    await auth.protect();
+  }
+
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", req.nextUrl.pathname);
 

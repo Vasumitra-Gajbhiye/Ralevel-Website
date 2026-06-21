@@ -5,24 +5,9 @@ import {
   buildPaginatedResponse,
   parsePaginationParams,
 } from "@/lib/pagination";
-import { Role } from "@/lib/roles";
+import { requireRoles } from "@/lib/requireRoles";
 import StaffMember from "@/models/staffMember";
 import { NextResponse } from "next/server";
-
-/* ================= HELPERS ================= */
-
-function requireTeamAdmin(session: any): Role[] {
-  const roles = session?.userData?.roles as Role[] | undefined;
-
-  if (
-    !roles ||
-    !roles.some((r) => ["owner", "admin", "mod_dep_head"].includes(r))
-  ) {
-    throw new Error("FORBIDDEN");
-  }
-
-  return roles;
-}
 
 const RANK_ORDER: Record<string, number> = {
   community_lead: 1,
@@ -39,7 +24,7 @@ export async function GET(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireTeamAdmin(session);
+    requireRoles(session, ["owner", "admin", "mod_dep_head"]);
 
     const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
@@ -98,7 +83,7 @@ export async function POST(req: Request) {
   const session = await getAuthSession();
 
   try {
-    requireTeamAdmin(session);
+    requireRoles(session, ["owner", "admin", "mod_dep_head"]);
 
     const csrfError = enforceSameOrigin(req);
     if (csrfError) return csrfError;
