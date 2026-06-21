@@ -10,8 +10,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 11    |
-| Medium   | 16    |
+| High     | 10    |
+| Medium   | 15    |
 | Low      | 8     |
 
 **Top priorities:** parallelize file uploads, add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
@@ -19,25 +19,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 ---
 
 ## 1. Auth & Session
-
-### Issue 1.2 — Triple auth chain on admin pages
-
-**Description:** Admin routes call `getAuthSession()` in the parent layout, again in each section layout (11 nested layouts), and a third time via client `useAuthSession()` → `GET /api/me`.
-
-**Severity:** High
-
-**Why it matters:** Visiting `/admin/blogs` can trigger 3× the full auth+DB chain per page load. Even with React request deduplication absent, nested layouts run sequentially.
-
-**Files involved:**
-- `app/(admin)/admin/layout.tsx` (line 123)
-- `app/(admin)/admin/{access,blogs,certificates,forms,graphic,helper,info,qotd,scheduling,team}/layout.tsx` (line 11 each)
-- `hooks/useAuthSession.ts` (lines 10–36)
-- `app/api/me/route.ts`
-- Client admin pages: `app/(admin)/admin/blogs/page.tsx`, `app/(admin)/admin/access/page.tsx`, `app/(admin)/admin/info/page.tsx`, `app/(admin)/admin/graphic/page.tsx`, `app/(admin)/admin/scheduling/page.tsx`
-
-**Suggested fix:** Wrap `getAuthSession` in React `cache()`. Enforce roles once in `admin/layout.tsx`; remove duplicate checks from section layouts. Pass session from server to client pages instead of `useAuthSession()`. Use Clerk client hooks (`useUser()`) only for UI state where server session is unavailable.
-
----
 
 ### Issue 1.3 — Duplicate DB read on profile API
 
@@ -53,25 +34,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `app/(others)/profile/page.tsx` (client fetch via `useEffect`)
 
 **Suggested fix:** Extend `getAuthSession` or add a `getUserProfile(email)` helper that returns full profile in one query. Better: server-render profile data and pass as props to a thin client form.
-
----
-
-### Issue 1.4 — No request-level memoization on `getAuthSession`
-
-**Description:** `getAuthSession` is a plain async function with no `cache()` wrapper from React.
-
-**Severity:** Medium
-
-**Why it matters:** Multiple server components/layouts in the same request each re-run the full auth chain independently.
-
-**Files involved:**
-- `lib/getAuthSession.ts`
-
-**Suggested fix:**
-```ts
-import { cache } from "react";
-export const getAuthSession = cache(async (): Promise<AuthSession | null> => { ... });
-```
 
 ---
 
@@ -314,7 +276,7 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => { .
 
 ### Issue 4.1 — No Next.js data cache layer
 
-**Description:** Zero usage of `unstable_cache`, React `cache()` (except auth, see 1.4), or `revalidateTag` anywhere in the repo. Only `revalidatePath("/qotd")` in QOTD actions.
+**Description:** Zero usage of `unstable_cache`, React `cache()` (except `getAuthSession`), or `revalidateTag` anywhere in the repo. Only `revalidatePath("/qotd")` in QOTD actions.
 
 **Severity:** High
 
@@ -627,7 +589,7 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => { .
 
 **Severity:** Medium
 
-**Why it matters:** Empty shell → loading spinner → client fetch → re-render. Doubles auth overhead when combined with layout + `useAuthSession`.
+**Why it matters:** Empty shell → loading spinner → client fetch → re-render. Blogs and access now receive server session props; other admin pages still fetch on mount.
 
 **Files involved:**
 - `app/(admin)/admin/blogs/page.tsx`
@@ -823,7 +785,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P0 | 1.2 Consolidate admin auth | 2–3× fewer auth calls per admin page |
 | P0 | 3.1 Parallel R2 uploads | 5–10× faster resource submissions |
 | P0 | 8.1 Protect theory-eval | Stop unbounded LLM cost |
 | P1 | 2.1–2.3 Pagination on lists | Prevents degradation as data grows |

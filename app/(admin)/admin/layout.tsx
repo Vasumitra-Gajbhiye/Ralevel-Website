@@ -1,6 +1,8 @@
 import { getAuthSession } from "@/lib/getAuthSession";
+import { getAdminSectionMessage, getAdminSectionRoles } from "@/lib/adminAccess";
 import NoAccess from "@/components/NoAccess";
-import { hasAnyRole } from "@/lib/roles";
+import { hasAnyRole, hasRequiredRole } from "@/lib/roles";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -140,6 +142,13 @@ export default async function AdminLayout({
 
   const roles = session.userData?.roles;
 
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+  const sectionRoles = getAdminSectionRoles(pathname);
+  const sectionDenied =
+    sectionRoles &&
+    !hasRequiredRole(roles, sectionRoles);
+
   // ❌ Logged in but NO ROLES
   if (!roles || roles.length === 0) {
     return (
@@ -155,7 +164,18 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar roles={roles} />
-      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+      <main className="flex-1 p-8 overflow-y-auto">
+        {sectionDenied ? (
+          <NoAccess
+            message={
+              getAdminSectionMessage(pathname) ??
+              "You don't have permission to access this page."
+            }
+          />
+        ) : (
+          children
+        )}
+      </main>
     </div>
   );
 }

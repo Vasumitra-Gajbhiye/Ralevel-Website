@@ -10,6 +10,7 @@ import { sanitizeRoles } from "@/lib/syncClerkUserMetadata";
 import type { Role } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { cache } from "react";
 
 type SessionClaims = Record<string, unknown> | null | undefined;
 
@@ -64,7 +65,7 @@ function readPublicMetadata(
   return { roles, userDataId };
 }
 
-export async function getAuthSession(): Promise<AuthSession | null> {
+export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
   const { userId, sessionClaims } = await auth();
   if (!userId) return null;
 
@@ -125,4 +126,4 @@ export async function getAuthSession(): Promise<AuthSession | null> {
       isOwner: resolvedRoles.includes("owner"),
     },
   };
-}
+});
