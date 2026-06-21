@@ -11,8 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 0     |
-| Medium   | 3     |
-| Low      | 2     |
+| Medium   | 2     |
+| Low      | 1     |
 
 ---
 
@@ -30,41 +30,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 - `lib/rateLimit.ts`
 
 **Suggested fix:** Cache `UserData` roles by email with 60–300s TTL. Cache public list endpoints (certs, team) with tag-based invalidation.
-
----
-
-### Issue 4.7 — No static asset cache headers in Next config
-
-**Description:** `next.config.mjs` sets security headers (CSP, HSTS) but no `Cache-Control` for `/_next/static` or public assets.
-
-**Severity:** Low
-
-**Why it matters:** Browsers revalidate static chunks on every visit instead of treating them as immutable.
-
-**Files involved:**
-- `next.config.mjs` (headers section)
-
-**Suggested fix:**
-```js
-{ source: "/_next/static/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] }
-```
-
----
-
-## 5. Bundle Size & Large Files
-
-### Issue 5.3 — Navigation component could be split further
-
-**Description:** Shared site navigation is a single client component loaded on every `(home)` and `(others)` route.
-
-**Severity:** Medium
-
-**Why it matters:** Parsed and bundled on certificates, resources, apply, and all other `(others)` routes regardless of need.
-
-**Files involved:**
-- `components/site/Navigation.tsx`
-
-**Suggested fix:** Split mobile overlay into a dynamically imported sub-component. Target ~200 lines in the always-loaded shell.
 
 ---
 
@@ -136,6 +101,8 @@ These patterns are worth replicating elsewhere:
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
 | Shared site Navigation + ContactUs (`variant` prop) | `components/site/Navigation.tsx`, `components/site/ContactUs.tsx` |
+| Navigation mobile overlay lazy-loaded via `next/dynamic` | `components/site/Navigation.tsx`, `components/site/NavigationMobileOverlay.tsx` |
+| Immutable `Cache-Control` on `/_next/static` | `next.config.mjs` |
 | Compound indexes on content models | `models/Topic.ts`, `models/MCQ.ts`, `models/Glossary.ts` |
 | Slug unique indexes + roles index on lookup models | `models/blogsData.tsx`, `models/resources2Data.tsx`, `models/userData.tsx` |
 
@@ -144,14 +111,6 @@ These patterns are worth replicating elsewhere:
 ## Recommended Fix Order
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §7).
-
-### Phase 7 — Frontend bundle & static delivery (1 PR)
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **7B** | **5.3** Split Navigation mobile overlay · **4.7** `/_next/static` cache headers | Shell + `next.config.mjs` headers; improves repeat-visit load, not first paint |
-
----
 
 ### Phase 8 — Caching layer (1 PR, after database indexes and lean read paths are in place)
 
@@ -164,12 +123,12 @@ Issues below are the remaining backlog. Group items in the same batch when they 
 ### Suggested PR sequence (summary)
 
 ```
-7B  →  8A
+8A
 ```
 
-**Highest impact next:** **7B** (split Navigation mobile overlay + `/_next/static` cache headers).
+**Highest impact next:** **8A** (Redis query/auth caching — Issue 4.6).
 
-**Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
+**Defer until data layer is stable:** Remaining 7.3 clone cleanup can land independently.
 
 ---
 
