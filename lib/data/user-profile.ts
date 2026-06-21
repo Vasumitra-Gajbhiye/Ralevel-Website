@@ -1,6 +1,5 @@
-import connectDB from "@/lib/mongodb";
+import { fetchUserDataByEmail } from "@/lib/data/user-data";
 import { getAuthSession } from "@/lib/getAuthSession";
-import UserData from "@/models/userData";
 import { BOARDS } from "@/lib/exam-constants";
 
 type BoardKey = "CAIE" | "Edexcel" | "Edexcel_IAL" | "AQA" | "OCR" | "WJEC";
@@ -56,9 +55,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   const email = session?.user?.email;
   if (!email) return null;
 
-  await connectDB();
-
-  const user = await UserData.findOne({ email }).lean<UserDataProfileDoc>();
+  const user = (await fetchUserDataByEmail(email)) as UserDataProfileDoc | null;
   if (!user) return null;
 
   const subjectsAS = normalizeSubjects(user.subjectsAS);

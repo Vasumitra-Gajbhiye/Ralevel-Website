@@ -11,27 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 3     |
+| Medium   | 2     |
 | Low      | 3     |
-
----
-
-## 1. Auth & Session
-
-### Issue 1.3 — Duplicate DB read on profile API
-
-**Description:** `POST /api/user` calls `getAuthSession()` (which already queries `UserData`) and then runs a second `UserData.findOne({ email })` for the full profile payload.
-
-**Severity:** Medium
-
-**Why it matters:** Every profile load pays for two identical DB lookups.
-
-**Files involved:**
-- `app/api/user/route.js` (lines 72, 98)
-- `lib/getAuthSession.ts`
-- `app/(others)/profile/page.tsx` (client fetch via `useEffect`)
-
-**Suggested fix:** Extend `getAuthSession` or add a `getUserProfile(email)` helper that returns full profile in one query. Better: server-render profile data and pass as props to a thin client form.
 
 ---
 
@@ -342,6 +323,7 @@ These patterns are worth replicating elsewhere:
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
 | Server-fetch + client props (QOTD, profile, MCQ quiz, team, admin lists) | `app/(admin)/admin/qotd/page.tsx`, `app/(admin)/admin/blogs/page.tsx`, `app/(admin)/admin/access/page.tsx`, `app/(admin)/admin/info/page.tsx`, `app/(admin)/admin/graphic/page.tsx`, `app/(admin)/admin/scheduling/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
+| Request-scoped `fetchUserDataByEmail` + `getUserProfile` (page + API) | `lib/data/user-data.ts`, `lib/data/user-profile.ts`, `app/api/user/route.js` |
 | Shared admin list data helpers | `lib/data/admin/blogs.ts`, `lib/data/admin/access.ts`, `lib/data/admin/info.ts`, `lib/data/admin/graphic.ts`, `lib/data/admin/scheduling.ts` |
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
@@ -354,14 +336,6 @@ These patterns are worth replicating elsewhere:
 ## Recommended Fix Order
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
-
-### Phase 4 — Profile API duplicate read (1 PR)
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **4B** | **1.3** Profile API duplicate `UserData` read | Profile page is already server-rendered; extend `getAuthSession` / `getUserProfile` so `POST /api/user` doesn't re-query on every profile update |
-
----
 
 ### Phase 5 — Query efficiency on curriculum & submissions (1–2 PRs)
 
@@ -401,10 +375,10 @@ Issues below are the remaining backlog. Group items in the same batch when they 
 ### Suggested PR sequence (summary)
 
 ```
-4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **4B** (profile duplicate `UserData` read) — profile page is server-rendered but `POST /api/user` still re-queries on every update.
+**Highest impact next:** **5A** (level page subject filter + parallel topic page queries) — curriculum navigation read-path waterfalls under `[board]/[level]/…`.
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

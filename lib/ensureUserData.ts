@@ -1,3 +1,4 @@
+import { fetchUserDataByEmail } from "@/lib/data/user-data";
 import connectDB from "@/lib/mongodb";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { syncClerkUserMetadata } from "@/lib/syncClerkUserMetadata";
@@ -26,12 +27,11 @@ export async function ensureUserData({
   provider = "google",
   clerkUserId,
 }: EnsureUserDataInput): Promise<UserDataDoc> {
-  await connectDB();
-
-  let existing = await UserData.findOne({ email }).lean<UserDataDoc>();
+  let existing = await fetchUserDataByEmail(email) as UserDataDoc | null;
   const isNewUser = !existing;
 
   if (isNewUser) {
+    await connectDB();
     const created = await UserData.create({
       name: name ?? "",
       email,
