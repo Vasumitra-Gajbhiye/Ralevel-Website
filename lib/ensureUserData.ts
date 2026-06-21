@@ -1,5 +1,6 @@
 import connectDB from "@/lib/mongodb";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { syncClerkUserMetadata } from "@/lib/syncClerkUserMetadata";
 import type { Role } from "@/lib/roles";
 import UserData from "@/models/userData";
 
@@ -8,6 +9,7 @@ type EnsureUserDataInput = {
   name?: string | null;
   trackSignIn?: boolean;
   provider?: string;
+  clerkUserId?: string;
 };
 
 type UserDataDoc = {
@@ -22,6 +24,7 @@ export async function ensureUserData({
   name,
   trackSignIn = false,
   provider = "google",
+  clerkUserId,
 }: EnsureUserDataInput): Promise<UserDataDoc> {
   await connectDB();
 
@@ -63,6 +66,13 @@ export async function ensureUserData({
         is_new_user: isNewUser,
         provider,
       },
+    });
+  }
+
+  if (clerkUserId) {
+    await syncClerkUserMetadata(clerkUserId, {
+      roles: existing!.roles ?? [],
+      userDataId: existing!._id.toString(),
     });
   }
 

@@ -3,6 +3,10 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
+import {
+  findClerkUserIdByEmail,
+  syncClerkUserMetadata,
+} from "@/lib/syncClerkUserMetadata";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
@@ -83,6 +87,14 @@ export async function POST(req: Request) {
     target.roles = roles;
     await target.save();
 
+    const clerkUserId = await findClerkUserIdByEmail(email);
+    if (clerkUserId) {
+      await syncClerkUserMetadata(clerkUserId, {
+        roles,
+        userDataId: target._id.toString(),
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch {
     return new Response("Forbidden", { status: 403 });
@@ -123,6 +135,14 @@ export async function DELETE(req: Request) {
 
     target.roles = [];
     await target.save();
+
+    const clerkUserId = await findClerkUserIdByEmail(email);
+    if (clerkUserId) {
+      await syncClerkUserMetadata(clerkUserId, {
+        roles: [],
+        userDataId: target._id.toString(),
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch {

@@ -10,32 +10,15 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 12    |
+| High     | 11    |
 | Medium   | 16    |
 | Low      | 8     |
 
-**Top priorities:** decouple auth from MongoDB on every request, parallelize file uploads, add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
+**Top priorities:** parallelize file uploads, add pagination to unbounded list endpoints, split oversized client bundles, and introduce a data caching layer (`unstable_cache` / ISR).
 
 ---
 
 ## 1. Auth & Session
-
-### Issue 1.1 — MongoDB lookup on every authenticated request
-
-**Description:** `getAuthSession()` calls Clerk (`auth()` + `currentUser()`) and then `ensureUserData()`, which always runs `UserData.findOne({ email })` against MongoDB—even for users that already exist.
-
-**Severity:** High
-
-**Why it matters:** This runs on most protected API routes, every admin layout, and `/api/me`. Under load it adds 2 Clerk round-trips + 1 DB read to nearly every authenticated action, dominating latency and MongoDB read capacity.
-
-**Files involved:**
-- `lib/getAuthSession.ts` (lines 5–16)
-- `lib/ensureUserData.ts` (lines 26–28)
-- All consumers: `app/api/me/route.ts`, `app/(admin)/admin/layout.tsx`, ~30 API routes
-
-**Suggested fix:** Store roles in Clerk `publicMetadata` or JWT session claims and read them from `auth()` without a DB hit. Reserve `ensureUserData()` for sign-up/webhook flows only. Optionally cache `UserData` in Redis with a short TTL keyed by `userId`.
-
----
 
 ### Issue 1.2 — Triple auth chain on admin pages
 
@@ -840,7 +823,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P0 | 1.1 Auth decoupled from MongoDB | Largest latency reduction across the app |
 | P0 | 1.2 Consolidate admin auth | 2–3× fewer auth calls per admin page |
 | P0 | 3.1 Parallel R2 uploads | 5–10× faster resource submissions |
 | P0 | 8.1 Protect theory-eval | Stop unbounded LLM cost |
