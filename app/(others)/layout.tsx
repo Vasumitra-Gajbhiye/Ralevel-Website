@@ -1,8 +1,8 @@
 import "katex/dist/katex.min.css";
 import { Poppins } from "next/font/google";
 import "../globals.css";
-import ContactUs from "./layout ui/contact-us";
-import Navigation from "./layout ui/navigation";
+import ContactUs from "@/components/site/ContactUs";
+import Navigation from "@/components/site/Navigation";
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],

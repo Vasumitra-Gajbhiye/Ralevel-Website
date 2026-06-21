@@ -11,10 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 2     |
-| Medium   | 13    |
+| Medium   | 10    |
 | Low      | 8     |
-
-**Top priorities:** dedupe navigation/forms, remove HTTP loopback controllers.
 
 ---
 
@@ -202,26 +200,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 4. Caching Opportunities
 
-### Issue 4.5 — HTTP loopback controllers bypass cache
-
-**Description:** Several controllers fetch data by HTTP to the app's own API instead of querying MongoDB directly, adding an extra network hop with no cache headers.
-
-**Severity:** Medium
-
-**Why it matters:** Server components pay DNS + HTTP latency to hit their own API. No `next: { revalidate }` options are set.
-
-**Files involved:**
-- `controller/getAllTeam.tsx` (lines 1–4)
-- `controller/getAllBlogs.tsx`
-- `controller/getAllSubjects.tsx`
-- `controller/getSingleBlog.tsx`
-- `app/(others)/certificates/[id]/page.tsx` (lines 110–115) — server component fetches own API
-- `app/(others)/team/page.tsx` — client imports `getAllTeam` in `useEffect`
-
-**Suggested fix:** Query MongoDB directly (as `controller/resourceController.ts` and `controller/blogController.ts` do). If HTTP must remain, add `{ next: { revalidate: 60, tags: ['team'] } }`.
-
----
-
 ### Issue 4.6 — Redis used only for rate limiting
 
 **Description:** Upstash Redis backs `lib/rateLimit.ts` but is not used for session, query-result, or auth caching.
@@ -257,19 +235,18 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 5. Bundle Size & Large Files
 
-### Issue 5.3 — Navigation component is ~1,584 lines
+### Issue 5.3 — Navigation component could be split further
 
-**Description:** `(others)` layout navigation is a monolithic client component loaded on every route in the group.
+**Description:** Shared site navigation is a single client component loaded on every `(home)` and `(others)` route.
 
 **Severity:** Medium
 
 **Why it matters:** Parsed and bundled on certificates, resources, apply, and all other `(others)` routes regardless of need.
 
 **Files involved:**
-- `app/(others)/layout ui/navigation.tsx` (1,584 lines)
-- Also duplicated: `app/(home)/layout ui/navigation.tsx` (~1,006 lines), `app/layout ui/navigation.tsx` (~1,005 lines)
+- `components/site/Navigation.tsx`
 
-**Suggested fix:** Extract to shared `@/components/site/Navigation`. Split mobile overlay into dynamically imported sub-component. Target ~200 lines in the always-loaded shell.
+**Suggested fix:** Split mobile overlay into a dynamically imported sub-component. Target ~200 lines in the always-loaded shell.
 
 ---
 
@@ -315,49 +292,12 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 **Files involved:**
 - `app/(others)/apply/page.tsx` (line 213)
-- `app/(others)/forms/page.tsx` (line 213)
 
 **Suggested fix:** Import only the icons used (`Shield`, `PenLine`, etc.) by name.
 
 ---
 
 ## 6. Duplicate Code
-
-### Issue 6.1 — Triplicated navigation and contact-us components
-
-**Description:** Three nearly identical copies of navigation (~1,000+ lines each) and contact-us (~630 lines each) exist across route groups.
-
-**Severity:** Medium
-
-**Why it matters:** Bugfixes and features must be applied 3×; drift risk; larger build graph.
-
-**Files involved:**
-- `app/(others)/layout ui/navigation.tsx`
-- `app/(home)/layout ui/navigation.tsx`
-- `app/layout ui/navigation.tsx`
-- `app/(others)/layout ui/contact-us.tsx`, `app/(home)/layout ui/contact-us.tsx`, `app/layout ui/contact-us.tsx`
-
-**Suggested fix:** Single `@/components/site/Navigation` and `@/components/site/ContactUs` imported by route-group layouts.
-
----
-
-### Issue 6.2 — Apply and forms pages are near-identical
-
-**Description:** `apply/page.tsx` and `forms/page.tsx` differ only in link prefix (`/apply/` vs `/forms/`). Redirects in `next.config.mjs` already map `/forms` → `/apply`.
-
-**Severity:** Medium
-
-**Why it matters:** Double maintenance; potential for divergent behavior.
-
-**Files involved:**
-- `app/(others)/apply/page.tsx`
-- `app/(others)/forms/page.tsx`
-- `app/(others)/apply/[slug]/pageClient.tsx` ↔ `app/(others)/forms/[slug]/pageClient.tsx`
-- `next.config.mjs` (redirects)
-
-**Suggested fix:** One shared server component; single route tree with redirect from legacy path.
-
----
 
 ### Issue 6.3 — Duplicate blog fetching helpers
 
@@ -593,11 +533,12 @@ These patterns are worth replicating elsewhere:
 | Paginated list endpoints (public + admin) | `app/api/certificates`, `app/api/blogs`, `app/api/admin/*` |
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
-| `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts` |
+| `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
-| Server-fetch + client props (QOTD, profile, MCQ quiz) | `app/(admin)/admin/qotd/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
+| Server-fetch + client props (QOTD, profile, MCQ quiz, team) | `app/(admin)/admin/qotd/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/team/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
+| Shared site Navigation + ContactUs (`variant` prop) | `components/site/Navigation.tsx`, `components/site/ContactUs.tsx` |
 | Compound indexes on content models | `models/Topic.ts`, `models/MCQ.ts`, `models/Glossary.ts` |
 
 ---
@@ -606,8 +547,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P1 | 4.5 Remove HTTP loopback | Eliminates self-fetch overhead |
-| P2 | 6.1–6.2 Dedupe navigation/forms | Lower maintenance, smaller bundles |
 | P2 | 7.1 Server-fetch admin data | Better admin UX, fewer round trips |
 | P3 | 2.5 `.lean()` everywhere | Incremental query speedup |
 | P3 | 8.2 PostHog flush tuning | Lower request tail latency |

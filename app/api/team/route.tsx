@@ -95,6 +95,7 @@ import { getAuthSession } from "@/lib/getAuthSession";
 //   }
 // }
 
+import { revalidateDataTags } from "@/lib/data-cache";
 import mongoDBConnect from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
@@ -163,6 +164,8 @@ export async function POST(req: NextRequest) {
       discordId,
     });
 
+    revalidateDataTags("team");
+
     return NextResponse.json(
       {
         message: "Successfully created member",
@@ -200,6 +203,8 @@ export async function DELETE(req: NextRequest) {
     if (!deleted) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
+
+    revalidateDataTags("team");
 
     return NextResponse.json(
       { message: "Member deleted successfully" },

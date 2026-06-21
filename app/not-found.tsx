@@ -1,7 +1,7 @@
 "use client";
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
-import Navigation from "./layout ui/navigation";
+import Navigation from "@/components/site/Navigation";
 
 // Floating card animation
 const floating: Variants = {
@@ -46,7 +46,7 @@ const slowSpin: Variants = {
 export default function NotFound() {
   return (
     <main>
-      <Navigation />
+      <Navigation variant="hero" />
       <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-b from-[#081227] via-[#091b3a] to-[#0b1730] relative overflow-hidden text-white">
         {/* Background motion layer */}
         <motion.div

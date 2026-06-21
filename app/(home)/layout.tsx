@@ -1,7 +1,7 @@
 import { Poppins } from "next/font/google";
 import "../globals.css";
-import ContactUs from "./layout ui/contact-us";
-import Navigation from "./layout ui/navigation";
+import ContactUs from "@/components/site/ContactUs";
+import Navigation from "@/components/site/Navigation";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <main className={poppins.className + " tracking-widest	"}>
-      <Navigation />
+      <Navigation variant="hero" />
       <div className="pt-11">{children}</div>
       <ContactUs />
     </main>
