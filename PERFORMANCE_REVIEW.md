@@ -10,11 +10,11 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 | Severity | Count |
 |----------|-------|
-| High     | 4     |
+| High     | 2     |
 | Medium   | 13    |
 | Low      | 8     |
 
-**Top priorities:** split oversized client bundles (profile, MCQ quiz pages).
+**Top priorities:** dedupe navigation/forms, remove HTTP loopback controllers.
 
 ---
 
@@ -256,37 +256,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 ---
 
 ## 5. Bundle Size & Large Files
-
-### Issue 5.1 — Profile page is ~5,700 lines of client code
-
-**Description:** `app/(others)/profile/page.tsx` is a `"use client"` page with ~4,600 lines of active code plus extensive commented legacy blocks.
-
-**Severity:** High
-
-**Why it matters:** Massive JS bundle, slow hydration, poor Time-to-Interactive. Most of the file is form UI that could be server-rendered.
-
-**Files involved:**
-- `app/(others)/profile/page.tsx` (5,700 lines)
-
-**Suggested fix:** Server-load user via `getAuthSession()` + single DB query. Extract form sections into smaller client components. Delete commented code. Lazy-load infrequent sections.
-
----
-
-### Issue 5.2 — MCQ quiz page is ~4,278 lines with heavy imports
-
-**Description:** Topic MCQ page imports full `mathjs`, `katex`, and `framer-motion` at the top level in a `"use client"` page.
-
-**Severity:** High
-
-**Why it matters:** `mathjs` alone is hundreds of KB gzipped. The entire bundle ships on every quiz visit.
-
-**Files involved:**
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/practice/topic-mcq-questions/[set]/page.tsx` (lines 3061–3087 active code)
-- `app/(others)/[board]/[level]/[subject]/[subjectCode]/[chapter]/practice/theory-topic-questions/[set]/page.tsx` (~1,806 lines, same import pattern)
-
-**Suggested fix:** Server-fetch questions from MongoDB; pass props to a thin client shell. Dynamic-import calculator (`next/dynamic`, `ssr: false`). Render LaTeX server-side where possible. Split quiz UI into `/components/quiz/`.
-
----
 
 ### Issue 5.3 — Navigation component is ~1,584 lines
 
@@ -626,7 +595,7 @@ These patterns are worth replicating elsewhere:
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts` |
 | ISR + `generateStaticParams` for curriculum + blogs | `app/(others)/[board]/.../page.tsx`, `app/(others)/blogs/[slug]/page.tsx` |
-| Server-fetch + client props (QOTD) | `app/(admin)/admin/qotd/page.tsx` |
+| Server-fetch + client props (QOTD, profile, MCQ quiz) | `app/(admin)/admin/qotd/page.tsx`, `app/(others)/profile/page.tsx`, `app/(others)/[board]/.../topic-mcq-questions/[set]/page.tsx` |
 | Redis rate limiting on public APIs | `lib/rateLimit.ts` |
 | Form submit validation (file size, honeypot, rate limit) | `app/api/forms/[slug]/submit/route.ts` |
 | Compound indexes on content models | `models/Topic.ts`, `models/MCQ.ts`, `models/Glossary.ts` |
@@ -637,8 +606,7 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P1 | 5.1–5.2 Split large client pages | Faster TTI on high-traffic routes |
-| P2 | 4.5 Remove HTTP loopback | Eliminates self-fetch overhead |
+| P1 | 4.5 Remove HTTP loopback | Eliminates self-fetch overhead |
 | P2 | 6.1–6.2 Dedupe navigation/forms | Lower maintenance, smaller bundles |
 | P2 | 7.1 Server-fetch admin data | Better admin UX, fewer round trips |
 | P3 | 2.5 `.lean()` everywhere | Incremental query speedup |
