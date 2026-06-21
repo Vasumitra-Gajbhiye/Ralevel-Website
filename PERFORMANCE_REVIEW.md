@@ -2,7 +2,7 @@
 
 Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/MongoDB, Clerk auth). Findings are ordered by severity within each category.
 
-**Stack:** Next.js App Router · MongoDB/Mongoose · Clerk · Upstash Redis (rate limiting only) · Cloudflare R2 · Cloudinary
+**Stack:** Next.js App Router · MongoDB/Mongoose · Clerk · Redis (rate limiting + cache-aside) · Cloudflare R2 · Cloudinary
 
 ---
 
@@ -11,25 +11,8 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 | Severity | Count |
 |----------|-------|
 | High     | 0     |
-| Medium   | 2     |
+| Medium   | 1     |
 | Low      | 1     |
-
----
-
-## 4. Caching Opportunities
-
-### Issue 4.6 — Redis used only for rate limiting
-
-**Description:** Upstash Redis backs `lib/rateLimit.ts` but is not used for session, query-result, or auth caching.
-
-**Severity:** Medium
-
-**Why it matters:** Existing Redis infrastructure could cache expensive reads and auth lookups at low incremental cost.
-
-**Files involved:**
-- `lib/rateLimit.ts`
-
-**Suggested fix:** Cache `UserData` roles by email with 60–300s TTL. Cache public list endpoints (certs, team) with tag-based invalidation.
 
 ---
 
@@ -91,6 +74,7 @@ These patterns are worth replicating elsewhere:
 | Limited search results (limit 5) | `app/api/admin/access/search/route.ts` |
 | ISR + `generateStaticParams` for resources | `app/(others)/resources/[slug]/page.tsx` |
 | `unstable_cache` data layer + tag invalidation | `lib/data-cache.ts`, `lib/data/blogs.ts`, `lib/data/resources.ts`, `lib/data/curriculum.ts`, `lib/data/team.ts`, `lib/data/certificates.ts` |
+| Redis cache-aside with tag invalidation (user data, public lists) | `lib/redis-cache.ts`, `lib/data/user-data.ts`, `lib/data/blogs.ts`, `lib/data/certificates.ts`, `lib/data/team.ts` |
 | Parallel independent queries after `connectDB()` | `app/(others)/apply/[slug]/page.tsx`, `app/api/forms/create/route.ts` |
 | Curriculum data layer + shared `connectDB` on all pages | `lib/data/curriculum.ts`, flashcards page |
 | Filtered level-subject list + parallel topic page queries | `lib/data/curriculum.ts` (`getSubjectsForLevel`, `getTopicPageData` with `Promise.all`) |
@@ -110,23 +94,9 @@ These patterns are worth replicating elsewhere:
 
 ## Recommended Fix Order
 
-Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §7).
+Issues below are the remaining backlog. Skip any item already resolved locally (e.g. team server-fetch is done — see §7).
 
-### Phase 8 — Caching layer (1 PR, after database indexes and lean read paths are in place)
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **8A** | **4.6** Redis query/auth caching | Redis infra already exists for rate limiting; lean read paths and slug/roles indexes are in place so cached payloads are correct and cheap to serialize |
-
----
-
-### Suggested PR sequence (summary)
-
-```
-8A
-```
-
-**Highest impact next:** **8A** (Redis query/auth caching — Issue 4.6).
+**Highest impact next:** **7.3** (unnecessary deep clones — independent cleanup).
 
 **Defer until data layer is stable:** Remaining 7.3 clone cleanup can land independently.
 

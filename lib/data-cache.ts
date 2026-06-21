@@ -1,3 +1,4 @@
+import { invalidateRedisTags } from "@/lib/redis-cache";
 import { revalidateTag, unstable_cache } from "next/cache";
 
 export function cachedQuery<T>(
@@ -12,4 +13,5 @@ export function revalidateDataTags(...tags: string[]) {
   for (const tag of tags) {
     revalidateTag(tag, "max");
   }
+  void invalidateRedisTags(...tags);
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRedis } from "@/lib/redis";
+import { ensureRedisConnected } from "@/lib/redis";
 
 type WindowConfig = {
   limit: number;
@@ -16,7 +16,7 @@ export async function enforceRateLimit(
   { limit, windowSec }: WindowConfig,
   identifier?: string
 ) {
-  const redis = getRedis();
+  const redis = await ensureRedisConnected();
   if (!redis) return null;
 
   const ip =

@@ -34,6 +34,7 @@ import { getAuthSession } from "@/lib/getAuthSession";
 // app/api/user/update/route.js
 // app/api/user/update/route.js
 import connectDB from "@/lib/mongodb";
+import { invalidateUserCache } from "@/lib/redis-cache";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
@@ -119,6 +120,8 @@ export async function POST(req) {
         { status: 404 }
       );
     }
+
+    await invalidateUserCache(email);
 
     return NextResponse.json({ success: true, updated }, { status: 200 });
   } catch (err) {

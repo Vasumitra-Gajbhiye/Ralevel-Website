@@ -1,6 +1,6 @@
 # Redis caching
 
-This app uses Redis for rate limiting and cache-aside data caching (blogs, resources, certificates).
+This app uses Redis for rate limiting and cache-aside data caching (user data, blogs, certificates, team).
 
 ## Local development
 
@@ -51,17 +51,18 @@ If `REDIS_URL` is missing or Redis is unreachable, the app falls back to MongoDB
 | `resources-legacy` | Legacy resource API mutations |
 | `certs` | Certificate create/update/delete |
 | `cert:{certId}` | Specific certificate changed |
+| `team` | Team member create/delete |
+| `user:{email}` | User profile update or role change |
 
-### Manual invalidation
-
-When `resources2data` is updated directly in MongoDB:
-
-```bash
-npx tsx scripts/invalidate-cache.ts resources
-```
+`revalidateDataTags()` in `lib/data-cache.ts` clears both Next.js `unstable_cache` tags and matching Redis tag sets.
 
 ## Verification
 
-1. **Cache hit:** Call `/api/blogs` twice — second request should be faster (Mongo not queried on hit).
-2. **Invalidation:** Create/delete a blog as admin — list updates immediately.
-3. **Degradation:** Stop Redis (`docker compose stop redis`) — app still serves data from MongoDB.
+1. **Cache population:** Call each endpoint twice:
+   - `GET /api/blogs`
+   - `GET /api/certificates`
+   - `GET /api/team`
+2. **Confirm keys:** `docker compose exec redis redis-cli KEYS 'cache:*'` — expect keys like `cache:blogs:list:1:50`, `cache:certs:list:1:50`, `cache:team:list:1:50`.
+3. **Invalidation:** Create/delete a blog, cert, or team member as admin — related `cache:*` keys should be removed.
+4. **User cache:** After a profile or role update, the `cache:user:email:*` key for that user is cleared.
+5. **Degradation:** Stop Redis (`docker compose stop redis`) — app still serves data from MongoDB.

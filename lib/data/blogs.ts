@@ -1,6 +1,7 @@
 import { cachedQuery } from "@/lib/data-cache";
 import connectDB from "@/lib/mongodb";
 import { buildPaginatedResponse } from "@/lib/pagination";
+import { redisCached } from "@/lib/redis-cache";
 import BlogsData from "@/models/blogsData";
 
 const BLOG_LIST_PROJECTION = {
@@ -24,21 +25,26 @@ export async function getCachedBlogList(options: BlogListOptions = {}) {
   const limit = options.limit ?? 50;
   const skip = (page - 1) * limit;
 
-  return cachedQuery(
-    ["blogs", "list", String(page), String(limit)],
-    async () => {
-      await connectDB();
-      const [data, total] = await Promise.all([
-        BlogsData.find({}, BLOG_LIST_PROJECTION)
-          .sort({ _id: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        BlogsData.countDocuments(),
-      ]);
-      return { data, total, page, limit };
-    },
-    { revalidate: 600, tags: ["blogs"] }
+  return redisCached(
+    `blogs:list:${page}:${limit}`,
+    () =>
+      cachedQuery(
+        ["blogs", "list", String(page), String(limit)],
+        async () => {
+          await connectDB();
+          const [data, total] = await Promise.all([
+            BlogsData.find({}, BLOG_LIST_PROJECTION)
+              .sort({ _id: -1 })
+              .skip(skip)
+              .limit(limit)
+              .lean(),
+            BlogsData.countDocuments(),
+          ]);
+          return { data, total, page, limit };
+        },
+        { revalidate: 600, tags: ["blogs"] }
+      ),
+    { ttlSec: 600, tags: ["blogs"] }
   );
 }
 

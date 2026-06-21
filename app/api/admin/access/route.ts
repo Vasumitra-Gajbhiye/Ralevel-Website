@@ -3,6 +3,7 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { getAdminAccessList } from "@/lib/data/admin/access";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
+import { invalidateUserCache } from "@/lib/redis-cache";
 import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
 import {
   findClerkUserIdByEmail,
@@ -84,6 +85,8 @@ export async function POST(req: Request) {
     });
   }
 
+  await invalidateUserCache(email);
+
   return NextResponse.json({ success: true });
 }
 
@@ -130,6 +133,8 @@ export async function DELETE(req: Request) {
       userDataId: target._id.toString(),
     });
   }
+
+  await invalidateUserCache(email);
 
   return NextResponse.json({ success: true });
 }

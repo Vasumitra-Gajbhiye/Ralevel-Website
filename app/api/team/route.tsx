@@ -96,11 +96,9 @@ import { getAuthSession } from "@/lib/getAuthSession";
 // }
 
 import { revalidateDataTags } from "@/lib/data-cache";
+import { getPaginatedTeamList } from "@/lib/data/team";
 import mongoDBConnect from "@/lib/mongodb";
-import {
-  buildPaginatedResponse,
-  parsePaginationParams,
-} from "@/lib/pagination";
+import { parsePaginationParams } from "@/lib/pagination";
 import { requireRoles } from "@/lib/requireRoles";
 import TeamData from "@/models/teamData";
 import mongoose from "mongoose";
@@ -109,24 +107,13 @@ import { NextRequest, NextResponse } from "next/server";
 /* ================= GET TEAM ================= */
 export async function GET(req: NextRequest) {
   try {
-    await mongoDBConnect();
-
-    const { page, limit, skip } = parsePaginationParams(req.nextUrl.searchParams);
-
-    const [members, total] = await Promise.all([
-      TeamData.find()
-        .select("name title discordId")
-        .sort({ _id: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      TeamData.countDocuments(),
-    ]);
+    const { page, limit } = parsePaginationParams(req.nextUrl.searchParams);
+    const result = await getPaginatedTeamList({ page, limit });
 
     return NextResponse.json(
       {
         message: "Successfully fetched members",
-        ...buildPaginatedResponse(members, total, page, limit),
+        ...result,
       },
       { status: 200 }
     );

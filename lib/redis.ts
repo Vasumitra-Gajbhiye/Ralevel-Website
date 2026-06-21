@@ -47,14 +47,25 @@ export function getRedis(): Redis | null {
   return global.redisClient;
 }
 
-export async function isRedisReady(): Promise<boolean> {
+export async function ensureRedisConnected(): Promise<Redis | null> {
   const client = getRedis();
-  if (!client) return false;
+  if (!client) return null;
 
   try {
     if (client.status === "wait") {
       await client.connect();
     }
+    return client;
+  } catch {
+    return null;
+  }
+}
+
+export async function isRedisReady(): Promise<boolean> {
+  const client = await ensureRedisConnected();
+  if (!client) return false;
+
+  try {
     const pong = await client.ping();
     global.redisUnavailableLogged = false;
     return pong === "PONG";
