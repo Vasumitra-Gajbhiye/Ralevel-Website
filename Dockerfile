@@ -4,7 +4,7 @@
 # Stage 1: base
 # Shared Node.js Alpine image with libc compatibility for sharp prebuilds.
 # -----------------------------------------------------------------------------
-FROM node:20.19.5-alpine3.20 AS base
+FROM node:20.19.5-alpine AS base
 
 RUN apk add --no-cache libc6-compat
 
