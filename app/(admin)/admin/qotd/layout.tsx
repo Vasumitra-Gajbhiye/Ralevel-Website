@@ -1,7 +1,6 @@
+import { getAuthSession } from "@/lib/getAuthSession";
 import NoAccess from "@/components/NoAccess";
-import { authOptions } from "@/lib/auth";
 import { hasRequiredRole } from "@/lib/roles";
-import { getServerSession } from "next-auth";
 import React from "react";
 
 export default async function qotdLayout({
@@ -9,7 +8,7 @@ export default async function qotdLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   // No session at all → no access
   if (!session) {

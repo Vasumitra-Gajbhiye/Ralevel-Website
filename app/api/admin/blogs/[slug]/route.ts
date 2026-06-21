@@ -1,10 +1,9 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import EditorBlog from "@/models/editorBlogs";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= GET BLOG ================= */
@@ -13,7 +12,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> }
 ) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin", "writer"]);
 
@@ -48,7 +47,7 @@ export async function PATCH(
   context: { params: Promise<{ slug: string }> }
 ) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin", "writer"]);
 
@@ -91,7 +90,7 @@ export async function DELETE(
   context: { params: Promise<{ slug: string }> }
 ) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);

@@ -1,3 +1,4 @@
+import { getAuthSession } from "@/lib/getAuthSession";
 // import mongoDBConnect from "@/libs/mongodb";
 // import TeamData from "@/models/teamData";
 // import { NextResponse, NextRequest } from "next/server";
@@ -81,12 +82,10 @@
 //   }
 // }
 
-import { authOptions } from "@/lib/auth";
 import mongoDBConnect from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import TeamData from "@/models/teamData";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 /* ================= GET SINGLE MEMBER ================= */
@@ -132,7 +131,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);

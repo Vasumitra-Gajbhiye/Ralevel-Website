@@ -1,10 +1,9 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import ResourcesData from "@/models/resourcesData";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET ALL SUBJECTS
@@ -43,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 // CREATE A SUBJECT
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin"]);
   } catch {
@@ -85,7 +84,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin"]);
   } catch {

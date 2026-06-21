@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Role } from "@/lib/roles";
 import { roleRank } from "@/lib/roles";
-import { useSession } from "next-auth/react";
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -228,7 +228,7 @@ function RoleMultiBadge({
 }
 
 export default function AccessPage() {
-  const { data: session } = useSession();
+  const { session } = useAuthSession();
 
   const [users, setUsers] = useState<AccessUser[]>([]);
   const [email, setEmail] = useState("");

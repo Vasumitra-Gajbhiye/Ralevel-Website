@@ -1,7 +1,6 @@
 import "katex/dist/katex.min.css";
 import { Poppins } from "next/font/google";
 import "../globals.css";
-import SessionProviderWrapper from "../SessionProviderWrapper";
 import ContactUs from "./layout ui/contact-us";
 import Navigation from "./layout ui/navigation";
 const poppins = Poppins({
@@ -38,11 +37,9 @@ export default function RootLayout({
 }>) {
   return (
     <main className={poppins.className + " tracking-widest pt-5	"}>
-      <SessionProviderWrapper>
-        <Navigation />
-        <div className="pt-11 min-h-screen">{children}</div>
-        <ContactUs />
-      </SessionProviderWrapper>
+      <Navigation />
+      <div className="pt-11 min-h-screen">{children}</div>
+      <ContactUs />
     </main>
   );
 }

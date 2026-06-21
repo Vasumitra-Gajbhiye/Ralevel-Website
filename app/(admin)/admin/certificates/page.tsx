@@ -1,8 +1,7 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import CertData from "@/models/certsData";
 import { Types } from "mongoose";
-import { getServerSession } from "next-auth";
 import CertificatesAdminPage, { Certificate } from "./certificateClient";
 
 // 🔒 Define DB type explicitly (important)
@@ -26,7 +25,7 @@ type CertDoc = {
 };
 
 export default async function Certificates() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   await connectDB();
 
   // ✅ lean + explicit type

@@ -1,10 +1,9 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { Role } from "@/lib/roles";
 import Contributor from "@/models/Contributor";
 import ResourceSubmission from "@/models/ResourceSubmission";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 /* ================= HELPERS ================= */
 
@@ -22,7 +21,7 @@ function requireResourceAdminAccess(session: any): Role[] {
 
 export async function GET(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireResourceAdminAccess(session);

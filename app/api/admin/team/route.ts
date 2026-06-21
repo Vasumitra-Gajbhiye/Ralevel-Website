@@ -1,9 +1,8 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { Role } from "@/lib/roles";
 import StaffMember from "@/models/staffMember";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= HELPERS ================= */
@@ -33,7 +32,7 @@ const RANK_ORDER: Record<string, number> = {
 /* ================= GET: LIST STAFF ================= */
 export async function GET() {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireTeamAdmin(session);
@@ -81,7 +80,7 @@ export async function GET() {
 /* ================= POST: ADD STAFF ================= */
 export async function POST(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireTeamAdmin(session);

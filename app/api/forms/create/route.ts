@@ -1,8 +1,7 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 type IntroBlock =
@@ -68,7 +67,7 @@ type Form = {
 
 export async function POST(req: Request) {
   // 1) Auth: only admins/owners can create forms
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const roles = session?.userData?.roles as string[] | undefined;
 
   if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {

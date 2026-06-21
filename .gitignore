@@ -52,3 +52,5 @@ json_files/
 scripts/
 
 /lib/syllabusJson
+# clerk configuration (can include secrets)
+/.clerk/

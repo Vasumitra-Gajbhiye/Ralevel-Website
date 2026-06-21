@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useAuthSession } from "@/hooks/useAuthSession";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiTrash2 } from "react-icons/fi";
@@ -25,7 +25,7 @@ export default function AdminBlogsPage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [savingSlug, setSavingSlug] = useState<string | null>(null);
 
-  const { data: session } = useSession();
+  const { session } = useAuthSession();
 
   const isAdmin =
     session?.userData?.roles?.includes("admin") ||

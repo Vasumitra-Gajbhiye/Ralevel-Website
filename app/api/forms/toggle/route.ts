@@ -1,14 +1,13 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
   // 1) Auth: only admins/owners can toggle forms
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const roles = session?.userData?.roles as string[] | undefined;
 
   if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {

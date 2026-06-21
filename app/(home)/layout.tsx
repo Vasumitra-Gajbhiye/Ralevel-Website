@@ -1,6 +1,5 @@
 import { Poppins } from "next/font/google";
 import "../globals.css";
-import SessionProviderWrapper from "../SessionProviderWrapper";
 import ContactUs from "./layout ui/contact-us";
 import Navigation from "./layout ui/navigation";
 
@@ -38,11 +37,9 @@ export default function RootLayout({
 }>) {
   return (
     <main className={poppins.className + " tracking-widest	"}>
-      <SessionProviderWrapper>
-        <Navigation />
-        <div className="pt-11">{children}</div>
-        <ContactUs />
-      </SessionProviderWrapper>
+      <Navigation />
+      <div className="pt-11">{children}</div>
+      <ContactUs />
     </main>
   );
 }

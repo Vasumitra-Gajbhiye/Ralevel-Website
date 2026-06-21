@@ -7,7 +7,7 @@ import {
   ThumbsDown,
   ThumbsUp,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -55,9 +55,9 @@ export default function SubmissionPageClient({ submission, form }: Props) {
   const upvotes = votes?.filter((v) => v.vote === 1).length ?? 0;
   const downvotes = votes?.filter((v) => v.vote === -1).length ?? 0;
 
-  const { data: session } = useSession();
+  const { user } = useUser();
 
-  const currentAdminId = session?.user?.email;
+  const currentAdminId = user?.primaryEmailAddress?.emailAddress;
 
   const currentVote = votes.find((v) => v.adminId === currentAdminId)?.vote;
 

@@ -1,4 +1,4 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { confirmationEmail } from "@/lib/emails/confirmationEmail";
 import connectDB from "@/lib/mongodb";
 import { getPostHogClient } from "@/lib/posthog-server";
@@ -8,7 +8,6 @@ import Form from "@/models/Form";
 import FormSubmission from "@/models/FormSubmission";
 import crypto from "crypto";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
@@ -26,7 +25,7 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   const sessionEmail = session?.user?.email ?? undefined;
   // Basic slug validation
   if (!slug || typeof slug !== "string" || slug.length > 100) {

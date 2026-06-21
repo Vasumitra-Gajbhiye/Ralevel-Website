@@ -1,9 +1,8 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import { requireRoles } from "@/lib/requireRoles";
 import BlogsData from "@/models/blogsData";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 // import { useSearchParams } from "next/navigation";
 
@@ -45,7 +44,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin", "writer"]);
   } catch {

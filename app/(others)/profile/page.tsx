@@ -4635,7 +4635,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { AnimatePresence, motion } from "framer-motion";
 import { HelpCircle, Menu, Plus, Search, Settings } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useClerk, useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -4915,7 +4915,8 @@ function SessionPickerModal({
    MAIN COMPONENT
 ----------------------------------------------------------- */
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { user, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -4954,10 +4955,7 @@ export default function ProfilePage() {
   }, [boards]);
 
   async function handleSwitchAccount() {
-    // Step 1: fully sign out and redirect
-    await signOut({
-      callbackUrl: "/auth/switch",
-    });
+    await signOut({ redirectUrl: "/sign-in" });
   }
 
   const sessionOptions = useMemo(() => {
@@ -4979,13 +4977,14 @@ export default function ProfilePage() {
   /* LOAD USER ---------------------- */
   useEffect(() => {
     async function load() {
-      if (!session?.user?.email) return setLoading(false);
+      const email = user?.primaryEmailAddress?.emailAddress;
+      if (!email) return setLoading(false);
 
       try {
         const r = await fetch("/api/user", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: session.user.email }),
+          body: JSON.stringify({ email }),
         });
 
         const data = await r.json();
@@ -5020,7 +5019,7 @@ export default function ProfilePage() {
         const defaultName =
           data.name && data.name.trim().length > 0
             ? data.name
-            : session.user.name ?? "";
+            : user?.fullName ?? "";
 
         setName(defaultName);
 
@@ -5045,7 +5044,7 @@ export default function ProfilePage() {
     }
 
     load();
-  }, [session?.user?.email]);
+  }, [user?.primaryEmailAddress?.emailAddress]);
 
   useEffect(() => {
     if (!initialSnapshot) return;
@@ -5076,13 +5075,14 @@ export default function ProfilePage() {
 
   async function handleSave(e?: FormEvent) {
     if (e) e.preventDefault();
-    if (!session?.user?.email) return;
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
 
     setSaving(true);
 
     const payload: UserPayload = {
       name,
-      email: session.user.email,
+      email,
       redditUsername,
       discordUsername,
       boards,
@@ -5126,6 +5126,14 @@ export default function ProfilePage() {
 
   // --------------------------------------------
   if (loading) return <div className="p-10 text-center">Loading...</div>;
+
+  if (!isSignedIn) {
+    return (
+      <div className="p-10 text-center">
+        Please sign in to view your profile.
+      </div>
+    );
+  }
 
   /* ------------------------------------------------------------------------
      LAYOUT REWRITE:
@@ -5217,7 +5225,7 @@ export default function ProfilePage() {
           name={name}
           redditUsername={redditUsername}
           discordUsername={discordUsername}
-          image={session?.user?.image}
+          image={user?.imageUrl}
           boards={boards}
           subjectsAS={subjectsAS}
           subjectsA2={subjectsA2}
@@ -5229,7 +5237,7 @@ export default function ProfilePage() {
               prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]
             )
           }
-          onSignOut={() => signOut()}
+          onSignOut={() => signOut({ redirectUrl: "/sign-in" })}
           onUpgrade={() => alert("Nitro Coming Soon!")}
         />
 

@@ -1,16 +1,15 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
 import UserData from "@/models/userData";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= GET ================= */
 export async function GET() {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);
@@ -38,7 +37,7 @@ export async function GET() {
 /* ================= POST / PATCH ================= */
 export async function POST(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);
@@ -97,7 +96,7 @@ export async function PATCH(req: Request) {
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);

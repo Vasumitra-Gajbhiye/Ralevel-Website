@@ -1,3 +1,4 @@
+import { getAuthSession } from "@/lib/getAuthSession";
 // // app/api/user/route.js
 // import { NextResponse } from "next/server";
 // import connectDB from "@/libs/mongodb";
@@ -61,16 +62,14 @@
 
 // app/api/user/route.js
 // app/api/user/route.js
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/mongodb";
 import UserData from "@/models/userData";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
     // 1) Ensure user is authenticated and derive identity from the session
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     const email = session?.user?.email;
 
     if (!email || typeof email !== "string") {

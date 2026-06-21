@@ -1295,8 +1295,8 @@
 "use client";
 
 import { cldImage } from "@/lib/cloudinary";
+import { useUser } from "@clerk/nextjs";
 import { LogIn, Menu, X } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -1306,7 +1306,7 @@ import { createPortal } from "react-dom";
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { isSignedIn, user } = useUser();
   const [isActive, setIsActive] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -1421,7 +1421,7 @@ export default function Navigation() {
                 </li>
               ))}
               {/* ✅ Profile link - visible only on mobile */}
-              {session?.user && (
+              {isSignedIn && (
                 <li>
                   <Link
                     href="/profile"
@@ -1450,17 +1450,24 @@ export default function Navigation() {
                 Join Now
               </a>
 
-              {!session?.user && (
-                <button
-                  onClick={() => {
-                    signIn("google");
-                    handleClose();
-                  }}
-                  className="w-full text-center bg-blue-500 text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition flex items-center justify-center gap-2"
-                >
-                  <LogIn size={18} />
-                  Sign in with Google
-                </button>
+              {!isSignedIn && (
+                <>
+                  <Link
+                    href="/sign-in"
+                    onClick={handleClose}
+                    className="block w-full text-center bg-blue-500 text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition flex items-center justify-center gap-2"
+                  >
+                    <LogIn size={18} />
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    onClick={handleClose}
+                    className="block w-full text-center border border-blue-500 text-blue-600 font-semibold py-3 rounded-full hover:bg-blue-50 transition"
+                  >
+                    Sign up
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -1516,13 +1523,13 @@ export default function Navigation() {
 
           {/* right side buttons (desktop) */}
           <div className="hidden md:flex items-center gap-4">
-            {session?.user ? (
+            {isSignedIn ? (
               <div
                 onClick={() => router.push("/profile")}
                 className="w-9 h-9 rounded-full overflow-hidden border border-gray-300 hover:scale-105 transition-all relative cursor-pointer"
               >
                 <Image
-                  src={session.user.image ?? "/default-avatar.png"}
+                  src={user?.imageUrl ?? "/default-avatar.png"}
                   alt="Profile"
                   fill
                   sizes="36px"
@@ -1530,13 +1537,21 @@ export default function Navigation() {
                 />
               </div>
             ) : (
-              <button
-                onClick={() => signIn("google")}
-                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-600 transition-all duration-300 shadow-sm"
-              >
-                <LogIn size={16} />
-                <span>Sign in</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/sign-in"
+                  className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-600 transition-all duration-300 shadow-sm"
+                >
+                  <LogIn size={16} />
+                  <span>Sign in</span>
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="flex items-center gap-2 border border-blue-500 text-blue-600 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-50 transition-all duration-300"
+                >
+                  <span>Sign up</span>
+                </Link>
+              </div>
             )}
 
             {/* join button */}

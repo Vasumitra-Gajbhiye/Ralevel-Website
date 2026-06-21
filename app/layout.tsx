@@ -1,3 +1,5 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import { GoogleAnalytics } from "@next/third-parties/google"; // <-- Official Package
 import { Analytics } from "@vercel/analytics/next";
 import { Poppins } from "next/font/google";
@@ -42,14 +44,11 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
       </head>
       <body className={poppins.className + " tracking-widest	"}>
-        {/* <Suspense fallback={null}>
-          <GoogleAnalyticsTracker />
-        </Suspense> */}
-        {/* <Navigation /> */}
-        {children}
-        <Toaster richColors position="top-right" />
-        <Analytics />
-        {/* <ContactUs /> */}
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          {children}
+          <Toaster richColors position="top-right" />
+          <Analytics />
+        </ClerkProvider>
       </body>
       <GoogleAnalytics gaId="G-8WQ1YNJQR8" />
     </html>

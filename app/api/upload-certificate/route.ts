@@ -1,3 +1,4 @@
+import { getAuthSession } from "@/lib/getAuthSession";
 // // app/api/upload-certificate/route.ts
 // import { v2 as cloudinary } from "cloudinary";
 // import { NextRequest, NextResponse } from "next/server";
@@ -56,10 +57,8 @@
 // }
 
 // app/api/upload-certificate/route.ts
-import { authOptions } from "@/lib/auth";
 import { requireRoles } from "@/lib/requireRoles";
 import { v2 as cloudinary } from "cloudinary";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Configure Cloudinary with your environment variables
@@ -70,7 +69,7 @@ cloudinary.config({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin"]);
   } catch {

@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Chrome } from "lucide-react";
-import { signIn } from "next-auth/react";
 
 export default function LoginRequiredCard() {
   return (
@@ -26,14 +26,15 @@ export default function LoginRequiredCard() {
         </CardHeader>
 
         <CardContent className="flex flex-col gap-6 pb-8 pt-2">
-          <Button
-            onClick={() => signIn("google")}
-            className="w-full flex items-center justify-center gap-2 py-6 text-base"
-            size="lg"
-          >
-            <Chrome className="h-4 w-4" />
-            Continue with Google
-          </Button>
+          <SignInButton mode="redirect" forceRedirectUrl="/apply">
+            <Button
+              className="w-full flex items-center justify-center gap-2 py-6 text-base"
+              size="lg"
+            >
+              <Chrome className="h-4 w-4" />
+              Continue with Google
+            </Button>
+          </SignInButton>
 
           <p className="text-sm text-muted-foreground text-center leading-relaxed px-4">
             Your Google account is used only to identify your submission.

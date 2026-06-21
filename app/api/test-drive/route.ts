@@ -1,12 +1,11 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { getDrive } from "@/lib/googleDrive";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
     // 1) Only allow admins/owners to use this diagnostic endpoint
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
     const roles = session?.userData?.roles as string[] | undefined;
 
     if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {

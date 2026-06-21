@@ -1,14 +1,13 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import UserData from "@/models/userData";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ---------------- SEARCH USERS BY EMAIL ---------------- */
 export async function GET(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireRoles(session, ["owner", "admin"]);

@@ -1,19 +1,18 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { useClerk } from "@clerk/nextjs";
 import { useEffect } from "react";
 
 export default function SwitchAccountPage() {
+  const { signOut } = useClerk();
+
   useEffect(() => {
-    signIn("google", {
-      prompt: "select_account",
-      callbackUrl: "/profile",
-    });
-  }, []);
+    signOut({ redirectUrl: "/sign-in" });
+  }, [signOut]);
 
   return (
     <div className="min-h-screen flex items-center justify-center text-gray-500">
-      Redirecting to Google…
+      Redirecting to sign in…
     </div>
   );
 }

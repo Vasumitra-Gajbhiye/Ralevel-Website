@@ -1,8 +1,7 @@
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 
 export default async function AdminPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   const roles = session?.userData?.roles;
 

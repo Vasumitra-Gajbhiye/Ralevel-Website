@@ -1,9 +1,8 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { Role } from "@/lib/roles";
 import GraphicMember from "@/models/graphicMember";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= HELPERS ================= */
@@ -26,7 +25,7 @@ function requireGraphicAccess(session: any): Role[] {
 /* ================= GET ================= */
 export async function GET() {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireGraphicAccess(session);
@@ -44,7 +43,7 @@ export async function GET() {
 /* ================= POST ================= */
 export async function POST(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireGraphicAccess(session);
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
 /* ================= PATCH ================= */
 export async function PATCH(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireGraphicAccess(session);
@@ -89,7 +88,7 @@ export async function PATCH(req: Request) {
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireGraphicAccess(session);

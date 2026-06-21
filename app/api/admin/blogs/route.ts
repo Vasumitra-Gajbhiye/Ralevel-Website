@@ -1,17 +1,16 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { requireRoles } from "@/lib/requireRoles";
 import { slugify } from "@/lib/slugify";
 import EditorBlog from "@/models/editorBlogs";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= LIST BLOGS ================= */
 export async function GET() {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     // writers see own, admins see all
@@ -58,7 +57,7 @@ export async function GET() {
 /* ================= CREATE BLOG ================= */
 export async function POST(req: Request) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
   try {
     requireRoles(session, ["owner", "admin", "writer"]);
 

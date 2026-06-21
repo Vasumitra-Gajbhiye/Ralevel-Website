@@ -1,8 +1,6 @@
+import { getAuthSession } from "@/lib/getAuthSession";
 import NoAccess from "@/components/NoAccess";
-import SessionProviderWrapper from "@/components/SessionProviderWrapper";
-import { authOptions } from "@/lib/auth";
 import { hasAnyRole } from "@/lib/roles";
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -122,7 +120,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (
     !session ||
@@ -145,23 +143,19 @@ export default async function AdminLayout({
   // ❌ Logged in but NO ROLES
   if (!roles || roles.length === 0) {
     return (
-      <SessionProviderWrapper>
-        <div className="min-h-screen flex bg-gray-50">
-          <Sidebar roles={[]} />
-          <main className="flex-1 p-8">
-            <NoAccess message="You don’t have access to the admin panel." />
-          </main>
-        </div>
-      </SessionProviderWrapper>
+      <div className="min-h-screen flex bg-gray-50">
+        <Sidebar roles={[]} />
+        <main className="flex-1 p-8">
+          <NoAccess message="You don’t have access to the admin panel." />
+        </main>
+      </div>
     );
   }
 
   return (
-    <SessionProviderWrapper>
-      <div className="min-h-screen flex bg-gray-50">
-        <Sidebar roles={roles} />
-        <main className="flex-1 p-8 overflow-y-auto">{children}</main>
-      </div>
-    </SessionProviderWrapper>
+    <div className="min-h-screen flex bg-gray-50">
+      <Sidebar roles={roles} />
+      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+    </div>
   );
 }

@@ -1,14 +1,13 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import FormSubmission from "@/models/FormSubmission";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
   await connectDB();
 
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   if (
     !session?.userData?.roles?.includes("admin") &&

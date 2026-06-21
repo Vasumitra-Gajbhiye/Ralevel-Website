@@ -1,9 +1,8 @@
-import { authOptions } from "@/lib/auth";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { Role } from "@/lib/roles";
 import StaffMember from "@/models/staffMember";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 /* ================= HELPERS ================= */
@@ -27,7 +26,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     const actorRoles = requireTeamAdmin(session);
@@ -85,7 +84,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   await connectDB();
-  const session = await getServerSession(authOptions);
+  const session = await getAuthSession();
 
   try {
     requireTeamAdmin(session);

@@ -1,7 +1,7 @@
 "use client";
 
 import getStripe from "@/lib/stripe-client";
-import { signIn, useSession } from "next-auth/react";
+import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
 
 // Initialize Stripe outside of component
@@ -170,14 +170,13 @@ export default function FundPageClient({
   goal: number;
   noContributors: number;
 }) {
-  const { data: session } = useSession();
+  const { isSignedIn } = useUser();
   const [customAmount, setCustomAmount] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
 
   const handleCheckout = async (amount: number, tierLabel: string) => {
-    if (!session) {
-      alert("Please sign in with Google first to contribute!");
-      signIn("google");
+    if (!isSignedIn) {
+      alert("Please sign in first to contribute!");
       return;
     }
 
