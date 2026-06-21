@@ -12,7 +12,7 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 |----------|-------|
 | High     | 2     |
 | Medium   | 4     |
-| Low      | 5     |
+| Low      | 3     |
 
 ---
 
@@ -324,38 +324,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 8. Scalability Limitations
 
-### Issue 8.4 — Admin API routes have no rate limiting
-
-**Description:** Public routes use `enforceRateLimit`; admin routes do not.
-
-**Severity:** Low
-
-**Why it matters:** Authenticated abuse (scraping all submissions/certs) is unthrottled.
-
-**Files involved:**
-- All `app/api/admin/**` routes
-
-**Suggested fix:** Add per-user rate limits on expensive list/export endpoints.
-
----
-
-### Issue 8.5 — `connectDB()` before auth on forbidden requests
-
-**Description:** Many admin routes call `connectDB()` before `getAuthSession()` and role checks.
-
-**Severity:** Low
-
-**Why it matters:** On 403 responses, work is already done opening DB and running auth DB lookup. Connection is cached, but `getAuthSession` still hits MongoDB.
-
-**Files involved:**
-- `app/api/admin/helper/route.ts` (lines 25–26)
-- `app/api/admin/access/search/route.ts` (lines 9–10)
-- Pattern repeated across admin routes
-
-**Suggested fix:** Auth + role check first; call `connectDB()` only after authorization passes.
-
----
-
 ### Issue 8.6 — Unused duplicate Mongo connection module
 
 **Description:** `lib/mongoClient.ts` exists but is unused while `lib/mongodb.tsx` is used everywhere.
@@ -382,6 +350,7 @@ These patterns are worth replicating elsewhere:
 | Middleware `auth.protect()` on `/admin` + `/api/admin` | `proxy.ts` |
 | Centralized admin section role rules | `lib/adminAccess.ts`, `app/(admin)/admin/layout.tsx` |
 | Shared `requireRoles` helper for API authorization | `lib/requireRoles.ts` |
+| `authorizeAdminApi` — auth before `connectDB()` + per-user rate limits on admin list GETs | `lib/adminApiAuth.ts`, `app/api/admin/**` |
 | Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
 | Field projection + `.lean()` on blog list | `lib/data/blogs.ts`, `app/api/blogs/route.tsx` |
 | Canonical paginated blog list helper | `lib/data/blogs.ts` (`getPaginatedBlogList`) |
@@ -403,16 +372,6 @@ These patterns are worth replicating elsewhere:
 ## Recommended Fix Order
 
 Issues below are the remaining backlog. Group items in the same batch when they touch the same files, patterns, or deploy window. Skip any item already resolved locally (e.g. team server-fetch is done — see §9).
-
-### Phase 3 — Auth & admin infrastructure (1 PR)
-
-Centralize authorization before refactoring admin pages that depend on it.
-
-| Batch | Issues | Why together |
-|-------|--------|--------------|
-| **3B** | **8.5** Auth before `connectDB()` on admin routes · **8.4** Admin rate limiting | Same admin API routes; reorder handler flow, then add `enforceRateLimit` per-user on list/export endpoints |
-
----
 
 ### Phase 4 — Eliminate client-side data fetching (2–3 PRs)
 
@@ -463,10 +422,10 @@ Highest UX impact for admin and profile; follow the QOTD / team server-fetch pat
 ### Suggested PR sequence (summary)
 
 ```
-3B  →  4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
+4A  →  4B  →  5A  →  5B  →  6A + 6B  →  7A  →  7B  →  8A
 ```
 
-**Highest impact next:** **3B** (auth-before-DB + admin rate limiting) then **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
+**Highest impact next:** **4A** (admin server-fetch) — removes the empty-shell → spinner → client fetch pattern across the admin surface.
 
 **Defer until data layer is stable:** **4.6** Redis caching — indexes and lean read paths are now in place; remaining 7.3 clone cleanup can land independently.
 

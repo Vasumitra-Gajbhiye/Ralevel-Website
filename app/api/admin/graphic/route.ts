@@ -1,126 +1,105 @@
-import { getAuthSession } from "@/lib/getAuthSession";
+import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
   parsePaginationParams,
 } from "@/lib/pagination";
-import { requireRoles } from "@/lib/requireRoles";
 import GraphicMember from "@/models/graphicMember";
 import { NextResponse } from "next/server";
 
+const GRAPHIC_ROLES = [
+  "owner",
+  "admin",
+  "graphic_designer",
+  "graphic_dep_head",
+] as const;
+
 /* ================= GET ================= */
 export async function GET(req: Request) {
+  const auth = await authorizeAdminApi(req, {
+    roles: [...GRAPHIC_ROLES],
+    rateLimit: { routeKey: "admin-graphic-list" },
+  });
+  if (auth instanceof Response) return auth;
+
   await connectDB();
-  const session = await getAuthSession();
 
-  try {
-    requireRoles(session, [
-      "owner",
-      "admin",
-      "graphic_designer",
-      "graphic_dep_head",
-    ]);
+  const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
 
-    const { page, limit, skip } = parsePaginationParams(new URL(req.url).searchParams);
+  const [members, total] = await Promise.all([
+    GraphicMember.find()
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    GraphicMember.countDocuments(),
+  ]);
 
-    const [members, total] = await Promise.all([
-      GraphicMember.find()
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      GraphicMember.countDocuments(),
-    ]);
-
-    return NextResponse.json(buildPaginatedResponse(members, total, page, limit));
-  } catch {
-    return new Response("Forbidden", { status: 403 });
-  }
+  return NextResponse.json(buildPaginatedResponse(members, total, page, limit));
 }
 
 /* ================= POST ================= */
 export async function POST(req: Request) {
+  const auth = await authorizeAdminApi(req, {
+    roles: [...GRAPHIC_ROLES],
+  });
+  if (auth instanceof Response) return auth;
+
+  const csrfError = enforceSameOrigin(req);
+  if (csrfError) return csrfError;
+
   await connectDB();
-  const session = await getAuthSession();
 
-  try {
-    requireRoles(session, [
-      "owner",
-      "admin",
-      "graphic_designer",
-      "graphic_dep_head",
-    ]);
-
-    const csrfError = enforceSameOrigin(req);
-    if (csrfError) return csrfError;
-
-    const created = await GraphicMember.create({});
-    return NextResponse.json(created);
-  } catch {
-    return new Response("Forbidden", { status: 403 });
-  }
+  const created = await GraphicMember.create({});
+  return NextResponse.json(created);
 }
 
 /* ================= PATCH ================= */
 export async function PATCH(req: Request) {
+  const auth = await authorizeAdminApi(req, {
+    roles: [...GRAPHIC_ROLES],
+  });
+  if (auth instanceof Response) return auth;
+
+  const csrfError = enforceSameOrigin(req);
+  if (csrfError) return csrfError;
+
   await connectDB();
-  const session = await getAuthSession();
 
-  try {
-    requireRoles(session, [
-      "owner",
-      "admin",
-      "graphic_designer",
-      "graphic_dep_head",
-    ]);
+  const { id, patch } = await req.json();
 
-    const csrfError = enforceSameOrigin(req);
-    if (csrfError) return csrfError;
-
-    const { id, patch } = await req.json();
-
-    if (!id || !patch) {
-      return new Response("Invalid payload", { status: 400 });
-    }
-
-    await GraphicMember.findByIdAndUpdate(id, patch, {
-      new: true,
-    });
-
-    return NextResponse.json({ success: true });
-  } catch {
-    return new Response("Forbidden", { status: 403 });
+  if (!id || !patch) {
+    return new Response("Invalid payload", { status: 400 });
   }
+
+  await GraphicMember.findByIdAndUpdate(id, patch, {
+    new: true,
+  });
+
+  return NextResponse.json({ success: true });
 }
 
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
+  const auth = await authorizeAdminApi(req, {
+    roles: [...GRAPHIC_ROLES],
+  });
+  if (auth instanceof Response) return auth;
+
+  const csrfError = enforceSameOrigin(req);
+  if (csrfError) return csrfError;
+
   await connectDB();
-  const session = await getAuthSession();
 
-  try {
-    requireRoles(session, [
-      "owner",
-      "admin",
-      "graphic_designer",
-      "graphic_dep_head",
-    ]);
-
-    const csrfError = enforceSameOrigin(req);
-    if (csrfError) return csrfError;
-
-    const { id } = await req.json();
-    if (!id) {
-      return new Response("Invalid payload", { status: 400 });
-    }
-
-    await GraphicMember.findByIdAndDelete(id);
-
-    return NextResponse.json({ success: true });
-  } catch {
-    return new Response("Forbidden", { status: 403 });
+  const { id } = await req.json();
+  if (!id) {
+    return new Response("Invalid payload", { status: 400 });
   }
+
+  await GraphicMember.findByIdAndDelete(id);
+
+  return NextResponse.json({ success: true });
 }
