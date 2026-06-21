@@ -652,21 +652,6 @@ Senior-engineer audit of the r/alevel Next.js codebase (App Router, Mongoose/Mon
 
 ## 8. Scalability Limitations
 
-### Issue 8.1 — Unprotected LLM endpoint
-
-**Description:** `POST /api/theory-eval` calls Google Gemini with no authentication and no rate limiting.
-
-**Severity:** High
-
-**Why it matters:** Unbounded external API cost, slow responses, and easy abuse. Unlike blogs/resources routes that use `enforceRateLimit`.
-
-**Files involved:**
-- `app/api/theory-eval/route.ts` (lines 67–144)
-
-**Suggested fix:** Require auth, add strict rate limits (IP + user), cap input size. Consider caching identical evaluations or queueing requests.
-
----
-
 ### Issue 8.2 — PostHog configured for immediate flush on every event
 
 **Description:** PostHog client uses `flushAt: 1` and `flushInterval: 0`, flushing synchronously during requests.
@@ -769,7 +754,6 @@ These patterns are worth replicating elsewhere:
 
 | Priority | Issue | Expected impact |
 |----------|-------|-----------------|
-| P0 | 8.1 Protect theory-eval | Stop unbounded LLM cost |
 | P1 | 2.1–2.3 Pagination on lists | Prevents degradation as data grows |
 | P1 | 4.1–4.4 Data caching / ISR | Major reduction in DB load for content |
 | P1 | 5.1–5.2 Split large client pages | Faster TTI on high-traffic routes |

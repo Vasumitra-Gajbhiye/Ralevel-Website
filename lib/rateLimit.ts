@@ -7,13 +7,14 @@ type WindowConfig = {
 };
 
 /**
- * Simple IP-based sliding window rate limiter.
+ * Simple sliding-window rate limiter keyed by IP or an explicit identifier.
  * Returns a NextResponse with 429 if the limit is exceeded, otherwise null.
  */
 export async function enforceRateLimit(
   req: Request,
   routeKey: string,
-  { limit, windowSec }: WindowConfig
+  { limit, windowSec }: WindowConfig,
+  identifier?: string
 ) {
   const redis = getRedis();
   if (!redis) return null;
@@ -23,9 +24,11 @@ export async function enforceRateLimit(
     req.headers.get("x-real-ip") ??
     "unknown";
 
+  const bucketId = identifier ?? ip;
+
   const now = Math.floor(Date.now() / 1000);
   const windowStart = Math.floor(now / windowSec) * windowSec;
-  const key = `rl:${routeKey}:${ip}:${windowStart}`;
+  const key = `rl:${routeKey}:${bucketId}:${windowStart}`;
 
   try {
     const current = await redis.incr(key);
