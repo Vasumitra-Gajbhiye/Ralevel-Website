@@ -84,6 +84,26 @@ const pdfBookSchema = new mongoose.Schema({
   source: { type: String }, // e.g., "OpenStax", "Author Release"
 });
 
+const draftUpdatedBySchema = new mongoose.Schema(
+  {
+    userId: { type: String },
+    email: { type: String },
+  },
+  { _id: false }
+);
+
+const draftSchema = new mongoose.Schema(
+  {
+    syllabus: [syllabusSchema],
+    notes: [notesSchema],
+    worksheets: [worksheetSchema],
+    tools: [toolsSchema],
+    updatedAt: { type: Date },
+    updatedBy: draftUpdatedBySchema,
+  },
+  { _id: false }
+);
+
 const resources2dataSchema = new mongoose.Schema(
   {
     subject: { type: String, required: true }, // e.g. "Chemistry"
@@ -99,6 +119,9 @@ const resources2dataSchema = new mongoose.Schema(
     pastPapers: [pastPaperSchema],
     tools: [toolsSchema],
     theme: themeSchema,
+    draft: draftSchema,
+    publishedAt: { type: Date },
+    hasUnpublishedChanges: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

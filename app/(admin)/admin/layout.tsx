@@ -1,6 +1,9 @@
-import { getAuthSession } from "@/lib/getAuthSession";
-import { getAdminSectionMessage, getAdminSectionRoles } from "@/lib/adminAccess";
 import NoAccess from "@/components/NoAccess";
+import {
+  getAdminSectionMessage,
+  getAdminSectionRoles,
+} from "@/lib/adminAccess";
+import { getAuthSession } from "@/lib/getAuthSession";
 import { hasAnyRole, hasRequiredRole } from "@/lib/roles";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -112,6 +115,14 @@ function Sidebar({ roles }: { roles: string[] }) {
             Discord QOTD
           </a>
         )}
+        {hasAnyRole(roles as any, ["owner", "admin"]) && (
+          <a
+            href="/admin/resource-cms"
+            className="block px-3 py-2 rounded hover:bg-gray-100"
+          >
+            Resource CMS
+          </a>
+        )}
       </nav>
     </aside>
   );
@@ -145,9 +156,7 @@ export default async function AdminLayout({
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "";
   const sectionRoles = getAdminSectionRoles(pathname);
-  const sectionDenied =
-    sectionRoles &&
-    !hasRequiredRole(roles, sectionRoles);
+  const sectionDenied = sectionRoles && !hasRequiredRole(roles, sectionRoles);
 
   // ❌ Logged in but NO ROLES
   if (!roles || roles.length === 0) {

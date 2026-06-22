@@ -64,6 +64,11 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     roles: ["owner", "admin", "mod_dep_head"],
     message: "You don't have permission to access Staff records.",
   },
+  {
+    prefix: "/admin/resource-cms",
+    roles: ["owner", "admin"],
+    message: "You don't have permission to access Resource CMS.",
+  },
 ];
 
 export function getAdminSectionRule(
