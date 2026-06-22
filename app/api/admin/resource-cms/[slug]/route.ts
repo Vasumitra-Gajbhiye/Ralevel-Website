@@ -91,7 +91,12 @@ export async function PATCH(
     },
   };
 
-  const result = await saveResourceCMSDraft(slug, nextDraft);
+  const result = await saveResourceCMSDraft(slug, nextDraft, {
+    actor: {
+      userId: auth.userData.id,
+      email: auth.user.email,
+    },
+  });
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -145,7 +150,12 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const result = await saveResourceCMSDraft(slug, nextDraft);
+  const result = await saveResourceCMSDraft(slug, nextDraft, {
+    actor: {
+      userId: auth.userData.id,
+      email: auth.user.email,
+    },
+  });
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

@@ -189,7 +189,7 @@ export default function ResourceEditorClient({
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="sticky top-0 z-10 -mx-2 border-b border-slate-200 bg-gray-50/95 px-2 py-4 backdrop-blur">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-row gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="h-4 w-4" />
@@ -215,6 +215,12 @@ export default function ResourceEditorClient({
                   View live page
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
+                <Link
+                  href={`/admin/resource-cms/history?slug=${initialData.slug}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  View history
+                </Link>
               </div>
             </div>
           </div>
@@ -236,7 +242,7 @@ export default function ResourceEditorClient({
 
       <div className="flex flex-col gap-6">
         <aside className="lg:w-52">
-          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <nav className="flex gap-2 overflow-x-auto  lg:overflow-visible">
             {SECTIONS.map((section) => (
               <button
                 key={section.id}

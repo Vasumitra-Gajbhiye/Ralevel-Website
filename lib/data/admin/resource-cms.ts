@@ -1,8 +1,10 @@
 import connectDB from "@/lib/mongodb";
 import { buildPaginatedResponse, type PaginatedResult } from "@/lib/pagination";
+import { extractCMSSections } from "@/lib/resource-cms/diff";
 import resources2Data from "@/models/resources2Data";
 import type {
   AdminResourceSubject,
+  ResourceCmsActor,
   ResourceCMSEditorData,
   ResourceDraft,
 } from "@/types/resources2";
@@ -309,12 +311,18 @@ function toDraftDocument(draft: ResourceDraft) {
 
 export async function saveResourceCMSDraft(
   slug: string,
-  draft: ResourceDraft
+  draft: ResourceDraft,
+  options?: {
+    actor?: ResourceCmsActor;
+    skipRevisionLog?: boolean;
+  }
 ): Promise<{ slug: string; hasUnpublishedChanges: true; draft: ResourceDraft } | null> {
   await connectDB();
 
   const existing = await getResourceCMSDocSnapshot(slug);
   if (!existing) return null;
+
+  const beforeSections = extractCMSSections(resolveCMSDraft(existing));
 
   const $set: Record<string, unknown> = {
     draft: toDraftDocument(draft),
@@ -326,6 +334,19 @@ export async function saveResourceCMSDraft(
   }
 
   await resources2Data.updateOne({ slug }, { $set });
+
+  const afterSections = extractCMSSections(draft);
+
+  if (!options?.skipRevisionLog && options?.actor) {
+    const { recordDraftSaveRevision } = await import("./resource-cms-revisions");
+    await recordDraftSaveRevision({
+      slug,
+      subject: existing.subject,
+      actor: options.actor,
+      before: beforeSections,
+      after: afterSections,
+    });
+  }
 
   return {
     slug,
@@ -339,7 +360,8 @@ export async function saveResourceCMSDraft(
 
 export async function publishResourceCMSDraft(
   slug: string,
-  draft: ResourceDraft
+  draft: ResourceDraft,
+  actor: ResourceCmsActor
 ): Promise<{
   slug: string;
   subject: string;
@@ -351,6 +373,9 @@ export async function publishResourceCMSDraft(
 
   const existing = await getResourceCMSDocSnapshot(slug);
   if (!existing) return null;
+
+  const liveBefore = extractCMSSections(existing);
+  const liveAfter = extractCMSSections(draft);
 
   const publishedAt = new Date();
   const draftDoc = toDraftDocument(draft);
@@ -372,6 +397,15 @@ export async function publishResourceCMSDraft(
       },
     }
   );
+
+  const { recordPublishRevision } = await import("./resource-cms-revisions");
+  await recordPublishRevision({
+    slug,
+    subject: existing.subject,
+    actor,
+    liveBefore,
+    liveAfter,
+  });
 
   return {
     slug,

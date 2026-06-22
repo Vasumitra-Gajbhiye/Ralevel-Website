@@ -66,6 +66,14 @@ function Sidebar({ roles }: { roles: string[] }) {
             Community Dept.
           </a>
         )}
+         {hasAnyRole(roles as any, ["owner", "admin", "resource_dep_head"]) && (
+          <a
+            href="/admin/info"
+            className="block px-3 py-2 rounded hover:bg-gray-100"
+          >
+            Resource Dept.
+          </a>
+        )}
         {hasAnyRole(roles as any, [
           "owner",
           "admin",
@@ -116,12 +124,20 @@ function Sidebar({ roles }: { roles: string[] }) {
           </a>
         )}
         {hasAnyRole(roles as any, ["owner", "admin"]) && (
-          <a
-            href="/admin/resource-cms"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Resource CMS
-          </a>
+          <>
+            <a
+              href="/admin/resource-cms"
+              className="block px-3 py-2 rounded hover:bg-gray-100"
+            >
+              Resource CMS
+            </a>
+            <a
+              href="/admin/resource-cms/history"
+              className="block px-3 py-2 rounded hover:bg-gray-100 pl-6 text-sm"
+            >
+              CMS History
+            </a>
+          </>
         )}
       </nav>
     </aside>

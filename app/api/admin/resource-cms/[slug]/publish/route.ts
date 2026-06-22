@@ -45,6 +45,9 @@ export async function POST(
       userId: auth.userData.id,
       email: auth.user.email,
     },
+  }, {
+    userId: auth.userData.id,
+    email: auth.user.email,
   });
 
   if (!result) {

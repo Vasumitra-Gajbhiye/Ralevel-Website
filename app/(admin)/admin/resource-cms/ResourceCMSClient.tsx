@@ -16,7 +16,13 @@ export default function ResourceCMSClient({
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Resource CMS</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Manage syllabus, notes, worksheets, and tools for each subject.
+          Manage syllabus, notes, worksheets, and tools for each subject.{" "}
+          <a
+            href="/admin/resource-cms/history"
+            className="text-blue-600 hover:underline"
+          >
+            View history
+          </a>
         </p>
       </div>
 
