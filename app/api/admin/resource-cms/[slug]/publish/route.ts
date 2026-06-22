@@ -2,11 +2,9 @@ import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { revalidateDataTags } from "@/lib/data-cache";
 import {
-  buildDraftFromLive,
   getResourceCMSDocSnapshot,
-  isDraftEmpty,
   publishResourceCMSDraft,
-  serializeDraft,
+  resolveCMSDraft,
 } from "@/lib/data/admin/resource-cms";
 import connectDB from "@/lib/mongodb";
 import type { ResourceDraft } from "@/types/resources2";
@@ -33,9 +31,13 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const draft: ResourceDraft = isDraftEmpty(doc.draft)
-    ? buildDraftFromLive(doc)
-    : serializeDraft(doc.draft);
+  const draft: ResourceDraft = {
+    ...resolveCMSDraft(doc),
+    updatedBy: {
+      userId: auth.userData.id,
+      email: auth.user.email,
+    },
+  };
 
   const result = await publishResourceCMSDraft(slug, {
     ...draft,

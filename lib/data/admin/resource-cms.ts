@@ -28,12 +28,22 @@ export function buildDraftFromLive(doc: {
   notes?: unknown[];
   worksheets?: unknown[];
   tools?: unknown[];
+  books?: unknown[];
+  youtubeChannel?: unknown[];
+  youtubePlaylist?: unknown[];
 }): ResourceDraft {
   return {
     syllabus: cloneSection(doc.syllabus as ResourceDraft["syllabus"]),
     notes: cloneSection(doc.notes as ResourceDraft["notes"]),
     worksheets: cloneSection(doc.worksheets as ResourceDraft["worksheets"]),
     tools: cloneSection(doc.tools as ResourceDraft["tools"]),
+    books: cloneSection(doc.books as ResourceDraft["books"]),
+    youtubeChannel: cloneSection(
+      doc.youtubeChannel as ResourceDraft["youtubeChannel"]
+    ),
+    youtubePlaylist: cloneSection(
+      doc.youtubePlaylist as ResourceDraft["youtubePlaylist"]
+    ),
   };
 }
 
@@ -43,8 +53,56 @@ export function isDraftEmpty(draft: ResourceDraft | null | undefined): boolean {
     (draft.syllabus?.length ?? 0) === 0 &&
     (draft.notes?.length ?? 0) === 0 &&
     (draft.worksheets?.length ?? 0) === 0 &&
-    (draft.tools?.length ?? 0) === 0
+    (draft.tools?.length ?? 0) === 0 &&
+    (draft.books?.length ?? 0) === 0 &&
+    (draft.youtubeChannel?.length ?? 0) === 0 &&
+    (draft.youtubePlaylist?.length ?? 0) === 0
   );
+}
+
+export function resolveCMSDraft(
+  doc: {
+    syllabus?: unknown[];
+    notes?: unknown[];
+    worksheets?: unknown[];
+    tools?: unknown[];
+    books?: unknown[];
+    youtubeChannel?: unknown[];
+    youtubePlaylist?: unknown[];
+    draft?: ResourceDraft | null;
+  }
+): ResourceDraft {
+  const rawDraft = doc.draft;
+  let draft = serializeDraft(rawDraft ?? undefined);
+
+  if (isDraftEmpty(draft)) {
+    return buildDraftFromLive(doc);
+  }
+
+  if (!rawDraft) {
+    return draft;
+  }
+
+  const liveDraft = buildDraftFromLive(doc);
+  const nextDraft = { ...draft };
+
+  if (!Array.isArray(rawDraft.books) && liveDraft.books.length > 0) {
+    nextDraft.books = liveDraft.books;
+  }
+  if (
+    !Array.isArray(rawDraft.youtubeChannel) &&
+    liveDraft.youtubeChannel.length > 0
+  ) {
+    nextDraft.youtubeChannel = liveDraft.youtubeChannel;
+  }
+  if (
+    !Array.isArray(rawDraft.youtubePlaylist) &&
+    liveDraft.youtubePlaylist.length > 0
+  ) {
+    nextDraft.youtubePlaylist = liveDraft.youtubePlaylist;
+  }
+
+  return nextDraft;
 }
 
 export function serializeDraft(
@@ -56,6 +114,9 @@ export function serializeDraft(
       notes: [],
       worksheets: [],
       tools: [],
+      books: [],
+      youtubeChannel: [],
+      youtubePlaylist: [],
     };
   }
 
@@ -64,6 +125,9 @@ export function serializeDraft(
     notes: cloneSection(draft.notes),
     worksheets: cloneSection(draft.worksheets),
     tools: cloneSection(draft.tools),
+    books: cloneSection(draft.books),
+    youtubeChannel: cloneSection(draft.youtubeChannel),
+    youtubePlaylist: cloneSection(draft.youtubePlaylist),
     updatedAt: toIsoString(draft.updatedAt),
     updatedBy: draft.updatedBy
       ? {
@@ -132,6 +196,9 @@ export async function getAdminResourceEditorData(
     notes?: unknown[];
     worksheets?: unknown[];
     tools?: unknown[];
+    books?: unknown[];
+    youtubeChannel?: unknown[];
+    youtubePlaylist?: unknown[];
     draft?: ResourceDraft;
     hasUnpublishedChanges?: boolean;
     publishedAt?: Date;
@@ -140,10 +207,10 @@ export async function getAdminResourceEditorData(
 
   if (!doc) return null;
 
-  let draft = serializeDraft(doc.draft ?? undefined);
+  let draft = resolveCMSDraft(doc);
+  const rawDraft = doc.draft as ResourceDraft | undefined;
 
-  if (isDraftEmpty(draft)) {
-    draft = buildDraftFromLive(doc);
+  if (isDraftEmpty(serializeDraft(rawDraft ?? undefined))) {
     await resources2Data.updateOne(
       { slug },
       {
@@ -153,6 +220,24 @@ export async function getAdminResourceEditorData(
             updatedAt: doc.updatedAt ?? new Date(),
           },
           ...(doc.publishedAt ? {} : { publishedAt: doc.updatedAt ?? new Date() }),
+        },
+      }
+    );
+  } else if (
+    rawDraft &&
+    (!Array.isArray(rawDraft.books) ||
+      !Array.isArray(rawDraft.youtubeChannel) ||
+      !Array.isArray(rawDraft.youtubePlaylist))
+  ) {
+    await resources2Data.updateOne(
+      { slug },
+      {
+        $set: {
+          draft: {
+            ...toDraftDocument(draft),
+            updatedAt: rawDraft.updatedAt ?? doc.updatedAt ?? new Date(),
+            updatedBy: rawDraft.updatedBy,
+          },
         },
       }
     );
@@ -176,6 +261,9 @@ type ResourceCMSDocSnapshot = {
   notes?: unknown[];
   worksheets?: unknown[];
   tools?: unknown[];
+  books?: unknown[];
+  youtubeChannel?: unknown[];
+  youtubePlaylist?: unknown[];
   draft?: ResourceDraft;
   publishedAt?: Date;
   updatedAt?: Date;
@@ -188,6 +276,9 @@ const CMS_DRAFT_PROJECTION = {
   notes: 1,
   worksheets: 1,
   tools: 1,
+  books: 1,
+  youtubeChannel: 1,
+  youtubePlaylist: 1,
   draft: 1,
   publishedAt: 1,
   updatedAt: 1,
@@ -208,6 +299,9 @@ function toDraftDocument(draft: ResourceDraft) {
     notes: draft.notes,
     worksheets: draft.worksheets,
     tools: draft.tools,
+    books: draft.books,
+    youtubeChannel: draft.youtubeChannel,
+    youtubePlaylist: draft.youtubePlaylist,
     updatedAt: new Date(),
     updatedBy: draft.updatedBy,
   };
@@ -269,6 +363,9 @@ export async function publishResourceCMSDraft(
         notes: draft.notes,
         worksheets: draft.worksheets,
         tools: draft.tools,
+        books: draft.books,
+        youtubeChannel: draft.youtubeChannel,
+        youtubePlaylist: draft.youtubePlaylist,
         draft: draftDoc,
         hasUnpublishedChanges: false,
         publishedAt,

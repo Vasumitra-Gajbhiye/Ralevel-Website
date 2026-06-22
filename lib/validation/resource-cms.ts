@@ -1,14 +1,22 @@
 import type {
+  BookItem,
   NotesItem,
   ResourceCMSDraftPayload,
   SyllabusItem,
   ToolsItem,
   WorksheetItem,
+  YoutubeChannelItem,
+  YoutubePlaylistItem,
 } from "@/types/resources2";
 
 const RESOURCE_BOARDS = ["CAIE", "Edexcel", "AQA", "WJEC/Eduqas"] as const;
 const MAX_NOTES_TAGS = 4;
 const MAX_TOOL_DESCRIPTION_LENGTH = 200;
+const PLAYLIST_TYPES = ["playlist", "video"] as const;
+const MAX_PLAYLIST_DESCRIPTION_LENGTH = 200;
+
+const THUMBNAIL_PATH_PATTERN =
+  /^\/(books_thumb|youtube_thumb|playlist_thumb)\/.+/;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -21,6 +29,24 @@ function isValidUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+function validateThumbnailPath(
+  value: unknown,
+  label: string,
+  index: number
+): string | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  if (!isNonEmptyString(value)) {
+    throw new Error(`${label} item ${index + 1}: thumbnail path is invalid`);
+  }
+  const path = value.trim();
+  if (!THUMBNAIL_PATH_PATTERN.test(path)) {
+    throw new Error(`${label} item ${index + 1}: thumbnail path is invalid`);
+  }
+  return path;
 }
 
 function validateSyllabusItem(item: unknown, index: number): SyllabusItem {
@@ -154,6 +180,124 @@ function validateToolsItem(item: unknown, index: number): ToolsItem {
   };
 }
 
+function validateBookItem(item: unknown, index: number): BookItem {
+  if (!item || typeof item !== "object") {
+    throw new Error(`Books item ${index + 1} is invalid`);
+  }
+
+  const record = item as Record<string, unknown>;
+  if (!isNonEmptyString(record.title)) {
+    throw new Error(`Books item ${index + 1}: title is required`);
+  }
+  if (!isNonEmptyString(record.buy) || !isValidUrl(record.buy.trim())) {
+    throw new Error(`Books item ${index + 1}: buy link must be a valid URL`);
+  }
+
+  const cover = validateThumbnailPath(record.cover, "Books", index);
+
+  return {
+    title: record.title.trim(),
+    edition: isNonEmptyString(record.edition) ? record.edition.trim() : undefined,
+    cover,
+    buy: record.buy.trim(),
+  };
+}
+
+function validateYoutubeChannelItem(
+  item: unknown,
+  index: number
+): YoutubeChannelItem {
+  if (!item || typeof item !== "object") {
+    throw new Error(`YouTube channel item ${index + 1} is invalid`);
+  }
+
+  const record = item as Record<string, unknown>;
+  if (!isNonEmptyString(record.channel)) {
+    throw new Error(`YouTube channel item ${index + 1}: channel is required`);
+  }
+  if (
+    !isNonEmptyString(record.channelUrl) ||
+    !isValidUrl(record.channelUrl.trim())
+  ) {
+    throw new Error(
+      `YouTube channel item ${index + 1}: channel URL must be a valid URL`
+    );
+  }
+
+  const thumbnail = validateThumbnailPath(
+    record.thumbnail,
+    "YouTube channel",
+    index
+  );
+
+  return {
+    channel: record.channel.trim(),
+    channelUrl: record.channelUrl.trim(),
+    description: isNonEmptyString(record.description)
+      ? record.description.trim()
+      : undefined,
+    thumbnail,
+  };
+}
+
+function validateYoutubePlaylistItem(
+  item: unknown,
+  index: number
+): YoutubePlaylistItem {
+  if (!item || typeof item !== "object") {
+    throw new Error(`YouTube playlist item ${index + 1} is invalid`);
+  }
+
+  const record = item as Record<string, unknown>;
+  if (!isNonEmptyString(record.title)) {
+    throw new Error(`YouTube playlist item ${index + 1}: title is required`);
+  }
+  if (
+    !isNonEmptyString(record.playlistUrl) ||
+    !isValidUrl(record.playlistUrl.trim())
+  ) {
+    throw new Error(
+      `YouTube playlist item ${index + 1}: playlist URL must be a valid URL`
+    );
+  }
+
+  const thumbnail = validateThumbnailPath(
+    record.thumbnail,
+    "YouTube playlist",
+    index
+  );
+
+  const description = isNonEmptyString(record.description)
+    ? record.description.trim()
+    : undefined;
+  if (
+    description &&
+    description.length > MAX_PLAYLIST_DESCRIPTION_LENGTH
+  ) {
+    throw new Error(
+      `YouTube playlist item ${index + 1}: description must be ${MAX_PLAYLIST_DESCRIPTION_LENGTH} characters or fewer`
+    );
+  }
+
+  if (!isNonEmptyString(record.type)) {
+    throw new Error(`YouTube playlist item ${index + 1}: type is required`);
+  }
+  const type = record.type.trim().toLowerCase();
+  if (!PLAYLIST_TYPES.includes(type as (typeof PLAYLIST_TYPES)[number])) {
+    throw new Error(
+      `YouTube playlist item ${index + 1}: type must be playlist or video`
+    );
+  }
+
+  return {
+    title: record.title.trim(),
+    playlistUrl: record.playlistUrl.trim(),
+    description,
+    thumbnail,
+    type,
+  };
+}
+
 function validateArray<T>(
   value: unknown,
   label: string,
@@ -196,12 +340,32 @@ export function validateResourceCMSDraftPayload(
   if (record.tools !== undefined) {
     payload.tools = validateArray(record.tools, "tools", validateToolsItem);
   }
+  if (record.books !== undefined) {
+    payload.books = validateArray(record.books, "books", validateBookItem);
+  }
+  if (record.youtubeChannel !== undefined) {
+    payload.youtubeChannel = validateArray(
+      record.youtubeChannel,
+      "youtubeChannel",
+      validateYoutubeChannelItem
+    );
+  }
+  if (record.youtubePlaylist !== undefined) {
+    payload.youtubePlaylist = validateArray(
+      record.youtubePlaylist,
+      "youtubePlaylist",
+      validateYoutubePlaylistItem
+    );
+  }
 
   if (
     payload.syllabus === undefined &&
     payload.notes === undefined &&
     payload.worksheets === undefined &&
-    payload.tools === undefined
+    payload.tools === undefined &&
+    payload.books === undefined &&
+    payload.youtubeChannel === undefined &&
+    payload.youtubePlaylist === undefined
   ) {
     throw new Error("At least one editable section must be provided");
   }
@@ -227,5 +391,16 @@ export function validateFullResourceCMSDraft(
       validateWorksheetItem
     ),
     tools: validateArray(record.tools, "tools", validateToolsItem),
+    books: validateArray(record.books, "books", validateBookItem),
+    youtubeChannel: validateArray(
+      record.youtubeChannel,
+      "youtubeChannel",
+      validateYoutubeChannelItem
+    ),
+    youtubePlaylist: validateArray(
+      record.youtubePlaylist,
+      "youtubePlaylist",
+      validateYoutubePlaylistItem
+    ),
   };
 }

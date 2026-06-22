@@ -26,6 +26,28 @@ export type ToolsItem = {
   description?: string;
 };
 
+export type BookItem = {
+  title: string;
+  edition?: string;
+  cover?: string;
+  buy: string;
+};
+
+export type YoutubeChannelItem = {
+  channel: string;
+  channelUrl: string;
+  description?: string;
+  thumbnail?: string;
+};
+
+export type YoutubePlaylistItem = {
+  title: string;
+  playlistUrl: string;
+  description?: string;
+  thumbnail?: string;
+  type?: string;
+};
+
 export type ResourceDraftUpdatedBy = {
   userId?: string;
   email?: string;
@@ -36,17 +58,32 @@ export type ResourceDraft = {
   notes: NotesItem[];
   worksheets: WorksheetItem[];
   tools: ToolsItem[];
+  books: BookItem[];
+  youtubeChannel: YoutubeChannelItem[];
+  youtubePlaylist: YoutubePlaylistItem[];
   updatedAt?: string;
   updatedBy?: ResourceDraftUpdatedBy;
 };
 
-export type EditableSection = "syllabus" | "notes" | "worksheets" | "tools";
+export type EditableSection =
+  | "syllabus"
+  | "notes"
+  | "worksheets"
+  | "tools"
+  | "books"
+  | "youtubeChannel"
+  | "youtubePlaylist";
+
+export type ThumbnailSection = "books" | "youtubeChannel" | "youtubePlaylist";
 
 export type ResourceCMSDraftPayload = {
   syllabus?: SyllabusItem[];
   notes?: NotesItem[];
   worksheets?: WorksheetItem[];
   tools?: ToolsItem[];
+  books?: BookItem[];
+  youtubeChannel?: YoutubeChannelItem[];
+  youtubePlaylist?: YoutubePlaylistItem[];
 };
 
 export type AdminResourceSubject = {

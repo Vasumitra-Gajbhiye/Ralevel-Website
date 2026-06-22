@@ -33,6 +33,7 @@ const youtubePlaylistSchema = new mongoose.Schema({
   playlistUrl: { type: String, required: true },
   description: { type: String },
   thumbnail: { type: String },
+  type: { type: String },
 });
 
 const pastPaperSchema = new mongoose.Schema({
@@ -98,6 +99,9 @@ const draftSchema = new mongoose.Schema(
     notes: [notesSchema],
     worksheets: [worksheetSchema],
     tools: [toolsSchema],
+    books: [booksSchema],
+    youtubeChannel: [youtubeChannelSchema],
+    youtubePlaylist: [youtubePlaylistSchema],
     updatedAt: { type: Date },
     updatedBy: draftUpdatedBySchema,
   },

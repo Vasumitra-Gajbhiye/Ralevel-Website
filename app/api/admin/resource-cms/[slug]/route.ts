@@ -5,8 +5,8 @@ import {
   getAdminResourceEditorData,
   getResourceCMSDocSnapshot,
   isDraftEmpty,
+  resolveCMSDraft,
   saveResourceCMSDraft,
-  serializeDraft,
 } from "@/lib/data/admin/resource-cms";
 import connectDB from "@/lib/mongodb";
 import {
@@ -75,13 +75,16 @@ export async function PATCH(
 
   const existingDraft = isDraftEmpty(doc.draft)
     ? buildDraftFromLive(doc)
-    : serializeDraft(doc.draft);
+    : resolveCMSDraft(doc);
 
   const nextDraft: ResourceDraft = {
     syllabus: validated.syllabus ?? existingDraft.syllabus,
     notes: validated.notes ?? existingDraft.notes,
     worksheets: validated.worksheets ?? existingDraft.worksheets,
     tools: validated.tools ?? existingDraft.tools,
+    books: validated.books ?? existingDraft.books,
+    youtubeChannel: validated.youtubeChannel ?? existingDraft.youtubeChannel,
+    youtubePlaylist: validated.youtubePlaylist ?? existingDraft.youtubePlaylist,
     updatedBy: {
       userId: auth.userData.id,
       email: auth.user.email,

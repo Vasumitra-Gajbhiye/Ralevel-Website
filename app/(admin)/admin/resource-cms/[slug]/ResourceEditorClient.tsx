@@ -20,6 +20,9 @@ const SECTIONS: { id: EditableSection; label: string }[] = [
   { id: "notes", label: "Notes" },
   { id: "worksheets", label: "Worksheets" },
   { id: "tools", label: "Tools" },
+  { id: "books", label: "Books" },
+  { id: "youtubeChannel", label: "YouTube Channels" },
+  { id: "youtubePlaylist", label: "Playlists & Videos" },
 ];
 
 function draftSignature(draft: ResourceDraft) {
@@ -28,7 +31,24 @@ function draftSignature(draft: ResourceDraft) {
     notes: draft.notes,
     worksheets: draft.worksheets,
     tools: draft.tools,
+    books: draft.books,
+    youtubeChannel: draft.youtubeChannel,
+    youtubePlaylist: draft.youtubePlaylist,
   });
+}
+
+function normalizeDraft(draft: ResourceDraft): ResourceDraft {
+  return {
+    syllabus: draft.syllabus ?? [],
+    notes: draft.notes ?? [],
+    worksheets: draft.worksheets ?? [],
+    tools: draft.tools ?? [],
+    books: draft.books ?? [],
+    youtubeChannel: draft.youtubeChannel ?? [],
+    youtubePlaylist: draft.youtubePlaylist ?? [],
+    updatedAt: draft.updatedAt,
+    updatedBy: draft.updatedBy,
+  };
 }
 
 export default function ResourceEditorClient({
@@ -39,12 +59,14 @@ export default function ResourceEditorClient({
   const router = useRouter();
   const [activeSection, setActiveSection] =
     useState<EditableSection>("syllabus");
-  const [draft, setDraft] = useState<ResourceDraft>(initialData.draft);
+  const [draft, setDraft] = useState<ResourceDraft>(
+    normalizeDraft(initialData.draft)
+  );
   const [savedSignature, setSavedSignature] = useState(() =>
-    draftSignature(initialData.draft),
+    draftSignature(normalizeDraft(initialData.draft))
   );
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(
-    initialData.hasUnpublishedChanges,
+    initialData.hasUnpublishedChanges
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -75,7 +97,7 @@ export default function ResourceEditorClient({
 
   function updateSection(
     section: EditableSection,
-    items: Record<string, unknown>[],
+    items: Record<string, unknown>[]
   ) {
     setDraft((prev) => ({
       ...prev,
@@ -94,6 +116,9 @@ export default function ResourceEditorClient({
           notes: draft.notes,
           worksheets: draft.worksheets,
           tools: draft.tools,
+          books: draft.books,
+          youtubeChannel: draft.youtubeChannel,
+          youtubePlaylist: draft.youtubePlaylist,
         }),
       });
 
@@ -102,14 +127,15 @@ export default function ResourceEditorClient({
         throw new Error(data.error ?? "Failed to save draft");
       }
 
-      setDraft(data.draft);
-      setSavedSignature(draftSignature(data.draft));
+      const nextDraft = normalizeDraft(data.draft);
+      setDraft(nextDraft);
+      setSavedSignature(draftSignature(nextDraft));
       setHasUnpublishedChanges(true);
       toast.success("Draft saved");
       return true;
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to save draft",
+        error instanceof Error ? error.message : "Failed to save draft"
       );
       return false;
     } finally {
@@ -120,7 +146,7 @@ export default function ResourceEditorClient({
   async function publishDraft() {
     if (isDirty) {
       const shouldContinue = confirm(
-        "You have unsaved local changes. Save draft before publishing?",
+        "You have unsaved local changes. Save draft before publishing?"
       );
       if (!shouldContinue) return;
       const saved = await saveDraft();
@@ -129,7 +155,7 @@ export default function ResourceEditorClient({
 
     if (
       !confirm(
-        `Publish changes for ${initialData.subject}? This will update the live resource page.`,
+        `Publish changes for ${initialData.subject}? This will update the live resource page.`
       )
     ) {
       return;
@@ -139,7 +165,7 @@ export default function ResourceEditorClient({
     try {
       const res = await fetch(
         `/api/admin/resource-cms/${initialData.slug}/publish`,
-        { method: "POST" },
+        { method: "POST" }
       );
 
       const data = await res.json();
@@ -220,7 +246,7 @@ export default function ResourceEditorClient({
                   "rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition",
                   activeSection === section.id
                     ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100",
+                    : "bg-white text-slate-600 hover:bg-slate-100"
                 )}
               >
                 {section.label}
@@ -233,6 +259,7 @@ export default function ResourceEditorClient({
           <SectionEditor
             key={activeSection}
             section={activeSection}
+            slug={initialData.slug}
             items={sectionItems}
             onChange={(items) => updateSection(activeSection, items)}
           />
