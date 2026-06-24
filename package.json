@@ -46,6 +46,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "docker": "^1.0.0",
     "dotenv": "^17.3.1",
     "framer-motion": "^12.23.24",
     "fuse.js": "^6.6.2",
@@ -110,7 +111,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=20.19.5"
+    "node": ">=22.23.1"
   },
   "bugs": {
     "url": "https://github.com/Vasumitra-Gajbhiye/r-alevel/issues"
