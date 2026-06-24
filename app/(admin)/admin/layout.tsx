@@ -8,141 +8,7 @@ import { hasAnyRole, hasRequiredRole } from "@/lib/roles";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import React from "react";
-
-function Sidebar({ roles }: { roles: string[] }) {
-  return (
-    <aside className="w-64 border-r bg-white px-4 py-6">
-      <h2 className="text-lg font-semibold mb-6">Admin</h2>
-
-      <nav className="space-y-2 text-sm">
-        {/* Blogs: writers allowed */}
-        {hasAnyRole(roles as any, ["owner", "admin", "writer"]) && (
-          <a
-            href="/admin/blogs"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Blogs
-          </a>
-        )}
-
-        {/* Admin-only */}
-        {hasAnyRole(roles as any, ["owner", "admin"]) && (
-          <a
-            href="/admin/access"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Access
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin", "mod_dep_head"]) && (
-          <a
-            href="/admin/team"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Mod. Staff
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin", "helper_dep_head"]) && (
-          <a
-            href="/admin/helper"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Helper
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin", "graphic_dep_head"]) && (
-          <a
-            href="/admin/graphic"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Graphic Dept.
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin", "info_dep_head"]) && (
-          <a
-            href="/admin/info"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Community Dept.
-          </a>
-        )}
-         {hasAnyRole(roles as any, ["owner", "admin", "resource_dep_head"]) && (
-          <a
-            href="/admin/info"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Resource Dept.
-          </a>
-        )}
-        {hasAnyRole(roles as any, [
-          "owner",
-          "admin",
-          "mod_dep_head",
-          "info_dep_head",
-          "graphic_dep_head",
-          "helper_dep_head",
-        ]) && (
-          <a
-            href="/admin/forms"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Form submission
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin"]) && (
-          <a
-            href="/admin/certificates"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Certificates
-          </a>
-        )}
-
-        {/* Informative team + admin */}
-        {hasAnyRole(roles as any, [
-          "owner",
-          "admin",
-          "informative_team",
-          "info_dep_head",
-        ]) && (
-          <>
-            <a
-              href="/admin/scheduling"
-              className="block px-3 py-2 rounded hover:bg-gray-100"
-            >
-              Scheduling
-            </a>
-          </>
-        )}
-
-        {hasAnyRole(roles as any, ["owner", "admin", "mod_dep_head"]) && (
-          <a
-            href="/admin/qotd"
-            className="block px-3 py-2 rounded hover:bg-gray-100"
-          >
-            Discord QOTD
-          </a>
-        )}
-        {hasAnyRole(roles as any, ["owner", "admin"]) && (
-          <>
-            <a
-              href="/admin/resource-cms"
-              className="block px-3 py-2 rounded hover:bg-gray-100"
-            >
-              Resource CMS
-            </a>
-            <a
-              href="/admin/resource-cms/history"
-              className="block px-3 py-2 rounded hover:bg-gray-100 pl-6 text-sm"
-            >
-              CMS History
-            </a>
-          </>
-        )}
-      </nav>
-    </aside>
-  );
-}
+import AdminLayoutShell from "./AdminLayoutShell";
 
 export default async function AdminLayout({
   children,
@@ -162,6 +28,8 @@ export default async function AdminLayout({
       "graphic_dep_head",
       "info_dep_head",
       "informative_team",
+      "resource_dep_head",
+      "resource_admin",
     ])
   ) {
     redirect("/"); // or redirect
@@ -177,30 +45,24 @@ export default async function AdminLayout({
   // ❌ Logged in but NO ROLES
   if (!roles || roles.length === 0) {
     return (
-      <div className="min-h-screen flex bg-gray-50">
-        <Sidebar roles={[]} />
-        <main className="flex-1 p-8">
-          <NoAccess message="You don’t have access to the admin panel." />
-        </main>
-      </div>
+      <AdminLayoutShell roles={[]}>
+        <NoAccess message="You don’t have access to the admin panel." />
+      </AdminLayoutShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <Sidebar roles={roles} />
-      <main className="flex-1 p-8 overflow-y-auto">
-        {sectionDenied ? (
-          <NoAccess
-            message={
-              getAdminSectionMessage(pathname) ??
-              "You don't have permission to access this page."
-            }
-          />
-        ) : (
-          children
-        )}
-      </main>
-    </div>
+    <AdminLayoutShell roles={roles}>
+      {sectionDenied ? (
+        <NoAccess
+          message={
+            getAdminSectionMessage(pathname) ??
+            "You don't have permission to access this page."
+          }
+        />
+      ) : (
+        children
+      )}
+    </AdminLayoutShell>
   );
 }

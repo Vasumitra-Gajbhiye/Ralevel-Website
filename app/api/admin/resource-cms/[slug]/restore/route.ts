@@ -1,6 +1,7 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { restoreResourceCMSRevision } from "@/lib/data/admin/resource-cms-revisions";
+import { RESOURCE_CMS_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -8,7 +9,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> }
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    roles: [...RESOURCE_CMS_ROLES],
   });
   if (auth instanceof Response) return auth;
 

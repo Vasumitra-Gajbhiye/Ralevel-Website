@@ -1,4 +1,8 @@
-import type { Role } from "./roles";
+import {
+  RESOURCE_ACCESS_MANAGE_ROLES,
+  RESOURCE_CMS_ROLES,
+  type Role,
+} from "./roles";
 
 type AdminSectionRule = {
   prefix: string;
@@ -66,8 +70,13 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
   },
   {
     prefix: "/admin/resource-cms",
-    roles: ["owner", "admin"],
+    roles: RESOURCE_CMS_ROLES,
     message: "You don't have permission to access Resource CMS.",
+  },
+  {
+    prefix: "/admin/resource",
+    roles: RESOURCE_ACCESS_MANAGE_ROLES,
+    message: "You don't have permission to manage Resource access.",
   },
 ];
 

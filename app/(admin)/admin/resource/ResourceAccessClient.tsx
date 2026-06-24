@@ -1,92 +1,27 @@
 "use client";
 
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ListPagination } from "@/components/ui/list-pagination";
-import type { AdminAccessUser } from "@/lib/data/admin/access";
+import type { ResourceAccessUser } from "@/lib/data/admin/resource-access";
 import type { PaginationMeta } from "@/lib/pagination";
-import type { Role } from "@/lib/roles";
-import { RESOURCE_TEAM_ROLES, roleRank } from "@/lib/roles";
+import {
+  isAdmin,
+  RESOURCE_TEAM_ROLES,
+  type ResourceTeamRole,
+} from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
+import { Shield, UserCog } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  Archive,
-  BadgeInfo,
-  Bot,
-  Brush,
-  Crown,
-  HelpingHand,
-  PenLine,
-  Shield,
-  User,
-  UserCog,
-} from "lucide-react";
-
-function getPrimaryRole(roles: Role[]) {
-  if (!roles.length) return "former_staff"; // safe fallback
-  return [...roles].sort((a, b) => roleRank(a) - roleRank(b))[0];
-}
-
-export const ROLE_LABELS: Record<Role, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  senior_mod: "Senior Moderator",
-  junior_mod: "Junior Moderator",
-  trial_mod: "Trial Moderator",
-  graphic_designer: "Graphic Designer",
-  writer: "Writer",
-  bot_dev: "Bot Developer",
-  former_staff: "Former Staff",
-  informative_team: "Community Team",
-  helper: "Helper",
-  mod_dep_head: "MOD Dep. Head",
-  helper_dep_head: "HLP Dep. Head",
-  graphic_dep_head: "GFX Dep. Head",
-  info_dep_head: "COMM Dep. Head",
+const RESOURCE_ROLE_LABELS: Record<ResourceTeamRole, string> = {
   resource_dep_head: "Resource Dep. Head",
   resource_admin: "Resource Admin",
 };
 
-const ASSIGNABLE_ACCESS_ROLES = Object.entries(ROLE_LABELS).filter(
-  ([value]) =>
-    value !== "owner" &&
-    !RESOURCE_TEAM_ROLES.includes(value as (typeof RESOURCE_TEAM_ROLES)[number])
-);
-
-export const ROLE_META: Record<
-  Role | "owner",
+const RESOURCE_ROLE_META: Record<
+  ResourceTeamRole,
   { color: string; icon: React.ElementType }
 > = {
-  owner: {
-    color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Crown,
-  },
-  admin: {
-    color: "bg-red-100 text-red-800 border-red-200",
-    icon: Shield,
-  },
-  mod_dep_head: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: Shield,
-  },
-  helper_dep_head: {
-    color: "bg-green-100 text-green-800 border-green-200",
-    icon: Shield,
-  },
-  graphic_dep_head: {
-    color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Shield,
-  },
-  info_dep_head: {
-    color: "bg-neutral-100 text-neutral-800 border-neutral-200",
-    icon: Shield,
-  },
   resource_dep_head: {
     color: "bg-amber-100 text-amber-800 border-amber-200",
     icon: Shield,
@@ -95,47 +30,6 @@ export const ROLE_META: Record<
     color: "bg-teal-100 text-teal-800 border-teal-200",
     icon: UserCog,
   },
-  senior_mod: {
-    color: "bg-orange-100 text-orange-800 border-orange-200",
-    icon: UserCog,
-  },
-  junior_mod: {
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    icon: User,
-  },
-  trial_mod: {
-    color: "bg-slate-100 text-slate-700 border-slate-200",
-    icon: User,
-  },
-  graphic_designer: {
-    color: "bg-pink-100 text-pink-800 border-pink-200",
-    icon: Brush,
-  },
-  writer: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: PenLine,
-  },
-  bot_dev: {
-    color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    icon: Bot,
-  },
-  former_staff: {
-    color: "bg-zinc-100 text-zinc-600 border-zinc-200",
-    icon: Archive,
-  },
-  informative_team: {
-    color: "bg-violet-100 text-violet-600 border-violet-200",
-    icon: BadgeInfo,
-  },
-  helper: {
-    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    icon: HelpingHand,
-  },
-};
-
-type AccessUser = {
-  email: string;
-  roles: Role[];
 };
 
 type Suggestion = {
@@ -143,16 +37,18 @@ type Suggestion = {
   name?: string;
 };
 
-function RoleBadge({
+function ResourceRoleBadge({
   role,
   disabled,
   onChange,
+  assignableRoles,
 }: {
-  role: Role | "owner";
+  role: ResourceTeamRole;
   disabled?: boolean;
-  onChange?: (role: Role) => void;
+  onChange?: (role: ResourceTeamRole) => void;
+  assignableRoles: ResourceTeamRole[];
 }) {
-  const meta = ROLE_META[role];
+  const meta = RESOURCE_ROLE_META[role];
   const Icon = meta.icon;
 
   return (
@@ -163,18 +59,17 @@ function RoleBadge({
       `}
     >
       <Icon className="w-3.5 h-3.5" />
-      {ROLE_LABELS[role]}
+      {RESOURCE_ROLE_LABELS[role]}
 
-      {/* Invisible native select layered on top */}
       {!disabled && onChange && (
         <select
           value={role}
-          onChange={(e) => onChange(e.target.value as Role)}
+          onChange={(e) => onChange(e.target.value as ResourceTeamRole)}
           className="absolute inset-0 opacity-0 cursor-pointer"
         >
-          {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
+          {assignableRoles.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {RESOURCE_ROLE_LABELS[value]}
             </option>
           ))}
         </select>
@@ -183,85 +78,32 @@ function RoleBadge({
   );
 }
 
-function RoleMultiBadge({
-  roles,
-  disabled,
-  onChange,
-}: {
-  roles: Role[];
-  disabled?: boolean;
-  onChange?: (roles: Role[]) => void;
-}) {
-  const primary = getPrimaryRole(roles);
-  const extraCount = roles.length - 1;
-
-  const meta = ROLE_META[primary];
-  const Icon = meta.icon;
-
-  function toggle(role: Role) {
-    if (!onChange) return;
-
-    if (roles.includes(role)) {
-      if (roles.length === 1) return; // prevent zero-role state
-      onChange(roles.filter((r) => r !== role));
-    } else {
-      onChange([...roles, role]);
-    }
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={disabled}>
-        <button
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium
-            ${meta.color}
-            ${disabled ? "opacity-60 cursor-not-allowed" : "hover:opacity-90"}
-          `}
-        >
-          <Icon className="w-3.5 h-3.5" />
-          {ROLE_LABELS[primary]}
-          {extraCount > 0 && (
-            <span className="ml-1 text-xs opacity-80">+{extraCount}</span>
-          )}
-        </button>
-      </DropdownMenuTrigger>
-
-      {!disabled && (
-        <DropdownMenuContent align="start" className="w-56">
-          {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
-            <DropdownMenuCheckboxItem
-              key={value}
-              checked={roles.includes(value as Role)}
-              onCheckedChange={() => toggle(value as Role)}
-            >
-              {label}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      )}
-    </DropdownMenu>
-  );
-}
-
-export default function AdminAccessClient({
+export default function ResourceAccessClient({
   session,
   initialUsers,
   pagination,
 }: {
   session: AuthSession | null;
-  initialUsers: AdminAccessUser[];
+  initialUsers: ResourceAccessUser[];
   pagination: PaginationMeta;
 }) {
   const router = useRouter();
-  const [users, setUsers] = useState<AccessUser[]>(initialUsers);
+  const actorIsAdmin = isAdmin(session?.userData?.roles);
+  const assignableRoles: ResourceTeamRole[] = actorIsAdmin
+    ? [...RESOURCE_TEAM_ROLES]
+    : ["resource_admin"];
+
+  const [users, setUsers] = useState(initialUsers);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("writer");
+  const [role, setRole] = useState<ResourceTeamRole>(
+    assignableRoles[0] ?? "resource_admin"
+  );
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [saving, setSaving] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{
     email: string;
-    reason: "owner" | "self" | "normal";
+    reason: "self" | "dep_head" | "normal";
   } | null>(null);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -270,7 +112,6 @@ export default function AdminAccessClient({
     setUsers(initialUsers);
   }, [initialUsers]);
 
-  /* ---------------- AUTOCOMPLETE ---------------- */
   function handleEmailChange(value: string) {
     setEmail(value);
 
@@ -283,58 +124,48 @@ export default function AdminAccessClient({
 
     debounceRef.current = setTimeout(async () => {
       const res = await fetch(
-        `/api/admin/access/search?q=${encodeURIComponent(value)}`
+        `/api/admin/resource-access/search?q=${encodeURIComponent(value)}`
       );
       const data = await res.json();
       setSuggestions(data);
     }, 250);
   }
 
-  function pickSuggestion(email: string) {
-    setEmail(email);
+  function pickSuggestion(value: string) {
+    setEmail(value);
     setSuggestions([]);
   }
 
-  /* ---------------- ADD ACCESS ---------------- */
   async function addAccess() {
     if (!email.trim()) return;
 
     setSaving(true);
 
-    await fetch("/api/admin/access", {
+    await fetch("/api/admin/resource-access", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        roles: [role], // ✅ THIS FIXES THE ERROR
-      }),
+      body: JSON.stringify({ email, role }),
     });
 
     setEmail("");
-    setRole("writer");
+    setRole(assignableRoles[0] ?? "resource_admin");
     setSuggestions([]);
     router.refresh();
     setSaving(false);
   }
-  async function updateRoles(email: string, roles: Role[]) {
-    try {
-      await fetch("/api/admin/access", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          roles,
-        }),
-      });
-    } catch (e) {
-      console.log(e);
-    }
+
+  async function updateRole(email: string, role: ResourceTeamRole) {
+    await fetch("/api/admin/resource-access", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    });
 
     router.refresh();
   }
 
   async function revoke(email: string) {
-    await fetch("/api/admin/access", {
+    await fetch("/api/admin/resource-access", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -343,14 +174,19 @@ export default function AdminAccessClient({
     router.refresh();
   }
 
-  /* ================= UI ================= */
+  function canRevokeUser(targetRole: ResourceTeamRole | null) {
+    if (!targetRole) return false;
+    if (!actorIsAdmin && targetRole === "resource_dep_head") return false;
+    return true;
+  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1">Access</h1>
-      <p className="text-sm text-gray-500 mb-6">Share admin or writer access</p>
+      <h1 className="text-2xl font-bold mb-1">Resource Dept.</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Manage Resource CMS access for department heads and admins
+      </p>
 
-      {/* Share box */}
       <div className="relative border rounded-xl p-4 bg-white mb-8 flex gap-3 items-end">
         <div className="flex-1 relative">
           <label className="text-xs text-gray-500">Email</label>
@@ -361,7 +197,6 @@ export default function AdminAccessClient({
             className="w-full border rounded px-3 py-2 text-sm"
           />
 
-          {/* Suggestions */}
           {suggestions.length > 0 && (
             <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
               {suggestions.map((s) => (
@@ -384,14 +219,14 @@ export default function AdminAccessClient({
           <label className="text-xs text-gray-500">Role</label>
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
+            onChange={(e) => setRole(e.target.value as ResourceTeamRole)}
             className="border rounded px-3 py-2 text-sm bg-white"
           >
-          {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
+            {assignableRoles.map((value) => (
+              <option key={value} value={value}>
+                {RESOURCE_ROLE_LABELS[value]}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -400,63 +235,68 @@ export default function AdminAccessClient({
           disabled={saving}
           className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
         >
-          + Share
+          + Grant access
         </button>
       </div>
 
-      {/* Access list */}
       <div className="border rounded-xl bg-white overflow-hidden">
         {users.length === 0 ? (
           <div className="p-6 text-sm text-gray-500 text-center">
-            No access granted yet
+            No resource access granted yet
           </div>
         ) : (
           <>
-            {/* Header */}
             <div className="grid grid-cols-[1fr_220px_100px] gap-4 px-4 py-3 bg-gray-50 text-gray-600 text-sm font-medium">
               <div>Email</div>
               <div>Role</div>
               <div className="text-right">Action</div>
             </div>
 
-            {/* Rows */}
             <div className="divide-y">
               {users.map((u) => {
                 const isSelf = u.email === session?.user?.email;
-                const isOwner = u.roles.includes("owner");
+                const resourceRole = u.resourceRole;
+                const revokeAllowed =
+                  !isSelf && canRevokeUser(resourceRole);
 
                 return (
                   <div
                     key={u.email}
                     className="grid grid-cols-[1fr_220px_100px] gap-4 px-4 py-3 items-center"
                   >
-                    {/* Email */}
                     <div className="text-sm text-gray-900 truncate">
                       {u.email}
                     </div>
 
-                    {/* Role */}
                     <div>
-                      <RoleMultiBadge
-                        roles={u.roles}
-                        disabled={isOwner || isSelf}
-                        onChange={(newRoles) => updateRoles(u.email, newRoles)}
-                      />
+                      {resourceRole ? (
+                        <ResourceRoleBadge
+                          role={resourceRole}
+                          disabled={isSelf || !actorIsAdmin}
+                          onChange={
+                            actorIsAdmin
+                              ? (newRole) => updateRole(u.email, newRole)
+                              : undefined
+                          }
+                          assignableRoles={assignableRoles}
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </div>
 
-                    {/* Action */}
                     <div className="text-right">
                       <button
                         onClick={() => {
-                          if (isOwner) {
-                            setConfirmDelete({
-                              email: u.email,
-                              reason: "owner",
-                            });
-                          } else if (isSelf) {
+                          if (isSelf) {
                             setConfirmDelete({
                               email: u.email,
                               reason: "self",
+                            });
+                          } else if (!revokeAllowed) {
+                            setConfirmDelete({
+                              email: u.email,
+                              reason: "dep_head",
                             });
                           } else {
                             setConfirmDelete({
@@ -466,9 +306,9 @@ export default function AdminAccessClient({
                           }
                         }}
                         className={`text-xs ${
-                          isOwner || isSelf
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-red-600 hover:underline"
+                          revokeAllowed
+                            ? "text-red-600 hover:underline"
+                            : "text-gray-400 cursor-not-allowed"
                         }`}
                       >
                         Remove
@@ -486,34 +326,13 @@ export default function AdminAccessClient({
         page={pagination.page}
         totalPages={pagination.totalPages}
         onPageChange={(nextPage) =>
-          router.push(`/admin/access?page=${nextPage}`)
+          router.push(`/admin/resource?page=${nextPage}`)
         }
       />
 
-      {/* Confirm delete modal */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-lg">
-            {confirmDelete.reason === "owner" && (
-              <>
-                <h3 className="text-lg font-semibold mb-2">
-                  Action not allowed
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  The <strong>owner</strong> access cannot be removed. Ownership
-                  must be transferred manually.
-                </p>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setConfirmDelete(null)}
-                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50"
-                  >
-                    Got it
-                  </button>
-                </div>
-              </>
-            )}
-
             {confirmDelete.reason === "self" && (
               <>
                 <h3 className="text-lg font-semibold mb-2">
@@ -533,13 +352,34 @@ export default function AdminAccessClient({
               </>
             )}
 
+            {confirmDelete.reason === "dep_head" && (
+              <>
+                <h3 className="text-lg font-semibold mb-2">
+                  Action not allowed
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Only owner or admin can revoke Resource Dep. Head access.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </>
+            )}
+
             {confirmDelete.reason === "normal" && (
               <>
-                <h3 className="text-lg font-semibold mb-2">Remove access?</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Remove resource access?
+                </h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  This will revoke access for{" "}
+                  This will revoke resource roles for{" "}
                   <span className="font-medium">{confirmDelete.email}</span>.
-                  This action cannot be undone.
+                  Other roles will be preserved.
                 </p>
 
                 <div className="flex justify-end gap-2">

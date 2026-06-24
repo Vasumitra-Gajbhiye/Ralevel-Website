@@ -7,6 +7,8 @@ export const ROLES = [
   "helper_dep_head",
   "graphic_dep_head",
   "info_dep_head",
+  "resource_dep_head",
+  "resource_admin",
   "senior_mod",
   "junior_mod",
   "trial_mod",
@@ -19,6 +21,26 @@ export const ROLES = [
 ] as const;
 
 export type Role = (typeof ROLES)[number];
+
+export const RESOURCE_CMS_ROLES = [
+  "owner",
+  "admin",
+  "resource_dep_head",
+  "resource_admin",
+] as const satisfies readonly Role[];
+
+export const RESOURCE_ACCESS_MANAGE_ROLES = [
+  "owner",
+  "admin",
+  "resource_dep_head",
+] as const satisfies readonly Role[];
+
+export const RESOURCE_TEAM_ROLES = [
+  "resource_dep_head",
+  "resource_admin",
+] as const satisfies readonly Role[];
+
+export type ResourceTeamRole = (typeof RESOURCE_TEAM_ROLES)[number];
 
 /**
  * Lower index = higher authority
@@ -62,4 +84,23 @@ export function hasAnyRole(
  */
 export function isAdmin(userRoles?: Role[]) {
   return hasAnyRole(userRoles, ["owner", "admin"]);
+}
+
+export function hasResourceCmsAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, RESOURCE_CMS_ROLES);
+}
+
+export function canManageResourceAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, RESOURCE_ACCESS_MANAGE_ROLES);
+}
+
+export function stripResourceTeamRoles(roles: Role[]): Role[] {
+  return roles.filter((r) => !RESOURCE_TEAM_ROLES.includes(r as ResourceTeamRole));
+}
+
+export function mergeResourceTeamRole(
+  roles: Role[],
+  assignedRole: ResourceTeamRole
+): Role[] {
+  return [...stripResourceTeamRoles(roles), assignedRole];
 }
