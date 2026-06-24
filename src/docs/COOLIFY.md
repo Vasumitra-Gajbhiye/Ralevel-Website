@@ -128,8 +128,25 @@ Posts to a Discord channel when a generic intake form is submitted. Runs inside 
 | `DISCORD_NOTIFICATIONS_ENABLED` | Yes | `true` to enable |
 | `DISCORD_BOT_TOKEN` | If enabled | Bot token from [Discord Developer Portal](https://discord.com/developers/applications) |
 | `DISCORD_APPLICATIONS_CHANNEL_ID` | If enabled | Snowflake ID of the target channel |
+| `DISCORD_JR_ADMIN_ROLE_ID` | If using reminders | Jr admin role snowflake for day 5/7 reminder pings |
+| `DISCORD_SR_ADMIN_ROLE_ID` | If using reminders | Sr admin role snowflake for day 7 reminder pings |
 
-Bot needs **View Channel**, **Send Messages**, and **Embed Links** in that channel. Notifications are fire-and-forget — a Discord failure does not fail the form submission.
+Bot needs **View Channel**, **Send Messages**, and **Embed Links** in that channel. For role mentions on reminder pings, the bot also needs permission to mention those roles. Notifications are fire-and-forget — a Discord failure does not fail the form submission.
+
+### Form reminder cron (6am IST daily)
+
+Sends escalating Discord reminders for unreviewed form applications (days 3, 5, and 7 after submission).
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `CRON_SECRET` | Yes | Bearer token for `GET /api/cron/form-reminders` |
+
+Schedule in Coolify (or host cron) at **`30 0 * * *` UTC** (= 6:00 AM IST):
+
+```bash
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://ralevel.com/api/cron/form-reminders"
+```
 
 ### QOTD admin
 

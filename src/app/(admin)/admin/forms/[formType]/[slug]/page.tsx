@@ -1,3 +1,4 @@
+import { resolveInchargeMembers } from "@/lib/forms/incharge";
 import connectDB from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
@@ -50,6 +51,10 @@ export default async function AdminFormPage({
     limit,
   ).pagination;
 
+  const inchargeMembers = await resolveInchargeMembers(
+    form.inchargeNicknames ?? [],
+  );
+
   return (
     <AdminFormPageClient
       form={form}
@@ -57,6 +62,7 @@ export default async function AdminFormPage({
       submissions={submissions}
       summarySubmissions={summarySubmissions}
       pagination={pagination}
+      inchargeMembers={inchargeMembers}
     />
   );
 }

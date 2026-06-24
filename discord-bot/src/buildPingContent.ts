@@ -1,25 +1,42 @@
 const DISCORD_SNOWFLAKE_RE = /^\d{17,20}$/;
 
-export function buildPingPayload(userIds: string[] | undefined): {
+export type PingTargets = {
+  userIds?: string[];
+  roleIds?: string[];
+};
+
+export function buildPingPayload(targets?: PingTargets): {
   content?: string;
-  allowed_mentions?: { parse: []; users: string[] };
+  allowed_mentions?: { parse: []; users: string[]; roles: string[] };
 } {
-  if (!userIds?.length) {
+  const userIds = [
+    ...new Set((targets?.userIds ?? []).map((id) => id.trim()).filter(Boolean)),
+  ].filter((id) => DISCORD_SNOWFLAKE_RE.test(id));
+
+  const roleIds = [
+    ...new Set((targets?.roleIds ?? []).map((id) => id.trim()).filter(Boolean)),
+  ].filter((id) => DISCORD_SNOWFLAKE_RE.test(id));
+
+  if (userIds.length === 0 && roleIds.length === 0) {
     return {};
   }
 
-  const uniqueIds = [...new Set(userIds.map((id) => id.trim()).filter(Boolean))];
-  const validIds = uniqueIds.filter((id) => DISCORD_SNOWFLAKE_RE.test(id));
-
-  if (validIds.length === 0) {
-    return {};
-  }
+  const parts = [
+    ...userIds.map((id) => `<@${id}>`),
+    ...roleIds.map((id) => `<@&${id}>`),
+  ];
 
   return {
-    content: validIds.map((id) => `<@${id}>`).join(" "),
+    content: parts.join(" "),
     allowed_mentions: {
       parse: [],
-      users: validIds,
+      users: userIds,
+      roles: roleIds,
     },
   };
+}
+
+// Backward-compatible helper for submission notifications
+export function buildUserPingPayload(userIds: string[] | undefined) {
+  return buildPingPayload({ userIds });
 }

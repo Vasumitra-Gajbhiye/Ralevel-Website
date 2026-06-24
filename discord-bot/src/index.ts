@@ -1,9 +1,13 @@
 import { buildPingPayload } from "./buildPingContent";
 import { formatSubmissionEmbed } from "./formatEmbed";
+import { formatReminderEmbed } from "./formatReminderEmbed";
 import { sendChannelMessage } from "./sendMessage";
-import type { FormSubmissionNotification } from "./types";
+import type {
+  FormReminderNotification,
+  FormSubmissionNotification,
+} from "./types";
 
-export type { FormSubmissionNotification } from "./types";
+export type { FormSubmissionNotification, FormReminderNotification } from "./types";
 export { DiscordApiError } from "./sendMessage";
 
 export type DiscordConfig = {
@@ -16,7 +20,23 @@ export async function notifyNewSubmission(
   data: FormSubmissionNotification,
 ): Promise<void> {
   const embed = formatSubmissionEmbed(data);
-  const pingPayload = buildPingPayload(data.pingUserIds);
+  const pingPayload = buildPingPayload({ userIds: data.pingUserIds });
+
+  await sendChannelMessage(config.botToken, config.channelId, {
+    embeds: [embed],
+    ...pingPayload,
+  });
+}
+
+export async function notifyFormReminder(
+  config: DiscordConfig,
+  data: FormReminderNotification,
+): Promise<void> {
+  const embed = formatReminderEmbed(data);
+  const pingPayload = buildPingPayload({
+    userIds: data.pingUserIds,
+    roleIds: data.pingRoleIds,
+  });
 
   await sendChannelMessage(config.botToken, config.channelId, {
     embeds: [embed],

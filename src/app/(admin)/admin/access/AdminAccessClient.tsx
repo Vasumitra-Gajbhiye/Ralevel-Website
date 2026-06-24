@@ -1,9 +1,5 @@
 "use client";
 
-import type { AdminAccessUser } from "@/lib/data/admin/access";
-import type { PaginationMeta } from "@/lib/pagination";
-import type { Role } from "@/lib/roles";
-import { RESOURCE_TEAM_ROLES, roleRank } from "@/lib/roles";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -11,6 +7,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ListPagination } from "@/components/ui/list-pagination";
+import type { AdminAccessUser } from "@/lib/data/admin/access";
+import type { PaginationMeta } from "@/lib/pagination";
+import type { Role } from "@/lib/roles";
+import { RESOURCE_TEAM_ROLES, roleRank } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -138,6 +138,8 @@ export const ROLE_META: Record<
 type AccessUser = {
   email: string;
   roles: Role[];
+  nickname?: string;
+  discordUserId?: string;
 };
 
 type Suggestion = {
@@ -258,8 +260,16 @@ export default function AdminAccessClient({
   const [users, setUsers] = useState<AccessUser[]>(initialUsers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("writer");
+  const [nickname, setNickname] = useState("");
+  const [discordUserId, setDiscordUserId] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [saving, setSaving] = useState(false);
+  const [identitySaveState, setIdentitySaveState] = useState<
+    Record<string, "saving" | "saved">
+  >({});
+  const [identityDrafts, setIdentityDrafts] = useState<
+    Record<string, { nickname: string; discordUserId: string }>
+  >({});
 
   const [confirmDelete, setConfirmDelete] = useState<{
     email: string;
@@ -299,24 +309,127 @@ export default function AdminAccessClient({
 
   /* ---------------- ADD ACCESS ---------------- */
   async function addAccess() {
-    if (!email.trim()) return;
+    if (!email.trim() || !nickname.trim() || !discordUserId.trim()) return;
 
     setSaving(true);
 
-    await fetch("/api/admin/access", {
+    const res = await fetch("/api/admin/access", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email,
-        roles: [role], // ✅ THIS FIXES THE ERROR
+        roles: [role],
+        nickname,
+        discordUserId,
       }),
     });
 
+    if (!res.ok) {
+      const text = await res.text();
+      alert(text || "Failed to grant access");
+      setSaving(false);
+      return;
+    }
+
     setEmail("");
     setRole("writer");
+    setNickname("");
+    setDiscordUserId("");
     setSuggestions([]);
     router.refresh();
     setSaving(false);
+  }
+
+  async function saveStaffIdentity(user: AccessUser) {
+    const draft = getIdentityDraft(user);
+
+    setIdentitySaveState((prev) => ({ ...prev, [user.email]: "saving" }));
+
+    const res = await fetch("/api/admin/access/staff-identity", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        nickname: draft.nickname,
+        discordUserId: draft.discordUserId,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error ?? "Failed to update staff identity");
+      setIdentitySaveState((prev) => {
+        const next = { ...prev };
+        delete next[user.email];
+        return next;
+      });
+      return;
+    }
+
+    const data = await res.json();
+
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.email === user.email
+          ? {
+              ...u,
+              nickname: data.nickname ?? draft.nickname,
+              discordUserId: data.discordUserId ?? draft.discordUserId,
+            }
+          : u,
+      ),
+    );
+    setIdentityDrafts((prev) => {
+      const next = { ...prev };
+      delete next[user.email];
+      return next;
+    });
+    setIdentitySaveState((prev) => ({ ...prev, [user.email]: "saved" }));
+
+    window.setTimeout(() => {
+      setIdentitySaveState((prev) => {
+        const next = { ...prev };
+        delete next[user.email];
+        return next;
+      });
+    }, 2000);
+  }
+
+  function getIdentityDraft(user: AccessUser) {
+    return (
+      identityDrafts[user.email] ?? {
+        nickname: user.nickname ?? "",
+        discordUserId: user.discordUserId ?? "",
+      }
+    );
+  }
+
+  function isIdentityDirty(user: AccessUser): boolean {
+    const draft = getIdentityDraft(user);
+    return (
+      draft.nickname.trim() !== (user.nickname ?? "").trim() ||
+      draft.discordUserId.trim() !== (user.discordUserId ?? "").trim()
+    );
+  }
+
+  function updateIdentityDraft(
+    user: AccessUser,
+    field: "nickname" | "discordUserId",
+    value: string,
+  ) {
+    setIdentitySaveState((prev) => {
+      if (!prev[user.email]) return prev;
+      const next = { ...prev };
+      delete next[user.email];
+      return next;
+    });
+    setIdentityDrafts((prev) => ({
+      ...prev,
+      [user.email]: {
+        ...getIdentityDraft(user),
+        [field]: value,
+      },
+    }));
   }
   async function updateRoles(email: string, roles: Role[]) {
     try {
@@ -348,106 +461,179 @@ export default function AdminAccessClient({
   /* ================= UI ================= */
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Access</h1>
       <p className="text-sm text-gray-500 mb-6">Share admin or writer access</p>
 
       {/* Share box */}
-      <div className="relative border rounded-xl p-4 bg-white mb-8 flex gap-3 items-end">
-        <div className="flex-1 relative">
-          <label className="text-xs text-gray-500">Email</label>
-          <input
-            value={email}
-            onChange={(e) => handleEmailChange(e.target.value)}
-            placeholder="user@example.com"
-            className="w-full border rounded px-3 py-2 text-sm"
-          />
+      <div className="relative border rounded-xl p-4 bg-white mb-8 space-y-4">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="relative">
+            <label className="text-xs text-gray-500">Email</label>
+            <input
+              value={email}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              placeholder="user@example.com"
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
 
-          {/* Suggestions */}
-          {suggestions.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
-              {suggestions.map((s) => (
-                <button
-                  key={s.email}
-                  onClick={() => pickSuggestion(s.email)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                >
-                  <div className="font-medium">{s.email}</div>
-                  {s.name && (
-                    <div className="text-xs text-gray-500">{s.name}</div>
-                  )}
-                </button>
+            {suggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-white border rounded shadow">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.email}
+                    onClick={() => pickSuggestion(s.email)}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    <div className="font-medium">{s.email}</div>
+                    {s.name && (
+                      <div className="text-xs text-gray-500">{s.name}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as Role)}
+              className="w-full border rounded px-3 py-2 text-sm bg-white"
+            >
+              {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
-            </div>
-          )}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500">Nickname</label>
+            <input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="server-wide nickname"
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500">Discord user ID</label>
+            <input
+              value={discordUserId}
+              onChange={(e) => setDiscordUserId(e.target.value)}
+              placeholder="123456789012345678"
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="text-xs text-gray-500">Role</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className="border rounded px-3 py-2 text-sm bg-white"
+        <div className="flex justify-end">
+          <button
+            onClick={addAccess}
+            disabled={
+              saving ||
+              !email.trim() ||
+              !nickname.trim() ||
+              !discordUserId.trim()
+            }
+            className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
           >
-            {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            + Share
+          </button>
         </div>
-
-        <button
-          onClick={addAccess}
-          disabled={saving}
-          className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
-        >
-          + Share
-        </button>
       </div>
 
       {/* Access list */}
-      <div className="border rounded-xl bg-white overflow-hidden">
+      <div className="border rounded-xl bg-white overflow-x-auto">
         {users.length === 0 ? (
           <div className="p-6 text-sm text-gray-500 text-center">
             No access granted yet
           </div>
         ) : (
-          <>
-            {/* Header */}
-            <div className="grid grid-cols-[1fr_220px_100px] gap-4 px-4 py-3 bg-gray-50 text-gray-600 text-sm font-medium">
-              <div>Email</div>
-              <div>Role</div>
-              <div className="text-right">Action</div>
-            </div>
-
-            {/* Rows */}
-            <div className="divide-y">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50 text-left text-gray-600">
+                <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium w-[160px]">Nickname</th>
+                <th className="px-4 py-3 font-medium w-[180px]">Discord ID</th>
+                <th className="px-4 py-3 font-medium w-[200px]">Role</th>
+                <th className="px-4 py-3 font-medium text-right w-[120px]">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
               {users.map((u) => {
                 const isSelf = u.email === session?.user?.email;
                 const isOwner = u.roles.includes("owner");
+                const saveState = identitySaveState[u.email];
+                const showSaveButton =
+                  !isOwner &&
+                  !isSelf &&
+                  (isIdentityDirty(u) ||
+                    saveState === "saving" ||
+                    saveState === "saved");
 
                 return (
-                  <div
-                    key={u.email}
-                    className="grid grid-cols-[1fr_220px_100px] gap-4 px-4 py-3 items-center"
-                  >
-                    {/* Email */}
-                    <div className="text-sm text-gray-900 truncate">
+                  <tr key={u.email} className="align-middle">
+                    <td className="px-4 py-3 text-gray-900 truncate max-w-[220px]">
                       {u.email}
-                    </div>
+                    </td>
 
-                    {/* Role */}
-                    <div>
+                    <td className="px-4 py-3">
+                      <input
+                        value={getIdentityDraft(u).nickname}
+                        onChange={(e) =>
+                          updateIdentityDraft(u, "nickname", e.target.value)
+                        }
+                        disabled={isOwner || isSelf}
+                        placeholder="nickname"
+                        className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <input
+                        value={getIdentityDraft(u).discordUserId}
+                        onChange={(e) =>
+                          updateIdentityDraft(u, "discordUserId", e.target.value)
+                        }
+                        disabled={isOwner || isSelf}
+                        placeholder="Discord ID"
+                        className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50"
+                      />
+                    </td>
+
+                    <td className="px-4 py-3">
                       <RoleMultiBadge
                         roles={u.roles}
                         disabled={isOwner || isSelf}
                         onChange={(newRoles) => updateRoles(u.email, newRoles)}
                       />
-                    </div>
+                    </td>
 
-                    {/* Action */}
-                    <div className="text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {showSaveButton && (
+                        <button
+                          onClick={() => saveStaffIdentity(u)}
+                          disabled={saveState === "saving"}
+                          className={`text-xs mr-3 disabled:opacity-50 ${
+                            saveState === "saved"
+                              ? "text-green-600"
+                              : "text-blue-600 hover:underline"
+                          }`}
+                        >
+                          {saveState === "saving"
+                            ? "Saving..."
+                            : saveState === "saved"
+                              ? "Saved"
+                              : "Save"}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           if (isOwner) {
@@ -475,12 +661,12 @@ export default function AdminAccessClient({
                       >
                         Remove
                       </button>
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 );
               })}
-            </div>
-          </>
+            </tbody>
+          </table>
         )}
       </div>
 

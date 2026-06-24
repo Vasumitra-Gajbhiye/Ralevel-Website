@@ -13,7 +13,7 @@ function isEnabled(): boolean {
   return flag === "true" || flag === "1";
 }
 
-function getConfig():
+export function getDiscordConfig():
   | { botToken: string; channelId: string }
   | null {
   if (!isEnabled()) return null;
@@ -39,7 +39,11 @@ export function normalizeSiteUrl(url: string | undefined): string {
   return `http://${raw}`;
 }
 
-function buildAdminUrl(input: FormSubmissionNotifyInput): string {
+export function buildAdminUrl(input: {
+  formType: string;
+  formSlug: string;
+  submissionId: string;
+}): string {
   const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_URL);
   return `${siteUrl}/admin/forms/${input.formType}/${input.formSlug}/responses/${input.submissionId}`;
 }
@@ -47,7 +51,7 @@ function buildAdminUrl(input: FormSubmissionNotifyInput): string {
 export async function notifyFormSubmission(
   data: FormSubmissionNotifyInput,
 ): Promise<void> {
-  const config = getConfig();
+  const config = getDiscordConfig();
   if (!config) return;
 
   await notifyNewSubmission(config, {

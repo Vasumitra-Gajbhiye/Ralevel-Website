@@ -32,6 +32,8 @@
 // }
 
 import connectDB from "@/lib/mongodb";
+import { canVoteOnForm } from "@/lib/forms/incharge";
+import { getAuthSession } from "@/lib/getAuthSession";
 import Form from "@/models/Form";
 import FormSubmission from "@/models/FormSubmission";
 import { FormDocument } from "@/types/form";
@@ -60,9 +62,23 @@ export default async function SubmissionPage({
 
   if (!submission) notFound();
 
-  // 3️⃣ Convert to plain objects
+  const session = await getAuthSession();
+  const canVote = session
+    ? await canVoteOnForm({
+        roles: session.userData?.roles,
+        email: session.user?.email,
+        form: { inchargeNicknames: form.inchargeNicknames ?? [] },
+      })
+    : false;
+
   const plainForm = JSON.parse(JSON.stringify(form));
   const plainSubmission = JSON.parse(JSON.stringify(submission));
 
-  return <SubmissionPageClient form={plainForm} submission={plainSubmission} />;
+  return (
+    <SubmissionPageClient
+      form={plainForm}
+      submission={plainSubmission}
+      canVote={canVote}
+    />
+  );
 }

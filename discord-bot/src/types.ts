@@ -1,3 +1,18 @@
+export type FormReminderNotification = {
+  formTitle: string;
+  formType: string;
+  formSlug: string;
+  cycleId: number;
+  submitterName?: string;
+  submitterEmail?: string;
+  submissionId: string;
+  adminUrl: string;
+  tier: 3 | 5 | 7;
+  daysPending: number;
+  pingUserIds?: string[];
+  pingRoleIds?: string[];
+};
+
 export type FormSubmissionNotification = {
   formTitle: string;
   formType: string;
@@ -26,5 +41,6 @@ export type DiscordMessagePayload = {
   allowed_mentions?: {
     parse: [];
     users: string[];
+    roles: string[];
   };
 };

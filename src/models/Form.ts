@@ -123,7 +123,7 @@ const FormSchema = new mongoose.Schema(
 
     introductionBlocks: Array, // keep flexible
 
-    discordPingUserIds: {
+    inchargeNicknames: {
       type: [String],
       default: [],
     },

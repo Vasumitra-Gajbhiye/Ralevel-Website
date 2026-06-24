@@ -13,9 +13,15 @@ import { FormDocument } from "@/types/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import DiscordPings from "./DiscordPings";
+import Incharge from "./Incharge";
 import ResponsesTable from "./ResponsesTable";
 import Summary from "./Summary";
+
+type InchargeMemberView = {
+  nickname: string;
+  email: string;
+  discordUserId: string;
+};
 
 type Props = {
   form: FormDocument;
@@ -23,6 +29,7 @@ type Props = {
   submissions: any[];
   summarySubmissions: any[];
   pagination: PaginationMeta;
+  inchargeMembers: InchargeMemberView[];
 };
 
 export default function AdminFormPageClient({
@@ -31,13 +38,13 @@ export default function AdminFormPageClient({
   submissions,
   summarySubmissions,
   pagination,
+  inchargeMembers,
 }: Props) {
   const router = useRouter();
   const hasResponses = totalResponses > 0;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-      {/* BACK */}
       <Link
         href={`/admin/forms/${form.formType}`}
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -46,7 +53,6 @@ export default function AdminFormPageClient({
         Back to {form.formType} forms
       </Link>
 
-      {/* HEADER */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold">{form.title}</h1>
@@ -60,8 +66,7 @@ export default function AdminFormPageClient({
         </p>
       </div>
 
-      {/* TABS */}
-      <Tabs defaultValue={hasResponses ? "summary" : "discord-pings"}>
+      <Tabs defaultValue={hasResponses ? "summary" : "incharge"}>
         <TabsList className="mb-6">
           {hasResponses && (
             <>
@@ -69,7 +74,7 @@ export default function AdminFormPageClient({
               <TabsTrigger value="responses">Responses</TabsTrigger>
             </>
           )}
-          <TabsTrigger value="discord-pings">Discord pings</TabsTrigger>
+          <TabsTrigger value="incharge">Incharge</TabsTrigger>
         </TabsList>
 
         {hasResponses && (
@@ -102,10 +107,11 @@ export default function AdminFormPageClient({
           </>
         )}
 
-        <TabsContent value="discord-pings">
-          <DiscordPings
+        <TabsContent value="incharge">
+          <Incharge
             formSlug={form.slug}
-            initialUserIds={form.discordPingUserIds ?? []}
+            initialNicknames={form.inchargeNicknames ?? []}
+            initialMembers={inchargeMembers}
           />
         </TabsContent>
       </Tabs>

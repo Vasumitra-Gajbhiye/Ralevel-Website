@@ -1,4 +1,5 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
+import { applyStaffIdentity } from "@/lib/admin/staffIdentity";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAdminAccessList } from "@/lib/data/admin/access";
 import connectDB from "@/lib/mongodb";
@@ -44,9 +45,11 @@ export async function POST(req: Request) {
   const actorRoles = auth.userData.roles;
   const actorHighest = highestAuthorityRole(actorRoles);
 
-  const { email, roles } = (await req.json()) as {
+  const { email, roles, nickname, discordUserId } = (await req.json()) as {
     email?: string;
     roles?: Role[];
+    nickname?: unknown;
+    discordUserId?: unknown;
   };
 
   if (!email || !Array.isArray(roles) || roles.length === 0) {
@@ -77,6 +80,15 @@ export async function POST(req: Request) {
   }
 
   target.roles = roles;
+
+  try {
+    await applyStaffIdentity(target, { nickname, discordUserId }, email);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Invalid staff identity";
+    return new Response(message, { status: 400 });
+  }
+
   await target.save();
 
   const clerkUserId = await findClerkUserIdByEmail(email);

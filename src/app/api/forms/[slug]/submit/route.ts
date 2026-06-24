@@ -1,4 +1,5 @@
 import { notifyFormSubmission } from "@/lib/discord/notifyFormSubmission";
+import { resolveInchargeMembers } from "@/lib/forms/incharge";
 import { confirmationEmail } from "@/lib/emails/confirmationEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
@@ -428,6 +429,10 @@ export async function POST(
   });
 
   const submissionId = submission._id.toString();
+  const inchargeMembers = await resolveInchargeMembers(
+    form.inchargeNicknames ?? [],
+  );
+
   void notifyFormSubmission({
     formTitle: form.title,
     formType: form.formType,
@@ -437,7 +442,7 @@ export async function POST(
     submitterEmail,
     submissionId,
     hasFiles: uploadedFiles.length > 0,
-    pingUserIds: form.discordPingUserIds ?? [],
+    pingUserIds: inchargeMembers.map((member) => member.discordUserId),
   }).catch((err) => console.error("[discord] notification failed:", err));
 
   return NextResponse.json(

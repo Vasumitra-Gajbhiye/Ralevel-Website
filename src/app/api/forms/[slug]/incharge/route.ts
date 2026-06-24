@@ -1,16 +1,16 @@
 import { enforceSameOrigin } from "@/lib/csrf";
-import { normalizeDiscordPingUserIds } from "@/lib/discord/validatePingUserIds";
+import { normalizeInchargeNicknames } from "@/lib/forms/incharge";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import Form from "@/models/Form";
 import { NextResponse } from "next/server";
 
-const DISCORD_PINGS_ADMIN_ROLES = ["owner", "admin"] as const;
+const INCHARGE_ADMIN_ROLES = ["owner", "admin"] as const;
 
-function canManageDiscordPings(roles: string[] | undefined): boolean {
+function canManageIncharge(roles: string[] | undefined): boolean {
   if (!roles) return false;
   return roles.some((role) =>
-    (DISCORD_PINGS_ADMIN_ROLES as readonly string[]).includes(role),
+    (INCHARGE_ADMIN_ROLES as readonly string[]).includes(role),
   );
 }
 
@@ -21,7 +21,7 @@ export async function PATCH(
   const session = await getAuthSession();
   const roles = session?.userData?.roles as string[] | undefined;
 
-  if (!canManageDiscordPings(roles)) {
+  if (!canManageIncharge(roles)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,19 +30,19 @@ export async function PATCH(
 
   const { slug } = await params;
 
-  let body: { userIds?: unknown };
+  let body: { nicknames?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  let userIds: string[];
+  let nicknames: string[];
   try {
-    userIds = normalizeDiscordPingUserIds(body.userIds);
+    nicknames = await normalizeInchargeNicknames(body.nicknames);
   } catch (err) {
     const message =
-      err instanceof Error ? err.message : "Invalid Discord user IDs";
+      err instanceof Error ? err.message : "Invalid incharge nicknames";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
@@ -53,8 +53,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
   }
 
-  form.discordPingUserIds = userIds;
+  form.inchargeNicknames = nicknames;
   await form.save();
 
-  return NextResponse.json({ success: true, userIds });
+  return NextResponse.json({ success: true, nicknames });
 }

@@ -1,7 +1,10 @@
+import { canVoteOnForm } from "@/lib/forms/incharge";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import Form from "@/models/Form";
 import FormSubmission from "@/models/FormSubmission";
+import type { Role } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
@@ -9,12 +12,6 @@ export async function PATCH(req: Request) {
 
   const session = await getAuthSession();
 
-  if (
-    !session?.userData?.roles?.includes("admin") &&
-    !session?.userData?.roles?.includes("mod_dep_head")
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
   if (!session || !session.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -36,34 +33,51 @@ export async function PATCH(req: Request) {
       { status: 404 },
     );
   }
+
+  const form = (await Form.findOne({ slug: submission.formSlug })
+    .select("inchargeNicknames")
+    .lean()) as { inchargeNicknames?: string[] } | null;
+  if (!form) {
+    return NextResponse.json({ error: "Form not found" }, { status: 404 });
+  }
+
+  const allowed = await canVoteOnForm({
+    roles: session.userData?.roles as Role[] | undefined,
+    email: session.user.email,
+    form: { inchargeNicknames: form.inchargeNicknames ?? [] },
+  });
+
+  if (!allowed) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const adminId = session.user.email;
-  const adminName = session.user.name || session.user.email; // fallback
+  const adminName = session.user.name || session.user.email;
 
   const existingVoteIndex = submission.votes.findIndex(
-    (v: any) => v.adminId === adminId,
+    (v: { adminId: string }) => v.adminId === adminId,
   );
 
   if (existingVoteIndex === -1) {
-    // 🟢 New vote
     submission.votes.push({
       adminId,
-      adminName, // ✅ SAVE NAME
+      adminName,
       vote,
       votedAt: new Date(),
     });
   } else {
-    // 🔄 Update vote
     submission.votes[existingVoteIndex].vote = vote;
     submission.votes[existingVoteIndex].votedAt = new Date();
-
-    // 🔄 Ensure name stays updated (in case admin changed Google name)
     submission.votes[existingVoteIndex].adminName = adminName;
   }
 
   await submission.save();
 
-  const upvotes = submission.votes.filter((v: any) => v.vote === 1).length;
-  const downvotes = submission.votes.filter((v: any) => v.vote === -1).length;
+  const upvotes = submission.votes.filter((v: { vote: number }) => v.vote === 1)
+    .length;
+  const downvotes = submission.votes.filter(
+    (v: { vote: number }) => v.vote === -1,
+  ).length;
 
   return NextResponse.json({
     success: true,

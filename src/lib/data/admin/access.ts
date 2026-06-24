@@ -7,6 +7,8 @@ export type AdminAccessUser = {
   name?: string;
   email: string;
   roles: Role[];
+  nickname?: string;
+  discordUserId?: string;
 };
 
 function buildRoleRankSwitch() {
@@ -62,6 +64,8 @@ export async function getAdminAccessList({
               name: 1,
               email: 1,
               roles: 1,
+              nickname: 1,
+              discordUserId: 1,
             },
           },
         ],

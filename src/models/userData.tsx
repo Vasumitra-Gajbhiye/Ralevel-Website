@@ -19,6 +19,14 @@ const userDataSchema = new mongoose.Schema(
 
     redditUsername: { type: String, default: "" },
     discordUsername: { type: String, default: "" },
+    nickname: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+    },
+    discordUserId: { type: String, trim: true },
 
     examSession: { type: [String], default: [] },
 

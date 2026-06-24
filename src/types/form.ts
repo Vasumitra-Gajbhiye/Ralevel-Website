@@ -45,7 +45,7 @@ export type FormDocument = {
 
   introductionBlocks?: IntroductionBlock[];
 
-  discordPingUserIds?: string[];
+  inchargeNicknames?: string[];
 
   sections: FormSection[];
 

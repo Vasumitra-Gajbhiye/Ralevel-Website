@@ -14,6 +14,7 @@ import { useState } from "react";
 type Props = {
   submission: Submission;
   form: any;
+  canVote: boolean;
 };
 
 type Vote = {
@@ -48,7 +49,7 @@ function formatDate(date: string) {
   });
 }
 
-export default function SubmissionPageClient({ submission, form }: Props) {
+export default function SubmissionPageClient({ submission, form, canVote }: Props) {
   const [votes, setVotes] = useState(submission.votes ?? []);
   const [isVoting, setIsVoting] = useState(false);
 
@@ -257,6 +258,7 @@ export default function SubmissionPageClient({ submission, form }: Props) {
               </div>
 
               {/* Reaction Pills */}
+              {canVote ? (
               <div className="flex items-center gap-3">
                 {/* Upvote pill */}
                 <button
@@ -292,6 +294,18 @@ export default function SubmissionPageClient({ submission, form }: Props) {
                   <span>{downvotes}</span>
                 </button>
               </div>
+              ) : (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-2 rounded-full border px-4 py-2">
+                    <ThumbsUp className="h-4 w-4" />
+                    {upvotes}
+                  </span>
+                  <span className="flex items-center gap-2 rounded-full border px-4 py-2">
+                    <ThumbsDown className="h-4 w-4" />
+                    {downvotes}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* RIGHT — ACTION LABEL */}

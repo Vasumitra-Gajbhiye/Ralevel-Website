@@ -133,6 +133,12 @@ const FormSubmissionSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
+
+    reminderPings: {
+      day3: { type: Date },
+      day5: { type: Date },
+      day7: { type: Date },
+    },
   },
   { timestamps: true }
 );
