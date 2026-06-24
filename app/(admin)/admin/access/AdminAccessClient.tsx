@@ -50,7 +50,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   graphic_dep_head: "GFX Dep. Head",
   info_dep_head: "COMM Dep. Head",
   resource_dep_head: "Resource Dep. Head",
-  resource_admin: "Resource Admin",
+  resource_staff: "Resource Staff",
 };
 
 const ASSIGNABLE_ACCESS_ROLES = Object.entries(ROLE_LABELS).filter(
@@ -91,7 +91,7 @@ export const ROLE_META: Record<
     color: "bg-amber-100 text-amber-800 border-amber-200",
     icon: Shield,
   },
-  resource_admin: {
+  resource_staff: {
     color: "bg-teal-100 text-teal-800 border-teal-200",
     icon: UserCog,
   },

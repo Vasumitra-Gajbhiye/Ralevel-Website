@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from "react";
 
 const RESOURCE_ROLE_LABELS: Record<ResourceTeamRole, string> = {
   resource_dep_head: "Resource Dep. Head",
-  resource_admin: "Resource Admin",
+  resource_staff: "Resource Staff",
 };
 
 const RESOURCE_ROLE_META: Record<
@@ -26,7 +26,7 @@ const RESOURCE_ROLE_META: Record<
     color: "bg-amber-100 text-amber-800 border-amber-200",
     icon: Shield,
   },
-  resource_admin: {
+  resource_staff: {
     color: "bg-teal-100 text-teal-800 border-teal-200",
     icon: UserCog,
   },
@@ -91,12 +91,12 @@ export default function ResourceAccessClient({
   const actorIsAdmin = isAdmin(session?.userData?.roles);
   const assignableRoles: ResourceTeamRole[] = actorIsAdmin
     ? [...RESOURCE_TEAM_ROLES]
-    : ["resource_admin"];
+    : ["resource_staff"];
 
   const [users, setUsers] = useState(initialUsers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ResourceTeamRole>(
-    assignableRoles[0] ?? "resource_admin"
+    assignableRoles[0] ?? "resource_staff"
   );
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [saving, setSaving] = useState(false);
@@ -148,7 +148,7 @@ export default function ResourceAccessClient({
     });
 
     setEmail("");
-    setRole(assignableRoles[0] ?? "resource_admin");
+    setRole(assignableRoles[0] ?? "resource_staff");
     setSuggestions([]);
     router.refresh();
     setSaving(false);
@@ -184,7 +184,7 @@ export default function ResourceAccessClient({
     <div className="p-8 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Resource Dept.</h1>
       <p className="text-sm text-gray-500 mb-6">
-        Manage Resource CMS access for department heads and admins
+        Manage Resource CMS access for department heads and staff
       </p>
 
       <div className="relative border rounded-xl p-4 bg-white mb-8 flex gap-3 items-end">

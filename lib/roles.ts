@@ -8,7 +8,7 @@ export const ROLES = [
   "graphic_dep_head",
   "info_dep_head",
   "resource_dep_head",
-  "resource_admin",
+  "resource_staff",
   "senior_mod",
   "junior_mod",
   "trial_mod",
@@ -26,7 +26,7 @@ export const RESOURCE_CMS_ROLES = [
   "owner",
   "admin",
   "resource_dep_head",
-  "resource_admin",
+  "resource_staff",
 ] as const satisfies readonly Role[];
 
 export const RESOURCE_ACCESS_MANAGE_ROLES = [
@@ -37,7 +37,7 @@ export const RESOURCE_ACCESS_MANAGE_ROLES = [
 
 export const RESOURCE_TEAM_ROLES = [
   "resource_dep_head",
-  "resource_admin",
+  "resource_staff",
 ] as const satisfies readonly Role[];
 
 export type ResourceTeamRole = (typeof RESOURCE_TEAM_ROLES)[number];

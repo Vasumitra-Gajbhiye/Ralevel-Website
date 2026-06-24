@@ -29,7 +29,7 @@ export default async function AdminLayout({
       "info_dep_head",
       "informative_team",
       "resource_dep_head",
-      "resource_admin",
+      "resource_staff",
     ])
   ) {
     redirect("/"); // or redirect
