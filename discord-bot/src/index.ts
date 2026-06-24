@@ -1,3 +1,4 @@
+import { buildPingPayload } from "./buildPingContent";
 import { formatSubmissionEmbed } from "./formatEmbed";
 import { sendChannelMessage } from "./sendMessage";
 import type { FormSubmissionNotification } from "./types";
@@ -15,7 +16,10 @@ export async function notifyNewSubmission(
   data: FormSubmissionNotification,
 ): Promise<void> {
   const embed = formatSubmissionEmbed(data);
+  const pingPayload = buildPingPayload(data.pingUserIds);
+
   await sendChannelMessage(config.botToken, config.channelId, {
     embeds: [embed],
+    ...pingPayload,
   });
 }

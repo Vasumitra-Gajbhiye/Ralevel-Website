@@ -123,6 +123,11 @@ const FormSchema = new mongoose.Schema(
 
     introductionBlocks: Array, // keep flexible
 
+    discordPingUserIds: {
+      type: [String],
+      default: [],
+    },
+
     sections: [FormSectionSchema], // ✅ THIS IS KEY
   },
   { timestamps: true }

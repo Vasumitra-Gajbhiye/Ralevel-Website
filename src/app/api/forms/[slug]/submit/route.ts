@@ -437,6 +437,7 @@ export async function POST(
     submitterEmail,
     submissionId,
     hasFiles: uploadedFiles.length > 0,
+    pingUserIds: form.discordPingUserIds ?? [],
   }).catch((err) => console.error("[discord] notification failed:", err));
 
   return NextResponse.json(

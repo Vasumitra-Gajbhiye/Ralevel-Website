@@ -8,6 +8,7 @@ export type FormSubmissionNotification = {
   submissionId: string;
   hasFiles: boolean;
   adminUrl: string;
+  pingUserIds?: string[];
 };
 
 export type DiscordEmbed = {
@@ -20,5 +21,10 @@ export type DiscordEmbed = {
 };
 
 export type DiscordMessagePayload = {
+  content?: string;
   embeds: DiscordEmbed[];
+  allowed_mentions?: {
+    parse: [];
+    users: string[];
+  };
 };
