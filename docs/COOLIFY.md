@@ -41,6 +41,7 @@ Do **not** use `localhost` or `127.0.0.1` for `REDIS_URL` from inside the app co
 
 | Variable | Purpose |
 |----------|---------|
+| `MONGODB_URI` | MongoDB Atlas connection string — **required at build time** for SSG routes (`/resources/[slug]`, curriculum pages) that call `generateStaticParams` |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk client auth |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | e.g. `/sign-in` |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | e.g. `/sign-up` |
@@ -54,6 +55,10 @@ Do **not** use `localhost` or `127.0.0.1` for `REDIS_URL` from inside the app co
 
 If build-time `NEXT_PUBLIC_*` values are missing, the image may build successfully but client-side integrations (Clerk, PostHog, Stripe.js) will fail at runtime.
 
+If `MONGODB_URI` is missing at build time, the Docker build will fail during page data collection (or earlier) because `.env` files are excluded from the image and the `Dockerfile` must declare matching `ARG` names for Coolify to pass build variables through.
+
+**Also set `MONGODB_URI` at runtime** (see section 4) — the final image does not bake in this secret; it is only needed during the builder stage.
+
 ## 4. Runtime environment variables
 
 Set these in Coolify **Environment Variables** (runtime only — never bake secrets into the image):
@@ -63,7 +68,7 @@ Set these in Coolify **Environment Variables** (runtime only — never bake secr
 | Variable | Required | Notes |
 |----------|----------|-------|
 | `NODE_ENV` | Yes | `production` |
-| `MONGODB_URI` | Yes | MongoDB Atlas connection string |
+| `MONGODB_URI` | Yes | Same Atlas URI as build time (not baked into the image) |
 | `NEXTAUTH_URL` | Yes | Public URL, e.g. `https://ralevel.com` (used by Stripe redirects) |
 
 ### Auth
@@ -127,7 +132,7 @@ After deploy, point Stripe webhooks to `https://your-domain/api/webhook`.
 
 | Phase | RAM |
 |-------|-----|
-| Docker build | **≥ 4 GB** recommended (`NODE_OPTIONS=--max-old-space-size=4096` is set in the Dockerfile builder stage) |
+| Docker build | **≥ 4 GB** recommended (`NODE_OPTIONS=--max-old-space-size=3072` is set in the Dockerfile builder stage) |
 | Runtime | **512 MB–1 GB** usually sufficient |
 
 ## 6. Deploy
@@ -149,8 +154,11 @@ After deploy, point Stripe webhooks to `https://your-domain/api/webhook`.
 ## Local Docker smoke test
 
 ```bash
-# Build (pass NEXT_PUBLIC_* as build args or env)
-docker build -t r-alevel .
+# Build (pass NEXT_PUBLIC_* and MONGODB_URI as build args)
+docker build -t r-alevel \
+  --build-arg MONGODB_URI="$MONGODB_URI" \
+  --build-arg NEXT_PUBLIC_URL="https://ralevel.com" \
+  .
 
 # Run (pass runtime secrets via --env-file)
 docker run --rm -p 3000:3000 --env-file .env.production r-alevel
@@ -166,7 +174,9 @@ npm run start:standalone
 
 | Symptom | Likely cause |
 |---------|----------------|
-| Build OOM | Increase Coolify build memory to ≥ 4 GB |
+| Build stops at "Running TypeScript" with no error | Truncated Coolify log — scroll for the real error; often OOM on a 4 GB VPS or missing `MONGODB_URI` in build variables / Dockerfile `ARG` |
+| Build fails collecting page data for `/resources/[slug]` | `MONGODB_URI` not available in builder stage, or Atlas IP allowlist blocks the Hetzner VPS |
+| Build OOM | Increase Coolify build memory to ≥ 4 GB; builder heap is capped at 3072 MB |
 | App unreachable from proxy | Ensure `HOSTNAME=0.0.0.0` and port `3000` (set in Dockerfile) |
 | Clerk/Stripe broken on client | Missing `NEXT_PUBLIC_*` at **build** time |
 | Redis connection errors | `REDIS_URL` points to `localhost` instead of Coolify Redis service name |

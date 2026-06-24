@@ -37,14 +37,15 @@ RUN \
 # -----------------------------------------------------------------------------
 # Stage 3: builder
 # Copy application source and produce the Next.js standalone production build.
-# NEXT_PUBLIC_* variables must be available here (Coolify build variables).
+# NEXT_PUBLIC_* and MONGODB_URI must be available here (Coolify build variables).
 # -----------------------------------------------------------------------------
 FROM base AS builder
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time public env vars (set in Coolify Build Variables or --build-arg)
+# Build-time env vars (set in Coolify Build Variables or --build-arg)
+ARG MONGODB_URI
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -56,6 +57,7 @@ ARG NEXT_PUBLIC_POSTHOG_HOST
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_URL
 
+ENV MONGODB_URI=$MONGODB_URI
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -68,7 +70,7 @@ ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
 
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_OPTIONS=--max-old-space-size=3072
 
 RUN \
   if [ -f pnpm-lock.yaml ]; then \
