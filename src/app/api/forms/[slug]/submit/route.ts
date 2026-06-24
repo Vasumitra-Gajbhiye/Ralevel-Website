@@ -1,3 +1,4 @@
+import { notifyFormSubmission } from "@/lib/discord/notifyFormSubmission";
 import { confirmationEmail } from "@/lib/emails/confirmationEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
@@ -426,10 +427,22 @@ export async function POST(
     },
   });
 
+  const submissionId = submission._id.toString();
+  void notifyFormSubmission({
+    formTitle: form.title,
+    formType: form.formType,
+    formSlug: slug,
+    cycleId: form.cycleId,
+    submitterName,
+    submitterEmail,
+    submissionId,
+    hasFiles: uploadedFiles.length > 0,
+  }).catch((err) => console.error("[discord] notification failed:", err));
+
   return NextResponse.json(
     {
       success: true,
-      submissionId: submission._id.toString(),
+      submissionId,
     },
     { status: 201 },
   );

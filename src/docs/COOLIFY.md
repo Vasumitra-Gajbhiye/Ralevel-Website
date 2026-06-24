@@ -119,6 +119,18 @@ After deploy, point Stripe webhooks to `https://your-domain/api/webhook`.
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | If using Google Drive (full JSON as single-line string) |
 | `DRIVE_ROOT_FOLDER_ID` | If using Google Drive |
 
+### Discord application notifications
+
+Posts to a Discord channel when a generic intake form is submitted. Runs inside the Next.js app (no separate bot container in Phase 1).
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `DISCORD_NOTIFICATIONS_ENABLED` | Yes | `true` to enable |
+| `DISCORD_BOT_TOKEN` | If enabled | Bot token from [Discord Developer Portal](https://discord.com/developers/applications) |
+| `DISCORD_APPLICATIONS_CHANNEL_ID` | If enabled | Snowflake ID of the target channel |
+
+Bot needs **View Channel**, **Send Messages**, and **Embed Links** in that channel. Notifications are fire-and-forget — a Discord failure does not fail the form submission.
+
 ### QOTD admin
 
 | Variable | Required |

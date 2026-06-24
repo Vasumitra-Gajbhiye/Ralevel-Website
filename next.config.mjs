@@ -27,6 +27,7 @@ import createMDX from "@next/mdx";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  transpilePackages: ["@r-alevel/discord-bot"],
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
   experimental: {

@@ -20,6 +20,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 FROM base AS deps
 
 COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* bun.lockb* ./
+COPY discord-bot/package.json ./discord-bot/
 
 RUN \
   if [ -f pnpm-lock.yaml ]; then \
