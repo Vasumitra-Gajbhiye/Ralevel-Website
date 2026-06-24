@@ -18,7 +18,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "target": "ES2017"
   },
@@ -27,11 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/api/user/route.js",
-    "app/api/user/update/route.js",
-    ".next/dev/types/**/*.ts",
-    "app/(others)/blogs/mdx-components.tss",
-    "scripts/upload-assets.ts"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }
