@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  hasAnyRole,
-  RESOURCE_ACCESS_MANAGE_ROLES,
-  RESOURCE_CMS_ROLES,
-  type Role,
-} from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -13,6 +7,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  hasAnyRole,
+  RESOURCE_ACCESS_MANAGE_ROLES,
+  RESOURCE_CMS_ROLES,
+  type Role,
+} from "@/lib/roles";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -28,7 +28,7 @@ function AdminSidebarNav({
   return (
     <nav className="space-y-2 text-sm">
       {hasAnyRole(roles, ["owner", "admin", "writer"]) && (
-        <a href="/admin/blogs" className={linkClass} onClick={onNavigate}>
+        <a href="/admin/blogs/v2" className={linkClass} onClick={onNavigate}>
           Blogs
         </a>
       )}
