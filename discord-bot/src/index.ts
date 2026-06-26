@@ -8,7 +8,18 @@ import type {
 } from "./types";
 
 export type { FormSubmissionNotification, FormReminderNotification } from "./types";
+export type { DiscordAppealNotification } from "./formatAppealEmbed";
 export { DiscordApiError } from "./sendMessage";
+export { sendDirectMessage } from "./sendDirectMessage";
+export { unbanMember } from "./unbanMember";
+export {
+  formatAppealEmbed,
+  buildAppealActionRow,
+} from "./formatAppealEmbed";
+export {
+  postAppealReviewMessage,
+  editAppealReviewMessage,
+} from "./postAppealReviewMessage";
 
 export type DiscordConfig = {
   botToken: string;

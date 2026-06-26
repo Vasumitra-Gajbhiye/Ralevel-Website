@@ -181,8 +181,7 @@ export default function DiscordRegulationsPage() {
                 If you seek an appeal (ban/penalty), submit it{" "}
                 <Link
                   className="text-blue-600 underline"
-                  href="https://formcord.app/alevel/g3wRLtxeHP"
-                  target="_blank"
+                  href="/discord-appeal-form"
                 >
                   here
                 </Link>
