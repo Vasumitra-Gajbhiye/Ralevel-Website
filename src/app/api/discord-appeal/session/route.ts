@@ -1,4 +1,7 @@
-import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
+import {
+  clearDiscordAppealSession,
+  getDiscordAppealSession,
+} from "@/lib/discord-appeal/oauth";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -14,4 +17,9 @@ export async function GET() {
     discordUsername: session.discordUsername,
     discordAvatar: session.discordAvatar,
   });
+}
+
+export async function DELETE() {
+  await clearDiscordAppealSession();
+  return NextResponse.json({ ok: true });
 }

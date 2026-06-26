@@ -1,5 +1,7 @@
 import { normalizeSiteUrl } from "@/lib/discord/notifyFormSubmission";
 
+export const DISCORD_APPEAL_INVITE_URL = "https://discord.gg/xEk5GsgfHC";
+
 export type DiscordAppealConfig = {
   clientId: string;
   clientSecret: string;

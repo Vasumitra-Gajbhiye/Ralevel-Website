@@ -12,6 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -82,6 +88,7 @@ export default function AppealClient({
   const [step, setStep] = useState(1);
   const [session, setSession] = useState<DiscordSession | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
   const {
@@ -166,6 +173,26 @@ export default function AppealClient({
     setStep((s) => Math.max(1, s - 1));
   }
 
+  async function disconnectDiscord() {
+    setLoggingOut(true);
+    try {
+      const res = await fetch("/api/discord-appeal/session", {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error("Failed to disconnect Discord. Please try again.");
+        return;
+      }
+      setSession(null);
+      setStep(1);
+      toast.success("Disconnected from Discord.");
+    } catch {
+      toast.error("Failed to disconnect Discord. Please try again.");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   const onSubmit = async (data: AppealFormValues) => {
     if (!session) {
       toast.error("Please connect your Discord account first.");
@@ -246,27 +273,49 @@ export default function AppealClient({
                 Discord server.
               </p>
             </div>
-            <div className="flex items-center gap-3 rounded-full border bg-muted/40 px-2 py-1">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={session.discordUsername}
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full"
-                />
-              ) : (
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
-                  style={{ backgroundColor: APPEAL_PURPLE }}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex cursor-pointer items-center gap-3 rounded-full border bg-muted/40 px-2 py-1 transition-colors hover:bg-muted/70"
                 >
-                  {session.discordUsername.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="text-sm font-medium">
-                {session.discordUsername}
-              </span>
-            </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={session.discordUsername}
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
+                      style={{ backgroundColor: APPEAL_PURPLE }}
+                    >
+                      {session.discordUsername.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">
+                    {session.discordUsername}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={loggingOut}
+                  onClick={disconnectDiscord}
+                >
+                  {loggingOut ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Disconnecting...
+                    </>
+                  ) : (
+                    "Disconnect Discord"
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="px-10 pb-4">

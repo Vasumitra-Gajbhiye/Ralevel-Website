@@ -4,7 +4,10 @@ import {
   sendDirectMessage,
   type DiscordAppealNotification,
 } from "@r-alevel/discord-bot";
-import { getDiscordAppealConfig } from "@/lib/discord-appeal/config";
+import {
+  DISCORD_APPEAL_INVITE_URL,
+  getDiscordAppealConfig,
+} from "@/lib/discord-appeal/config";
 
 const APPEAL_TYPE_LABELS: Record<DiscordAppealNotification["appealType"], string> =
   {
@@ -67,10 +70,15 @@ export async function sendDiscordAppealResultDm(
   if (!config) return;
 
   const label = APPEAL_TYPE_LABELS[appealType];
-  const content =
-    action === "approve"
-      ? `Your ${label} for the r/alevel Discord server has been approved.`
-      : `Your ${label} for the r/alevel Discord server has been rejected.`;
+  let content: string;
+  if (action === "approve") {
+    content = `Your ${label} for the r/alevel Discord server has been approved.`;
+    if (appealType === "ban") {
+      content += ` You can rejoin the server using this invite link: ${DISCORD_APPEAL_INVITE_URL}`;
+    }
+  } else {
+    content = `Your ${label} for the r/alevel Discord server has been rejected.`;
+  }
 
   await sendDirectMessage(config.botToken, discordUserId, content);
 }
