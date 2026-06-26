@@ -1,3 +1,5 @@
+import { normalizeSiteUrl } from "@/lib/discord/notifyFormSubmission";
+
 export type DiscordAppealConfig = {
   clientId: string;
   clientSecret: string;
@@ -61,7 +63,17 @@ export function getDiscordAppealConfig(): DiscordAppealConfig | null {
   };
 }
 
+export function getDiscordAppealSiteUrl(): string {
+  return normalizeSiteUrl(process.env.NEXT_PUBLIC_URL);
+}
+
 export function getDiscordAppealRedirectUri(siteUrl: string): string {
   const base = siteUrl.replace(/\/$/, "");
   return `${base}/api/discord-appeal/callback`;
+}
+
+export function buildDiscordAppealFormUrl(
+  path = "/discord-appeal-form",
+): string {
+  return new URL(path, getDiscordAppealSiteUrl()).toString();
 }

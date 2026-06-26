@@ -7,7 +7,10 @@ import {
   exchangeCodeForUser,
   setDiscordAppealSession,
 } from "@/lib/discord-appeal/oauth";
-import { getDiscordAppealConfig } from "@/lib/discord-appeal/config";
+import {
+  buildDiscordAppealFormUrl,
+  getDiscordAppealConfig,
+} from "@/lib/discord-appeal/config";
 
 const OAUTH_STATE_COOKIE = "discord_appeal_oauth_state";
 
@@ -15,7 +18,7 @@ export async function GET(req: Request) {
   const config = getDiscordAppealConfig();
   if (!config) {
     return NextResponse.redirect(
-      new URL("/discord-appeal-form?error=oauth_not_configured", req.url),
+      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_not_configured"),
     );
   }
 
@@ -26,13 +29,13 @@ export async function GET(req: Request) {
 
   if (error) {
     return NextResponse.redirect(
-      new URL("/discord-appeal-form?error=oauth_denied", req.url),
+      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_denied"),
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      new URL("/discord-appeal-form?error=oauth_invalid", req.url),
+      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_invalid"),
     );
   }
 
@@ -43,7 +46,7 @@ export async function GET(req: Request) {
   const expectedState = storedState ? decodeOAuthState(storedState) : null;
   if (!expectedState || expectedState !== state) {
     return NextResponse.redirect(
-      new URL("/discord-appeal-form?error=oauth_state", req.url),
+      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_state"),
     );
   }
 
@@ -57,7 +60,7 @@ export async function GET(req: Request) {
 
     if (banned) {
       return NextResponse.redirect(
-        new URL("/discord-appeal-form?error=form_banned", req.url),
+        buildDiscordAppealFormUrl("/discord-appeal-form?error=form_banned"),
       );
     }
 
@@ -67,11 +70,11 @@ export async function GET(req: Request) {
       discordAvatar: user.avatar ?? undefined,
     });
 
-    return NextResponse.redirect(new URL("/discord-appeal-form", req.url));
+    return NextResponse.redirect(buildDiscordAppealFormUrl());
   } catch (err) {
     console.error("[discord-appeal] OAuth callback failed:", err);
     return NextResponse.redirect(
-      new URL("/discord-appeal-form?error=oauth_failed", req.url),
+      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_failed"),
     );
   }
 }

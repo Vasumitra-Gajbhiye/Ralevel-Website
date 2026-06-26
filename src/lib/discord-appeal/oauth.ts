@@ -1,9 +1,9 @@
-import { normalizeSiteUrl } from "@/lib/discord/notifyFormSubmission";
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import {
   getDiscordAppealConfig,
   getDiscordAppealRedirectUri,
+  getDiscordAppealSiteUrl,
 } from "./config";
 
 export const DISCORD_APPEAL_SESSION_COOKIE = "discord_appeal_session";
@@ -106,8 +106,7 @@ export function buildDiscordOAuthUrl(state: string): string {
     throw new Error("Discord appeal OAuth is not configured");
   }
 
-  const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_URL);
-  const redirectUri = getDiscordAppealRedirectUri(siteUrl);
+  const redirectUri = getDiscordAppealRedirectUri(getDiscordAppealSiteUrl());
 
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -135,8 +134,7 @@ export async function exchangeCodeForUser(
     throw new Error("Discord appeal OAuth is not configured");
   }
 
-  const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_URL);
-  const redirectUri = getDiscordAppealRedirectUri(siteUrl);
+  const redirectUri = getDiscordAppealRedirectUri(getDiscordAppealSiteUrl());
 
   const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
     method: "POST",
