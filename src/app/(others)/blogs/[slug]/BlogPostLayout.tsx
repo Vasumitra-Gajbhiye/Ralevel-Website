@@ -6,7 +6,8 @@ import BlogPostComments from "@/components/blogs-v2/BlogPostComments";
 import BlogPostRecommendations from "@/components/blogs-v2/BlogPostRecommendations";
 import BlogPostFooter from "@/components/blogs-v2/BlogPostFooter";
 import BlogPostHeader from "@/components/blogs-v2/BlogPostHeader";
-import { isExternalImageUrl, resolveBlogHeroImage } from "@/lib/blogHeroImage";
+import BlogHeroPlaceholder from "@/components/blogs-v2/BlogHeroPlaceholder";
+import { hasBlogHeroImage, isExternalImageUrl, resolveBlogHeroImage } from "@/lib/blogHeroImage";
 
 import { useUser } from "@clerk/nextjs";
 import { motion, useScroll, useSpring } from "framer-motion";
@@ -166,14 +167,16 @@ export default function BlogPostLayout({
     return () => observer.disconnect();
   }, []);
 
-  const hasImageInput = Boolean(metadata.image?.trim());
-  const imageIsValid = isValidImageSrc(metadata.image);
+  const trimmedImage = metadata.image?.trim() ?? "";
+  const hasImageInput = hasBlogHeroImage(trimmedImage);
+  const imageIsValid = isValidImageSrc(trimmedImage);
 
-  const heroImageSrc = hasImageInput
-    ? imageIsValid
-      ? resolveBlogHeroImage(metadata.image!)
-      : "/opengraph-image-2.png"
-    : null;
+  const heroImageSrc =
+    hasImageInput && imageIsValid
+      ? resolveBlogHeroImage(trimmedImage)
+      : hasImageInput
+        ? "/opengraph-image-2.png"
+        : null;
 
   return (
     <>
@@ -211,21 +214,23 @@ export default function BlogPostLayout({
             onCommentClick={showComments ? scrollToComments : undefined}
           />
 
-          {heroImageSrc && (
-            <div className="mt-10 rounded-2xl overflow-hidden shadow-md">
+          <div className="mt-10 rounded-2xl overflow-hidden shadow-md aspect-[2/1] w-full">
+            {heroImageSrc ? (
               <Image
                 src={heroImageSrc}
                 alt="blog hero"
                 width={1200}
                 height={600}
                 unoptimized={isExternalImageUrl(heroImageSrc)}
-                className={`object-cover w-full aspect-[2/1] ${
+                className={`object-cover h-full w-full ${
                   imageIsValid ? "" : "opacity-60"
                 }`}
                 priority
               />
-            </div>
-          )}
+            ) : (
+              <BlogHeroPlaceholder />
+            )}
+          </div>
         </motion.div>
 
         {showToc && toc.length > 1 && (

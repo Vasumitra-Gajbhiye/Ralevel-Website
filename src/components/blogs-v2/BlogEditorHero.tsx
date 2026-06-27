@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  hasBlogHeroImage,
   isExternalImageUrl,
   resolveBlogHeroImage,
 } from "@/lib/blogHeroImage";
@@ -15,6 +16,7 @@ import { Pencil } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import BlogHeroImageField from "./BlogHeroImageField";
+import BlogHeroPlaceholder from "./BlogHeroPlaceholder";
 
 type BlogEditorHeroProps = {
   blogId: string;
@@ -28,29 +30,26 @@ export default function BlogEditorHero({
   onImageChange,
 }: BlogEditorHeroProps) {
   const [open, setOpen] = useState(false);
-  const heroSrc = image.trim() ? resolveBlogHeroImage(image) : null;
+  const heroSrc = hasBlogHeroImage(image) ? resolveBlogHeroImage(image) : null;
 
   return (
     <>
       <div className="group relative mt-8">
-        {heroSrc ? (
-          <div className="rounded-2xl overflow-hidden shadow-md">
+        <div className="rounded-2xl overflow-hidden shadow-md aspect-[2/1] w-full">
+          {heroSrc ? (
             <Image
               src={heroSrc}
               alt="Blog hero"
               width={1200}
               height={600}
               unoptimized={isExternalImageUrl(heroSrc)}
-              className="object-cover w-full aspect-[2/1]"
+              className="object-cover h-full w-full"
               priority
             />
-          </div>
-        ) : (
-          <div
-            className="w-full aspect-[2/1] rounded-2xl bg-neutral-200"
-            aria-hidden
-          />
-        )}
+          ) : (
+            <BlogHeroPlaceholder />
+          )}
+        </div>
 
         <Button
           type="button"

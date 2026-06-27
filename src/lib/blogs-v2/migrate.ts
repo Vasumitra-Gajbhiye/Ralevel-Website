@@ -4,11 +4,43 @@ import { randomBytes } from "crypto";
 
 let migrationPromise: Promise<void> | null = null;
 
+async function ensureBlogV2SlugIndex(): Promise<void> {
+  const collection = BlogV2.collection;
+  const indexes = await collection.indexes();
+  const slugIndex = indexes.find((index) => index.name === "slug_1");
+
+  const needsRecreate =
+    !slugIndex ||
+    !slugIndex.unique ||
+    slugIndex.sparse !== true;
+
+  if (needsRecreate) {
+    if (slugIndex) {
+      await collection.dropIndex("slug_1");
+    }
+    await collection.createIndex(
+      { slug: 1 },
+      { unique: true, sparse: true, name: "slug_1" },
+    );
+  }
+}
+
 export async function ensureBlogV2Migrated(): Promise<void> {
   if (migrationPromise) return migrationPromise;
 
   migrationPromise = (async () => {
     await connectDB();
+
+    await ensureBlogV2SlugIndex();
+
+    // Drafts should omit slug entirely; sparse index ignores missing fields.
+    await BlogV2.updateMany(
+      {
+        status: { $in: ["draft", "in_review", "changes_requested"] },
+        $or: [{ slug: null }, { slug: "" }],
+      },
+      { $unset: { slug: "" } },
+    );
 
     const legacyBlogs = await BlogV2.find({
       $or: [{ status: { $exists: false } }, { previewToken: { $exists: false } }],

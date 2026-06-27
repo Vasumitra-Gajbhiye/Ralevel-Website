@@ -51,7 +51,7 @@ const PendingReviewSchema = new mongoose.Schema(
 const BlogV2Schema = new mongoose.Schema(
   {
     title: { type: String, required: true },
-    slug: { type: String, unique: true, sparse: true, index: true },
+    slug: { type: String },
 
     metadata: {
       title: String,
@@ -107,6 +107,8 @@ const BlogV2Schema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+BlogV2Schema.index({ slug: 1 }, { unique: true, sparse: true });
 
 export type BlogV2Document = mongoose.Document & {
   title: string;
