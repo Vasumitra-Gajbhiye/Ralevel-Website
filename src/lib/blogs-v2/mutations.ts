@@ -10,8 +10,9 @@ import {
   stripClientAuthorFields,
 } from "./content";
 import { ensureBlogV2Migrated } from "./migrate";
-import { logBlogV2ReviewEvent } from "./reviewEvents";
+import { logBlogV2ReviewEvent, linkReviewEventVersion } from "./reviewEvents";
 import { assignPermanentSlug } from "./slug";
+import { createBlogV2VersionOnApprove } from "./versions";
 import {
   applyPendingToLive,
   canApprove,
@@ -129,6 +130,11 @@ export async function submitBlogV2ForReview(
     action: "submitted",
     actorId,
     reviewType,
+    submissionSnapshot: {
+      title: working.title,
+      metadata: { ...(working.metadata ?? {}) },
+      content: Array.isArray(working.content) ? working.content : [],
+    },
   });
 
   return blog;
@@ -153,6 +159,22 @@ export async function approveBlogV2Review(
     blog.publishedAt = blog.publishedAt ?? new Date();
   }
 
+  const eventId = await logBlogV2ReviewEvent({
+    blogId: blog._id.toString(),
+    action: "approved",
+    actorId,
+    reviewType,
+  });
+
+  const { versionId } = await createBlogV2VersionOnApprove({
+    blog,
+    actorId,
+    reviewType,
+    reviewEventId: eventId,
+  });
+
+  await linkReviewEventVersion(eventId, versionId);
+
   applyPendingToLive(blog);
   clearPendingReview(blog);
   blog.status = "published";
@@ -162,13 +184,6 @@ export async function approveBlogV2Review(
   syncDraftFromLive(blog);
 
   await blog.save();
-
-  await logBlogV2ReviewEvent({
-    blogId: blog._id.toString(),
-    action: "approved",
-    actorId,
-    reviewType,
-  });
 
   return blog;
 }

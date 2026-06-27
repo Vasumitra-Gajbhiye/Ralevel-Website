@@ -3,6 +3,7 @@
 import { BlockNoteEditor } from "@/components/blogs-v2";
 import BlogEditorDetailsPopover from "@/components/blogs-v2/BlogEditorDetailsPopover";
 import BlogEditorHero from "@/components/blogs-v2/BlogEditorHero";
+import BlogHistorySheet from "@/components/blogs-v2/BlogHistorySheet";
 import BlogPostAuthorProfile from "@/components/blogs-v2/BlogPostAuthorProfile";
 import BlogPostFooter from "@/components/blogs-v2/BlogPostFooter";
 import BlogPostHeader from "@/components/blogs-v2/BlogPostHeader";
@@ -30,6 +31,8 @@ type BlogEditorClientProps = {
   reviewNote?: string | null;
   submittedAt?: string | null;
   reviewType?: BlogV2ReviewType | null;
+  lastApprovedByName?: string | null;
+  currentVersionNumber?: number | null;
 };
 
 function editorSignature(
@@ -51,6 +54,8 @@ export default function BlogEditorClient({
   previewToken,
   reviewNote,
   submittedAt,
+  lastApprovedByName,
+  currentVersionNumber,
 }: BlogEditorClientProps) {
   const editorRef = useRef<BlockNoteEditorType | null>(null);
   const [title, setTitle] = useState(initialTitle);
@@ -234,6 +239,7 @@ export default function BlogEditorClient({
               Preview
             </Link>
           </Button>
+          <BlogHistorySheet blogId={blogId} />
           <Button
             variant="outline"
             size="sm"
@@ -315,6 +321,13 @@ export default function BlogEditorClient({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {status === "published" && lastApprovedByName && (
+        <div className="px-4 md:px-6 py-2 border-b border-neutral-100 bg-neutral-50/80 text-sm text-neutral-600">
+          Approved by {lastApprovedByName}
+          {currentVersionNumber ? ` · Version ${currentVersionNumber} live` : ""}
         </div>
       )}
 

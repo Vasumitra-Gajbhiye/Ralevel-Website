@@ -1,6 +1,8 @@
 import connectDB from "@/lib/mongodb";
 import BlogV2 from "@/models/blogV2";
 import { randomBytes } from "crypto";
+import { hasLiveContent } from "./content";
+import { backfillPublishedBlogVersion } from "./versions";
 
 let migrationPromise: Promise<void> | null = null;
 
@@ -72,6 +74,12 @@ export async function ensureBlogV2Migrated(): Promise<void> {
 
     if (bulk.batches.length > 0) {
       await bulk.execute();
+    }
+
+    const publishedBlogs = await BlogV2.find({ status: "published" });
+    for (const blog of publishedBlogs) {
+      if (!hasLiveContent(blog)) continue;
+      await backfillPublishedBlogVersion(blog);
     }
   })();
 

@@ -1,5 +1,6 @@
 "use client";
 
+import BlogGlobalHistoryTab from "@/components/blogs-v2/BlogGlobalHistoryTab";
 import BlogReviewActions from "@/components/blogs-v2/BlogReviewActions";
 import BlogV2AdminGrid from "@/components/blogs-v2/BlogV2AdminGrid";
 import WriterProfileRow from "@/components/blogs-v2/WriterProfileRow";
@@ -12,6 +13,7 @@ import type { PaginationMeta } from "@/lib/pagination";
 import { ListPagination } from "@/components/ui/list-pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuthSession } from "@/types/auth";
+import type { BlogV2GlobalHistoryEntry } from "@/types/blogV2";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,6 +22,8 @@ type AllBlogsClientBaseProps = {
   session: AuthSession | null;
   pendingBlogs: PendingBlogReview[];
   pendingPagination: PaginationMeta;
+  historyEntries: BlogV2GlobalHistoryEntry[];
+  historyPagination: PaginationMeta;
 };
 
 type AdminOverviewModeProps = AllBlogsClientBaseProps & {
@@ -43,7 +47,13 @@ export default function AllBlogsClient(props: AllBlogsClientProps) {
   const searchParams = useSearchParams();
   const { session } = props;
 
-  const activeTab = searchParams.get("tab") === "pending" ? "pending" : "all";
+  const tabParam = searchParams.get("tab");
+  const activeTab =
+    tabParam === "pending"
+      ? "pending"
+      : tabParam === "history"
+        ? "history"
+        : "all";
 
   const blogs = props.mode === "admin-overview" ? [] : props.blogs;
 
@@ -106,6 +116,7 @@ export default function AllBlogsClient(props: AllBlogsClientProps) {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-6">
@@ -226,6 +237,13 @@ export default function AllBlogsClient(props: AllBlogsClientProps) {
             onPageChange={(nextPage) =>
               router.push(buildPageUrl(nextPage, undefined, "pending"))
             }
+          />
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <BlogGlobalHistoryTab
+            entries={props.historyEntries}
+            pagination={props.historyPagination}
           />
         </TabsContent>
       </Tabs>

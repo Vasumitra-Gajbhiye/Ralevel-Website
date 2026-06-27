@@ -8,6 +8,7 @@ import BlogV2 from "@/models/blogV2";
 import type { BlogV2Doc } from "@/lib/data/blogsV2";
 import {
   resolveBlogAuthorFromOwnerId,
+  getWriterProfile,
   type ResolvedBlogAuthor,
 } from "@/lib/data/admin/writerProfile";
 import type { BlogV2ReviewType, BlogV2Status } from "@/types/blogV2";
@@ -153,6 +154,9 @@ export type AdminBlogV2Detail = {
   reviewNote?: string | null;
   submittedAt?: string | null;
   reviewType?: BlogV2ReviewType | null;
+  lastApprovedByName?: string | null;
+  lastApprovedAt?: string | null;
+  currentVersionNumber?: number | null;
 };
 
 export async function getAdminBlogV2ById(
@@ -186,6 +190,9 @@ export async function getAdminBlogV2ById(
     reviewNote?: string | null;
     submittedAt?: Date;
     reviewType?: BlogV2ReviewType | null;
+    lastApprovedBy?: mongoose.Types.ObjectId;
+    lastApprovedAt?: Date;
+    currentVersionNumber?: number | null;
     draft?: { title: string; metadata?: BlogV2Doc["metadata"]; content?: unknown[] };
   }>();
 
@@ -194,6 +201,14 @@ export async function getAdminBlogV2ById(
   const ownerId = blog.ownerId?.toString();
   const author = ownerId ? await resolveBlogAuthorFromOwnerId(ownerId) : null;
   const working = getWorkingContent(blog as Parameters<typeof getWorkingContent>[0]);
+
+  let lastApprovedByName: string | null = null;
+  if (blog.lastApprovedBy) {
+    const approver = await getWriterProfile(blog.lastApprovedBy.toString());
+    if (approver) {
+      lastApprovedByName = approver.name;
+    }
+  }
 
   return {
     _id: blog._id.toString(),
@@ -212,6 +227,13 @@ export async function getAdminBlogV2ById(
         : String(blog.submittedAt)
       : null,
     reviewType: blog.reviewType ?? null,
+    lastApprovedByName,
+    lastApprovedAt: blog.lastApprovedAt
+      ? blog.lastApprovedAt instanceof Date
+        ? blog.lastApprovedAt.toISOString()
+        : String(blog.lastApprovedAt)
+      : null,
+    currentVersionNumber: blog.currentVersionNumber ?? null,
   };
 }
 

@@ -50,6 +50,8 @@ export default async function BlogV2EditPage({
       reviewNote={blog.reviewNote}
       submittedAt={blog.submittedAt}
       reviewType={blog.reviewType}
+      lastApprovedByName={blog.lastApprovedByName}
+      currentVersionNumber={blog.currentVersionNumber}
     />
   );
 }

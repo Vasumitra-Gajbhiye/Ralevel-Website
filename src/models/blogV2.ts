@@ -93,6 +93,13 @@ const BlogV2Schema = new mongoose.Schema(
       ref: "UserData",
       default: null,
     },
+    lastApprovedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "UserData",
+      default: null,
+    },
+    lastApprovedAt: { type: Date, default: null },
+    currentVersionNumber: { type: Number, default: null },
     submittedAt: { type: Date, default: null },
     publishedAt: { type: Date, default: null },
     previewToken: { type: String, required: true, index: true },
@@ -122,6 +129,9 @@ export type BlogV2Document = mongoose.Document & {
   reviewNote?: string | null;
   reviewedAt?: Date | null;
   reviewedBy?: mongoose.Types.ObjectId | null;
+  lastApprovedBy?: mongoose.Types.ObjectId | null;
+  lastApprovedAt?: Date | null;
+  currentVersionNumber?: number | null;
   submittedAt?: Date | null;
   publishedAt?: Date | null;
   previewToken: string;
