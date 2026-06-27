@@ -133,6 +133,14 @@ export function hasWriterCmsAccess(userRoles?: Role[]) {
   return hasAnyRole(userRoles, WRITER_CMS_ROLES);
 }
 
+export function hasWriterTeamRole(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, WRITER_TEAM_ROLES);
+}
+
+export function needsWriterRoleSelfGrant(userRoles?: Role[]) {
+  return hasWriterCmsAccess(userRoles) && !hasWriterTeamRole(userRoles);
+}
+
 export function canManageWriterAccess(userRoles?: Role[]) {
   return hasAnyRole(userRoles, WRITER_ACCESS_MANAGE_ROLES);
 }

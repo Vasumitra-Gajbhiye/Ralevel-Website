@@ -7,12 +7,12 @@ import { parsePaginationParams } from "@/lib/pagination";
 import { slugify } from "@/lib/slugify";
 import BlogV2 from "@/models/blogV2";
 import mongoose from "mongoose";
-import { WRITER_CMS_ROLES } from "@/lib/roles";
+import { WRITER_TEAM_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
     rateLimit: { routeKey: "admin-blogs-v2-list" },
   });
   if (auth instanceof Response) return auth;
@@ -26,7 +26,6 @@ export async function GET(req: Request) {
     limit,
     skip,
     userId: auth.userData.id,
-    roles: auth.userData.roles,
   });
 
   return NextResponse.json(result);
@@ -34,7 +33,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
   });
   if (auth instanceof Response) return auth;
 

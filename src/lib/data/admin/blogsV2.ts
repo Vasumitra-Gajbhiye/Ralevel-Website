@@ -1,6 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import { buildPaginatedResponse, type PaginatedResult } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
+import { hasWriterTeamRole } from "@/lib/roles";
 import BlogV2 from "@/models/blogV2";
 import type { BlogV2Doc } from "@/lib/data/blogsV2";
 import {
@@ -31,7 +32,6 @@ type GetAdminBlogsV2ListParams = {
   limit: number;
   skip: number;
   userId: string;
-  roles: Role[];
 };
 
 export async function getAdminBlogsV2List({
@@ -39,15 +39,10 @@ export async function getAdminBlogsV2List({
   limit,
   skip,
   userId,
-  roles,
 }: GetAdminBlogsV2ListParams): Promise<PaginatedResult<AdminBlogV2>> {
   await connectDB();
 
-  const isAdminLike = roles.some((r) => r === "admin" || r === "owner");
-
-  const match = isAdminLike
-    ? {}
-    : { ownerId: new mongoose.Types.ObjectId(userId) };
+  const match = { ownerId: new mongoose.Types.ObjectId(userId) };
 
   const [result] = await BlogV2.aggregate([
     { $match: match },
@@ -133,6 +128,10 @@ export async function getAdminBlogV2BySlug(
   roles: Role[],
 ): Promise<AdminBlogV2Detail | null> {
   await connectDB();
+
+  if (!hasWriterTeamRole(roles)) {
+    return null;
+  }
 
   const isAdminLike = roles.some((r) => r === "admin" || r === "owner");
 

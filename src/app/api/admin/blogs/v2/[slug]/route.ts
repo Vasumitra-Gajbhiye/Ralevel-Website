@@ -4,7 +4,7 @@ import { resolveBlogAuthorFromOwnerId } from "@/lib/data/admin/writerProfile";
 import connectDB from "@/lib/mongodb";
 import BlogV2 from "@/models/blogV2";
 import mongoose from "mongoose";
-import { WRITER_CMS_ROLES } from "@/lib/roles";
+import { WRITER_TEAM_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
   });
   if (auth instanceof Response) return auth;
 
@@ -45,7 +45,7 @@ export async function PATCH(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
   });
   if (auth instanceof Response) return auth;
 
@@ -107,7 +107,7 @@ export async function DELETE(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
   });
   if (auth instanceof Response) return auth;
 

@@ -19,6 +19,11 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     message: "You don't have permission to access Control records.",
   },
   {
+    prefix: "/admin/all-blogs",
+    roles: ["owner", "admin"],
+    message: "You don't have permission to view all blogs.",
+  },
+  {
     prefix: "/admin/blogs",
     roles: WRITER_CMS_ROLES,
     message: "You don't have permission to access Blog records.",

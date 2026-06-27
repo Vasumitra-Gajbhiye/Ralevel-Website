@@ -5,7 +5,7 @@ import connectDB from "@/lib/mongodb";
 import BlogV2 from "@/models/blogV2";
 import { randomUUID } from "crypto";
 import mongoose from "mongoose";
-import { WRITER_CMS_ROLES } from "@/lib/roles";
+import { WRITER_TEAM_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 const MAX_HERO_SIZE_BYTES = 5 * 1024 * 1024;
@@ -17,7 +17,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    roles: [...WRITER_TEAM_ROLES],
   });
   if (auth instanceof Response) return auth;
 

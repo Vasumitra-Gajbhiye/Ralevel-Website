@@ -184,6 +184,8 @@ export async function getAdminWritersOverview({
 }: GetAdminWritersOverviewParams): Promise<PaginatedResult<WriterOverviewEntry>> {
   await connectDB();
 
+  const blogCollection = BlogV2.collection.collectionName;
+
   const [result] = await UserData.aggregate([
     {
       $match: {
@@ -191,7 +193,20 @@ export async function getAdminWritersOverview({
       },
     },
     {
+      $lookup: {
+        from: blogCollection,
+        let: { userId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$ownerId", "$$userId"] } } },
+          { $sort: { updatedAt: -1 } },
+        ],
+        as: "allBlogs",
+      },
+    },
+    {
       $addFields: {
+        totalBlogCount: { $size: "$allBlogs" },
+        recentBlogs: { $slice: ["$allBlogs", blogsPerAuthor] },
         roleRank: buildRoleRankSwitch(),
       },
     },
@@ -208,30 +223,6 @@ export async function getAdminWritersOverview({
         data: [
           { $skip: skip },
           { $limit: limit },
-          {
-            $lookup: {
-              from: "blogv2s",
-              localField: "_id",
-              foreignField: "ownerId",
-              as: "allBlogs",
-            },
-          },
-          {
-            $addFields: {
-              totalBlogCount: { $size: "$allBlogs" },
-              recentBlogs: {
-                $slice: [
-                  {
-                    $sortArray: {
-                      input: "$allBlogs",
-                      sortBy: { updatedAt: -1 },
-                    },
-                  },
-                  blogsPerAuthor,
-                ],
-              },
-            },
-          },
           {
             $project: {
               _id: 1,
