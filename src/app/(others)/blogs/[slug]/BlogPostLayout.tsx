@@ -8,6 +8,7 @@ import BlogPostFooter from "@/components/blogs-v2/BlogPostFooter";
 import BlogPostHeader from "@/components/blogs-v2/BlogPostHeader";
 import BlogHeroPlaceholder from "@/components/blogs-v2/BlogHeroPlaceholder";
 import { hasBlogHeroImage, isExternalImageUrl, resolveBlogHeroImage } from "@/lib/blogHeroImage";
+import type { BlogRecommendations } from "@/lib/blogs-v2/recommendations";
 
 import { useUser } from "@clerk/nextjs";
 import { motion, useScroll, useSpring } from "framer-motion";
@@ -39,6 +40,9 @@ type BlogPostLayoutProps = {
   currentUserName?: string;
   currentUserId?: string;
   isAdmin?: boolean;
+  shareLive?: boolean;
+  publicSlug?: string | null;
+  recommendations?: BlogRecommendations;
 };
 
 function isValidImageSrc(src?: string) {
@@ -66,6 +70,9 @@ export default function BlogPostLayout({
   currentUserName,
   currentUserId,
   isAdmin = false,
+  shareLive: shareLiveProp,
+  publicSlug: publicSlugProp,
+  recommendations,
 }: BlogPostLayoutProps) {
   const { isSignedIn } = useUser();
   const ref = useRef<HTMLDivElement>(null);
@@ -178,6 +185,10 @@ export default function BlogPostLayout({
         ? "/opengraph-image-2.png"
         : null;
 
+  const shareLive = shareLiveProp ?? Boolean(blogSlug);
+  const publicSlug = publicSlugProp ?? blogSlug ?? null;
+  const shareTitle = metadata.title ?? "Untitled";
+
   return (
     <>
       <BlogLikeSignInDialog
@@ -212,6 +223,8 @@ export default function BlogPostLayout({
             liked={liked}
             onLikeClick={blogSlug ? handleLikeClick : undefined}
             onCommentClick={showComments ? scrollToComments : undefined}
+            shareLive={shareLive}
+            publicSlug={publicSlug}
           />
 
           <div className="mt-10 rounded-2xl overflow-hidden shadow-md aspect-[2/1] w-full">
@@ -282,6 +295,9 @@ export default function BlogPostLayout({
               liked={liked}
               onLikeClick={blogSlug ? handleLikeClick : undefined}
               onCommentClick={showComments ? scrollToComments : undefined}
+              shareLive={shareLive}
+              publicSlug={publicSlug}
+              shareTitle={shareTitle}
             />
             <BlogPostAuthorProfile
               author={metadata.author}
@@ -304,7 +320,12 @@ export default function BlogPostLayout({
                   onCommentCountChange={setCommentCount}
                 />
                 <BlogPostRecommendations
-                  authorName={metadata.author}
+                  authorItems={recommendations?.authorItems ?? []}
+                  siteItems={recommendations?.siteItems ?? []}
+                  authorSlug={recommendations?.authorSlug}
+                  authorName={
+                    recommendations?.authorName ?? metadata.author ?? "Author"
+                  }
                 />
               </>
             )}

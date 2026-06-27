@@ -4,6 +4,7 @@ import { toAbsoluteBlogImageUrl } from "@/lib/blogHeroImage";
 import { getBlogV2CommentCount } from "@/lib/data/blogV2Comments";
 import { hasUserLikedBlogV2 } from "@/lib/data/blogV2Likes";
 import { getBlogV2BySlug } from "@/lib/data/blogsV2";
+import { getBlogV2Recommendations } from "@/lib/blogs-v2/recommendations";
 import { formatBlogMediumDate } from "@/lib/formatBlogDate";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { isAdmin } from "@/lib/roles";
@@ -53,6 +54,12 @@ export default async function BlogV2Page({
 
   if (!blog) notFound();
 
+  const recommendations = await getBlogV2Recommendations({
+    ownerId: blog.ownerId,
+    excludeSlug: slug,
+    authorName: blog.author?.name ?? blog.metadata?.author ?? "",
+  });
+
   const liked = session
     ? await hasUserLikedBlogV2(slug, session.userData.id)
     : false;
@@ -77,6 +84,7 @@ export default async function BlogV2Page({
     <Suspense fallback={null}>
       <BlogPostLayout
         metadata={metadata}
+        showToc={false}
         showComments
         blogSlug={slug}
         initialLikeCount={blog.likeCount}
@@ -87,6 +95,9 @@ export default async function BlogV2Page({
         }
         currentUserId={session?.userData.id}
         isAdmin={session ? isAdmin(session.userData.roles) : false}
+        shareLive
+        publicSlug={slug}
+        recommendations={recommendations}
       >
         <BlockNoteViewer initialContent={blog.content} />
       </BlogPostLayout>

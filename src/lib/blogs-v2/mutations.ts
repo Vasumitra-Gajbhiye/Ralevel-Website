@@ -190,6 +190,9 @@ export async function rejectBlogV2Review(
   if (!trimmedNote) {
     throw new Error("A rejection note is required.");
   }
+  if (trimmedNote.length > 3000) {
+    throw new Error("Feedback note must be 3000 characters or fewer.");
+  }
 
   clearPendingReview(blog);
   blog.status = "changes_requested";

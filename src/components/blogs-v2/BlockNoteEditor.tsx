@@ -12,11 +12,13 @@ import "./blocknote-notion.css";
 type BlockNoteEditorProps = {
   initialContent?: unknown;
   onEditorReady?: (editor: Editor) => void;
+  onChange?: () => void;
 };
 
 export default function BlockNoteEditor({
   initialContent,
   onEditorReady,
+  onChange,
 }: BlockNoteEditorProps) {
   const resolved = resolveInitialContent(initialContent);
   const editor = useCreateBlockNote(
@@ -31,6 +33,11 @@ export default function BlockNoteEditor({
       onEditorReady(editor);
     }
   }, [editor, onEditorReady]);
+
+  useEffect(() => {
+    if (!onChange) return;
+    return editor.onChange(onChange);
+  }, [editor, onChange]);
 
   return (
     <div className="bn-notion-editor">

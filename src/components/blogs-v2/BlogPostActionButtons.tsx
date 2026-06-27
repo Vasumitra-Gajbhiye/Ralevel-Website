@@ -1,8 +1,9 @@
 "use client";
 
+import BlogSharePopover from "@/components/blogs-v2/BlogSharePopover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Heart, MessageCircle, Share2 } from "lucide-react";
+import { Heart, MessageCircle } from "lucide-react";
 
 type BlogPostActionButtonsProps = {
   clapCount?: number;
@@ -11,6 +12,9 @@ type BlogPostActionButtonsProps = {
   onLikeClick?: () => void;
   onCommentClick?: () => void;
   likeDisabled?: boolean;
+  shareUrl: string;
+  shareLive?: boolean;
+  shareTitle?: string;
 };
 
 export default function BlogPostActionButtons({
@@ -20,6 +24,9 @@ export default function BlogPostActionButtons({
   onLikeClick,
   onCommentClick,
   likeDisabled = false,
+  shareUrl,
+  shareLive = false,
+  shareTitle,
 }: BlogPostActionButtonsProps) {
   return (
     <div className="flex items-center gap-1 md:gap-2 shrink-0">
@@ -57,15 +64,11 @@ export default function BlogPostActionButtons({
         <MessageCircle className="h-5 w-5" />
         <span className="text-sm tabular-nums">{commentCount}</span>
       </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-9 px-2 text-neutral-600 hover:text-neutral-900"
-        onClick={() => {}}
-      >
-        <Share2 className="h-5 w-5" />
-      </Button>
+      <BlogSharePopover
+        shareUrl={shareUrl}
+        shareLive={shareLive}
+        title={shareTitle}
+      />
     </div>
   );
 }

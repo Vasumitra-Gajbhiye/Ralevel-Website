@@ -88,7 +88,7 @@ export default async function BlogV2PreviewPage({
       <div className="bg-amber-50 border-b border-amber-200 text-amber-900 text-sm text-center py-2 px-4">
         Preview — not published
       </div>
-      <BlogPostLayout metadata={metadata}>
+      <BlogPostLayout metadata={metadata} showToc={false}>
         <BlockNoteViewer initialContent={blog.content} />
       </BlogPostLayout>
     </div>

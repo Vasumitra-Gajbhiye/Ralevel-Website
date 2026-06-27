@@ -2,6 +2,7 @@
 
 import AuthorAvatar from "@/components/blogs-v2/AuthorAvatar";
 import BlogPostActionButtons from "@/components/blogs-v2/BlogPostActionButtons";
+import { resolveBlogShareUrl } from "@/lib/blogs-v2/share";
 
 type BlogPostHeaderProps = {
   title: string;
@@ -19,6 +20,8 @@ type BlogPostHeaderProps = {
   onLikeClick?: () => void;
   onCommentClick?: () => void;
   likeDisabled?: boolean;
+  shareLive?: boolean;
+  publicSlug?: string | null;
 };
 
 export default function BlogPostHeader({
@@ -37,9 +40,12 @@ export default function BlogPostHeader({
   onLikeClick,
   onCommentClick,
   likeDisabled = false,
+  shareLive = false,
+  publicSlug,
 }: BlogPostHeaderProps) {
   const editable = Boolean(onTitleChange);
   const authorName = author?.trim() || "Author";
+  const shareUrl = resolveBlogShareUrl(publicSlug, shareLive);
 
   const metaParts: string[] = [];
   if (readTimeMinutes && readTimeMinutes > 0) {
@@ -108,6 +114,9 @@ export default function BlogPostHeader({
               onLikeClick={onLikeClick}
               onCommentClick={onCommentClick}
               likeDisabled={likeDisabled}
+              shareUrl={shareUrl}
+              shareLive={shareLive}
+              shareTitle={title}
             />
           )}
         </div>

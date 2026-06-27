@@ -1,6 +1,7 @@
 "use client";
 
 import BlogPostActionButtons from "@/components/blogs-v2/BlogPostActionButtons";
+import { resolveBlogShareUrl } from "@/lib/blogs-v2/share";
 import { parseBlogTags } from "@/lib/parseBlogTags";
 
 type BlogPostFooterProps = {
@@ -11,6 +12,9 @@ type BlogPostFooterProps = {
   onLikeClick?: () => void;
   onCommentClick?: () => void;
   likeDisabled?: boolean;
+  shareLive?: boolean;
+  publicSlug?: string | null;
+  shareTitle?: string;
 };
 
 export default function BlogPostFooter({
@@ -21,20 +25,31 @@ export default function BlogPostFooter({
   onLikeClick,
   onCommentClick,
   likeDisabled = false,
+  shareLive = false,
+  publicSlug,
+  shareTitle,
 }: BlogPostFooterProps) {
   const tags = parseBlogTags(tag);
+  const shareUrl = resolveBlogShareUrl(publicSlug, shareLive);
+
+  const actionButtons = (
+    <BlogPostActionButtons
+      clapCount={clapCount}
+      commentCount={commentCount}
+      liked={liked}
+      onLikeClick={onLikeClick}
+      onCommentClick={onCommentClick}
+      likeDisabled={likeDisabled}
+      shareUrl={shareUrl}
+      shareLive={shareLive}
+      shareTitle={shareTitle}
+    />
+  );
 
   if (tags.length === 0) {
     return (
       <footer className="mt-12 pt-8 border-t border-neutral-200">
-        <BlogPostActionButtons
-          clapCount={clapCount}
-          commentCount={commentCount}
-          liked={liked}
-          onLikeClick={onLikeClick}
-          onCommentClick={onCommentClick}
-          likeDisabled={likeDisabled}
-        />
+        {actionButtons}
       </footer>
     );
   }
@@ -51,16 +66,7 @@ export default function BlogPostFooter({
           </span>
         ))}
       </div>
-      <div className="mt-4">
-        <BlogPostActionButtons
-          clapCount={clapCount}
-          commentCount={commentCount}
-          liked={liked}
-          onLikeClick={onLikeClick}
-          onCommentClick={onCommentClick}
-          likeDisabled={likeDisabled}
-        />
-      </div>
+      <div className="mt-4">{actionButtons}</div>
     </footer>
   );
 }

@@ -36,6 +36,7 @@ export type BlogV2Public = {
   _id: string;
   title: string;
   slug: string;
+  ownerId?: string | null;
   metadata: {
     title?: string;
     author?: string;
@@ -82,6 +83,7 @@ export async function getBlogV2BySlug(slug: string): Promise<BlogV2Public | null
     _id: blog._id.toString(),
     title: blog.title,
     slug: blog.slug,
+    ownerId: ownerId ?? null,
     metadata,
     author,
     content: blog.content ?? [],

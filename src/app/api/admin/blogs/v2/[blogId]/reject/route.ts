@@ -34,6 +34,13 @@ export async function POST(
   const body = await req.json();
   const note = typeof body.note === "string" ? body.note : "";
 
+  if (note.length > 3000) {
+    return NextResponse.json(
+      { error: "Feedback note must be 3000 characters or fewer." },
+      { status: 400 },
+    );
+  }
+
   try {
     const updated = await rejectBlogV2Review(blog, auth.userData.id, note);
     return NextResponse.json({ success: true, blog: updated });

@@ -1,5 +1,6 @@
 import type { BlogV2Status } from "@/types/blogV2";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<BlogV2Status, string> = {
   draft: "Draft",
@@ -14,8 +15,12 @@ const STATUS_VARIANTS: Record<
 > = {
   draft: "secondary",
   in_review: "default",
-  changes_requested: "destructive",
+  changes_requested: "outline",
   published: "outline",
+};
+
+const STATUS_CLASSNAMES: Partial<Record<BlogV2Status, string>> = {
+  changes_requested: "border-amber-300 bg-amber-50 text-amber-800",
 };
 
 type BlogStatusBadgeProps = {
@@ -25,7 +30,10 @@ type BlogStatusBadgeProps = {
 
 export default function BlogStatusBadge({ status, className }: BlogStatusBadgeProps) {
   return (
-    <Badge variant={STATUS_VARIANTS[status]} className={className}>
+    <Badge
+      variant={STATUS_VARIANTS[status]}
+      className={cn(STATUS_CLASSNAMES[status], className)}
+    >
       {STATUS_LABELS[status]}
     </Badge>
   );

@@ -80,6 +80,10 @@ export function getPendingContent(
 }
 
 export function getPreviewContent(blog: BlogV2Document): BlogV2ContentSnapshot {
+  if (blog.status === "in_review") {
+    const pending = getPendingContent(blog);
+    if (pending) return pending;
+  }
   return getWorkingContent(blog);
 }
 

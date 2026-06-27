@@ -11,10 +11,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { PendingBlogReview } from "@/lib/data/admin/blogsV2";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import BlogStatusBadge from "./BlogStatusBadge";
+
+const REJECT_NOTE_MAX_LENGTH = 3000;
 
 type BlogReviewActionsProps = {
   blog: PendingBlogReview;
@@ -26,6 +29,9 @@ export default function BlogReviewActions({ blog }: BlogReviewActionsProps) {
   const [note, setNote] = useState("");
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+
+  const noteOverLimit = note.length > REJECT_NOTE_MAX_LENGTH;
+  const canSendFeedback = note.trim().length > 0 && !noteOverLimit;
 
   async function handleApprove() {
     setApproving(true);
@@ -47,7 +53,7 @@ export default function BlogReviewActions({ blog }: BlogReviewActionsProps) {
   }
 
   async function handleReject() {
-    if (!note.trim()) {
+    if (!canSendFeedback) {
       toast.error("Please add a note for the writer");
       return;
     }
@@ -104,14 +110,19 @@ export default function BlogReviewActions({ blog }: BlogReviewActionsProps) {
           >
             Reject
           </Button>
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/blogs/v2/preview/${blog._id}`} target="_blank">
+              View
+            </Link>
+          </Button>
           <Button size="sm" variant="ghost" asChild>
-            <a href={`/admin/blogs/v2/${blog._id}/edit`}>Open editor</a>
+            <Link href={`/admin/blogs/v2/${blog._id}/edit`}>Open editor</Link>
           </Button>
           {blog.slug && (
             <Button size="sm" variant="ghost" asChild>
-              <a href={`/blogs/v2/${blog.slug}`} target="_blank">
+              <Link href={`/blogs/v2/${blog.slug}`} target="_blank">
                 View live
-              </a>
+              </Link>
             </Button>
           )}
         </div>
@@ -130,13 +141,24 @@ export default function BlogReviewActions({ blog }: BlogReviewActionsProps) {
               onChange={(e) => setNote(e.target.value)}
               placeholder="Explain what needs to change…"
               rows={5}
+              maxLength={REJECT_NOTE_MAX_LENGTH}
             />
+            <p
+              className={`text-xs text-right ${
+                noteOverLimit ? "text-red-600" : "text-gray-500"
+              }`}
+            >
+              {note.length}/{REJECT_NOTE_MAX_LENGTH}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleReject} disabled={rejecting}>
+            <Button
+              onClick={handleReject}
+              disabled={rejecting || !canSendFeedback}
+            >
               {rejecting ? "Sending…" : "Send feedback"}
             </Button>
           </DialogFooter>

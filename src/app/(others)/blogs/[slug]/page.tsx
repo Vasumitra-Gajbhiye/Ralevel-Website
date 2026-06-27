@@ -82,7 +82,7 @@ export default async function Page({
 
     return (
       <Suspense fallback={null}>
-        <BlogPostLayout metadata={metadata}>
+        <BlogPostLayout metadata={metadata} showToc={false}>
           <Post />
         </BlogPostLayout>
       </Suspense>

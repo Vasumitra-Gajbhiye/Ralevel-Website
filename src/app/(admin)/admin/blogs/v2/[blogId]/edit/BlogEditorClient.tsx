@@ -13,9 +13,9 @@ import type { ResolvedBlogAuthor } from "@/lib/data/admin/writerProfile";
 import { formatBlogMediumDate } from "@/lib/formatBlogDate";
 import type { BlogV2ReviewType, BlogV2Status } from "@/types/blogV2";
 import type { BlockNoteEditor as BlockNoteEditorType } from "@blocknote/core";
-import { AlertCircle, ArrowLeft, Copy } from "lucide-react";
+import { AlertCircle, ArrowLeft, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type BlogEditorClientProps = {
@@ -32,6 +32,14 @@ type BlogEditorClientProps = {
   reviewType?: BlogV2ReviewType | null;
 };
 
+function editorSignature(
+  title: string,
+  metadata: BlogMetadata,
+  content: unknown,
+) {
+  return JSON.stringify({ title, metadata, content });
+}
+
 export default function BlogEditorClient({
   blogId,
   initialTitle,
@@ -47,8 +55,15 @@ export default function BlogEditorClient({
   const editorRef = useRef<BlockNoteEditorType | null>(null);
   const [title, setTitle] = useState(initialTitle);
   const [metadata, setMetadata] = useState<BlogMetadata>(initialMetadata);
+  const [contentVersion, setContentVersion] = useState(0);
+  const [savedSignature, setSavedSignature] = useState(() =>
+    editorSignature(initialTitle, initialMetadata, initialContent ?? []),
+  );
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [publishBannerDismissed, setPublishBannerDismissed] = useState(false);
+  const [reviewNoteDismissed, setReviewNoteDismissed] = useState(false);
+  const [inReviewBannerDismissed, setInReviewBannerDismissed] = useState(false);
 
   const authorName = authorProfile?.name ?? "Writer";
   const authorBio = authorProfile?.bio;
@@ -57,9 +72,27 @@ export default function BlogEditorClient({
   const previewUrl = `/blogs/v2/preview/${blogId}?token=${previewToken}`;
   const liveUrl = slug ? `/blogs/v2/${slug}` : null;
 
-  const handleEditorReady = useCallback((editor: BlockNoteEditorType) => {
-    editorRef.current = editor;
+  const handleEditorReady = useCallback(
+    (editor: BlockNoteEditorType) => {
+      editorRef.current = editor;
+      setSavedSignature(
+        editorSignature(initialTitle, initialMetadata, editor.document),
+      );
+    },
+    [initialTitle, initialMetadata],
+  );
+
+  const handleEditorChange = useCallback(() => {
+    setContentVersion((v) => v + 1);
   }, []);
+
+  const currentSignature = useMemo(() => {
+    void contentVersion;
+    const content = editorRef.current?.document ?? initialContent ?? [];
+    return editorSignature(title, metadata, content);
+  }, [title, metadata, contentVersion, initialContent]);
+
+  const isDirty = currentSignature !== savedSignature;
 
   const displayDate = metadata.date
     ? formatBlogMediumDate(metadata.date)
@@ -93,6 +126,7 @@ export default function BlogEditorClient({
         const data = await res.json();
         throw new Error(data.error ?? "Failed to save draft");
       }
+      setSavedSignature(editorSignature(title, saveMetadata, content));
       toast.success("Draft saved");
     } catch (error) {
       toast.error(
@@ -154,12 +188,6 @@ export default function BlogEditorClient({
     }
   }
 
-  function copyPreviewLink() {
-    const fullUrl = `${window.location.origin}${previewUrl}`;
-    void navigator.clipboard.writeText(fullUrl);
-    toast.success("Preview link copied");
-  }
-
   const submitLabel =
     status === "in_review"
       ? "Push to review"
@@ -168,6 +196,11 @@ export default function BlogEditorClient({
         : status === "changes_requested"
           ? "Submit for review"
           : "Publish";
+
+  const showPublishBanner = status === "published" && !publishBannerDismissed;
+  const showReviewNote = reviewNote && !reviewNoteDismissed;
+  const showInReviewBanner =
+    status === "in_review" && submittedAt && !inReviewBannerDismissed;
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
@@ -201,40 +234,86 @@ export default function BlogEditorClient({
               Preview
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={copyPreviewLink}>
-            <Copy className="h-3.5 w-3.5" />
-            Copy preview link
-          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleSaveDraft}
-            disabled={saving}
+            disabled={!isDirty || saving}
           >
             {saving ? "Saving…" : "Save draft"}
           </Button>
-          <Button size="sm" onClick={handleSubmitForReview} disabled={submitting}>
+          <Button
+            size="sm"
+            onClick={handleSubmitForReview}
+            disabled={!isDirty || submitting}
+          >
             {submitting ? "Submitting…" : submitLabel}
           </Button>
         </div>
       </header>
 
-      {(reviewNote || (status === "in_review" && submittedAt)) && (
+      {showPublishBanner && (
+        <div className="relative bg-green-50 border-b border-green-200 text-green-900 text-sm text-center py-2 px-10">
+          Your blog is published
+          {liveUrl && (
+            <>
+              {" — "}
+              <Link
+                href={liveUrl}
+                target="_blank"
+                className="underline hover:text-green-950"
+              >
+                View live
+              </Link>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setPublishBannerDismissed(true)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-green-100 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {(showReviewNote || showInReviewBanner) && (
         <div className="px-4 md:px-6 py-3 border-b border-neutral-100 bg-neutral-50/80">
-          {reviewNote && (
-            <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-              <div className="flex items-center gap-2 font-medium">
-                <AlertCircle className="h-4 w-4" />
-                Changes requested
+          {showReviewNote && (
+            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="flex items-center justify-between gap-2 font-medium">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Changes requested
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReviewNoteDismissed(true)}
+                  className="p-1 rounded hover:bg-amber-100 transition-colors shrink-0"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
               <p className="mt-1">{reviewNote}</p>
             </div>
           )}
-          {status === "in_review" && submittedAt && (
-            <p className="text-sm text-neutral-600">
-              In review since {formatBlogMediumDate(submittedAt)}. You can still
-              edit your draft and push an updated version for reviewers.
-            </p>
+          {showInReviewBanner && (
+            <div className="relative flex items-center pr-8">
+              <p className="text-sm text-neutral-600">
+                In review since {formatBlogMediumDate(submittedAt)}. You can still
+                edit your draft and push an updated version for reviewers.
+              </p>
+              <button
+                type="button"
+                onClick={() => setInReviewBannerDismissed(true)}
+                className="absolute right-0 p-1 rounded hover:bg-neutral-200 transition-colors shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4 text-neutral-500" />
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -262,6 +341,8 @@ export default function BlogEditorClient({
               authorAvatar={authorProfile?.avatar}
               displayDate={displayDate}
               readTimeMinutes={metadata.readTimeMinutes}
+              shareLive={status === "published" && Boolean(slug)}
+              publicSlug={slug}
             />
 
             <BlogEditorHero
@@ -278,8 +359,14 @@ export default function BlogEditorClient({
               key={blogId}
               initialContent={initialContent}
               onEditorReady={handleEditorReady}
+              onChange={handleEditorChange}
             />
-            <BlogPostFooter tag={metadata.tag} />
+            <BlogPostFooter
+              tag={metadata.tag}
+              shareLive={status === "published" && Boolean(slug)}
+              publicSlug={slug}
+              shareTitle={title}
+            />
             <BlogPostAuthorProfile
               author={authorName}
               authorAvatar={authorProfile?.avatar}
