@@ -1,0 +1,53 @@
+.bn-notion-editor {
+  --bn-colors-editor-background: #ffffff;
+  --bn-colors-editor-text: #37352f;
+  --bn-colors-menu-background: #ffffff;
+  --bn-colors-menu-text: #37352f;
+  --bn-colors-tooltip-background: #37352f;
+  --bn-colors-tooltip-text: #ffffff;
+  --bn-colors-hovered-background: #f7f7f5;
+  --bn-colors-selected-background: #ebebea;
+  --bn-colors-disabled-background: #f7f7f5;
+  --bn-colors-disabled-text: #9b9a97;
+  --bn-colors-shadow: rgba(15, 15, 15, 0.05);
+  --bn-colors-border: #ebebea;
+  --bn-colors-side-menu: #9b9a97;
+  --bn-font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+.bn-notion-editor .bn-container {
+  background: #ffffff;
+}
+
+.bn-notion-editor .bn-editor {
+  background: #ffffff;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.bn-notion-editor .bn-block-group {
+  margin-left: 0;
+}
+
+.bn-notion-editor .bn-block-outer {
+  margin-left: 0;
+}
+
+.bn-notion-editor .bn-block-content {
+  color: #37352f;
+}
+
+.bn-notion-editor .bn-inline-content:has(> .ProseMirror-trailingBreak):before {
+  color: #c4c4c0;
+}
+
+.bn-notion-editor .mantine-BlockNoteView-root {
+  border: none;
+  box-shadow: none;
+  background: #ffffff;
+}
+
+.bn-notion-editor [data-floating-ui-focusable] {
+  border-radius: 6px;
+}

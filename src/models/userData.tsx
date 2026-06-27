@@ -31,6 +31,11 @@ const userDataSchema = new mongoose.Schema(
     examSession: { type: [String], default: [] },
 
     receiveEmails: { type: Boolean, default: false },
+
+    writerProfile: {
+      bio: { type: String, default: "" },
+      avatar: { type: String, default: "" },
+    },
   },
   { timestamps: true }
 );

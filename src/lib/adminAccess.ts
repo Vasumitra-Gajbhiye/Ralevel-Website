@@ -1,6 +1,8 @@
 import {
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
+  WRITER_ACCESS_MANAGE_ROLES,
+  WRITER_CMS_ROLES,
   type Role,
 } from "./roles";
 
@@ -18,7 +20,7 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
   },
   {
     prefix: "/admin/blogs",
-    roles: ["owner", "admin", "writer"],
+    roles: WRITER_CMS_ROLES,
     message: "You don't have permission to access Blog records.",
   },
   {
@@ -77,6 +79,11 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     prefix: "/admin/resource",
     roles: RESOURCE_ACCESS_MANAGE_ROLES,
     message: "You don't have permission to manage Resource access.",
+  },
+  {
+    prefix: "/admin/writers",
+    roles: WRITER_ACCESS_MANAGE_ROLES,
+    message: "You don't have permission to manage Writer access.",
   },
 ];
 

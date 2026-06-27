@@ -28,6 +28,11 @@ import createMDX from "@next/mdx";
 const nextConfig = {
   output: "standalone",
   transpilePackages: ["@r-alevel/discord-bot"],
+  serverExternalPackages: [
+    "@blocknote/core",
+    "@blocknote/react",
+    "@blocknote/mantine",
+  ],
   pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 
   experimental: {
@@ -55,6 +60,14 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "cdn.discordapp.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.pravatar.cc",
+      },
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
       },
     ],
   },

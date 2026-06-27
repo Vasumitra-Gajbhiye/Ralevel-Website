@@ -13,6 +13,8 @@ export const ROLES = [
   "junior_mod",
   "trial_mod",
   "graphic_designer",
+  "writer_dep_head",
+  "senior_writer",
   "writer",
   "bot_dev",
   "helper",
@@ -41,6 +43,28 @@ export const RESOURCE_TEAM_ROLES = [
 ] as const satisfies readonly Role[];
 
 export type ResourceTeamRole = (typeof RESOURCE_TEAM_ROLES)[number];
+
+export const WRITER_CMS_ROLES = [
+  "owner",
+  "admin",
+  "writer_dep_head",
+  "senior_writer",
+  "writer",
+] as const satisfies readonly Role[];
+
+export const WRITER_ACCESS_MANAGE_ROLES = [
+  "owner",
+  "admin",
+  "writer_dep_head",
+] as const satisfies readonly Role[];
+
+export const WRITER_TEAM_ROLES = [
+  "writer_dep_head",
+  "senior_writer",
+  "writer",
+] as const satisfies readonly Role[];
+
+export type WriterTeamRole = (typeof WRITER_TEAM_ROLES)[number];
 
 /**
  * Lower index = higher authority
@@ -103,4 +127,23 @@ export function mergeResourceTeamRole(
   assignedRole: ResourceTeamRole
 ): Role[] {
   return [...stripResourceTeamRoles(roles), assignedRole];
+}
+
+export function hasWriterCmsAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, WRITER_CMS_ROLES);
+}
+
+export function canManageWriterAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, WRITER_ACCESS_MANAGE_ROLES);
+}
+
+export function stripWriterTeamRoles(roles: Role[]): Role[] {
+  return roles.filter((r) => !WRITER_TEAM_ROLES.includes(r as WriterTeamRole));
+}
+
+export function mergeWriterTeamRole(
+  roles: Role[],
+  assignedRole: WriterTeamRole
+): Role[] {
+  return [...stripWriterTeamRoles(roles), assignedRole];
 }

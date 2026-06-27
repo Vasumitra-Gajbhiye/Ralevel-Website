@@ -84,3 +84,93 @@ export async function uploadImageToCloudinary(
     path: publicIdToThumbnailPath(result.public_id, result.format),
   };
 }
+
+type UploadBlogHeroOptions = {
+  slug: string;
+  mimeType: string;
+  uniqueId: string;
+};
+
+export async function uploadBlogHeroToCloudinary(
+  buffer: Buffer,
+  { slug, mimeType, uniqueId }: UploadBlogHeroOptions,
+): Promise<{ path: string }> {
+  const extension = extensionFromMime(mimeType);
+  const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const publicId = `ralevel/blogs_hero/${safeSlug}-${uniqueId}`;
+
+  const result = await new Promise<{ public_id: string; format: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          resource_type: "image",
+          overwrite: false,
+          invalidate: true,
+        },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else if (!uploadResult?.public_id) {
+            reject(new Error("Cloudinary upload returned no public_id"));
+          } else {
+            resolve({
+              public_id: uploadResult.public_id,
+              format: uploadResult.format ?? extension,
+            });
+          }
+        },
+      );
+
+      uploadStream.end(buffer);
+    },
+  );
+
+  return {
+    path: publicIdToThumbnailPath(result.public_id, result.format),
+  };
+}
+
+type UploadWriterAvatarOptions = {
+  userId: string;
+  mimeType: string;
+  uniqueId: string;
+};
+
+export async function uploadWriterAvatarToCloudinary(
+  buffer: Buffer,
+  { userId, mimeType, uniqueId }: UploadWriterAvatarOptions,
+): Promise<{ path: string }> {
+  const extension = extensionFromMime(mimeType);
+  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const publicId = `ralevel/writer_avatars/${safeUserId}-${uniqueId}`;
+
+  const result = await new Promise<{ public_id: string; format: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          resource_type: "image",
+          overwrite: false,
+          invalidate: true,
+        },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else if (!uploadResult?.public_id) {
+            reject(new Error("Cloudinary upload returned no public_id"));
+          } else {
+            resolve({
+              public_id: uploadResult.public_id,
+              format: uploadResult.format ?? extension,
+            });
+          }
+        },
+      );
+
+      uploadStream.end(buffer);
+    },
+  );
+
+  return {
+    path: publicIdToThumbnailPath(result.public_id, result.format),
+  };
+}

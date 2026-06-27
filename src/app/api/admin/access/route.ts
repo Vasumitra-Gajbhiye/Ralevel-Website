@@ -5,7 +5,7 @@ import { getAdminAccessList } from "@/lib/data/admin/access";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
 import { invalidateUserCache } from "@/lib/redis-cache";
-import { Role, highestAuthorityRole, roleRank } from "@/lib/roles";
+import { Role, highestAuthorityRole, roleRank, stripWriterTeamRoles, WRITER_TEAM_ROLES, type WriterTeamRole } from "@/lib/roles";
 import {
   findClerkUserIdByEmail,
   syncClerkUserMetadata,
@@ -56,6 +56,12 @@ export async function POST(req: Request) {
     return new Response("Invalid payload", { status: 400 });
   }
 
+  if (roles.some((r) => WRITER_TEAM_ROLES.includes(r as WriterTeamRole))) {
+    return new Response("Writer roles must be assigned via /admin/writers", {
+      status: 403,
+    });
+  }
+
   if (highestAuthorityRole(roles) === "owner") {
     return new Response("Owner role cannot be assigned", { status: 403 });
   }
@@ -79,7 +85,15 @@ export async function POST(req: Request) {
     );
   }
 
-  target.roles = roles;
+  const currentRoles = (target.roles ?? []) as Role[];
+  const preservedWriterRole = currentRoles.find((r) =>
+    WRITER_TEAM_ROLES.includes(r as WriterTeamRole),
+  );
+
+  target.roles = [
+    ...stripWriterTeamRoles(roles),
+    ...(preservedWriterRole ? [preservedWriterRole] : []),
+  ];
 
   try {
     await applyStaffIdentity(target, { nickname, discordUserId }, email);
@@ -94,7 +108,7 @@ export async function POST(req: Request) {
   const clerkUserId = await findClerkUserIdByEmail(email);
   if (clerkUserId) {
     await syncClerkUserMetadata(clerkUserId, {
-      roles,
+      roles: target.roles as Role[],
       userDataId: target._id.toString(),
     });
   }
@@ -137,13 +151,14 @@ export async function DELETE(req: Request) {
     return new Response("Owner cannot be removed", { status: 403 });
   }
 
-  target.roles = [];
+  const currentRoles = (target.roles ?? []) as Role[];
+  target.roles = stripWriterTeamRoles(currentRoles);
   await target.save();
 
   const clerkUserId = await findClerkUserIdByEmail(email);
   if (clerkUserId) {
     await syncClerkUserMetadata(clerkUserId, {
-      roles: [],
+      roles: target.roles as Role[],
       userDataId: target._id.toString(),
     });
   }

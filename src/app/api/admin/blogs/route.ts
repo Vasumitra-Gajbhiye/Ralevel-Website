@@ -6,12 +6,13 @@ import { parsePaginationParams } from "@/lib/pagination";
 import { slugify } from "@/lib/slugify";
 import EditorBlog from "@/models/editorBlogs";
 import mongoose from "mongoose";
+import { WRITER_CMS_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 /* ================= LIST BLOGS ================= */
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin", "writer"],
+    roles: [...WRITER_CMS_ROLES],
     rateLimit: { routeKey: "admin-blogs-list" },
   });
   if (auth instanceof Response) return auth;
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
 /* ================= CREATE BLOG ================= */
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin", "writer"],
+    roles: [...WRITER_CMS_ROLES],
   });
   if (auth instanceof Response) return auth;
 

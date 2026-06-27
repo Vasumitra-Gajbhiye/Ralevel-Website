@@ -11,10 +11,19 @@ import {
   hasAnyRole,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
+  WRITER_ACCESS_MANAGE_ROLES,
+  WRITER_CMS_ROLES,
   type Role,
 } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+
+function isBlogEditorPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return /^\/admin\/blogs\/v2\/[^/]+\/edit$/.test(pathname);
+}
 
 function AdminSidebarNav({
   roles,
@@ -27,9 +36,15 @@ function AdminSidebarNav({
 
   return (
     <nav className="space-y-2 text-sm">
-      {hasAnyRole(roles, ["owner", "admin", "writer"]) && (
+      {hasAnyRole(roles, WRITER_CMS_ROLES) && (
         <a href="/admin/blogs/v2" className={linkClass} onClick={onNavigate}>
           Blogs
+        </a>
+      )}
+
+      {hasAnyRole(roles, WRITER_ACCESS_MANAGE_ROLES) && (
+        <a href="/admin/writers" className={linkClass} onClick={onNavigate}>
+          Writers
         </a>
       )}
 
@@ -131,6 +146,8 @@ export default function AdminLayoutShell({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isBlogEditor = isBlogEditorPath(pathname);
 
   const closeSidebar = () => setOpen(false);
 
@@ -159,7 +176,14 @@ export default function AdminLayoutShell({
         <AdminSidebarNav roles={roles} />
       </aside>
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">{children}</main>
+      <main
+        className={cn(
+          "flex-1",
+          isBlogEditor ? "overflow-hidden p-0" : "overflow-y-auto p-4 md:p-8",
+        )}
+      >
+        {children}
+      </main>
     </div>
   );
 }

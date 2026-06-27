@@ -22,6 +22,8 @@ export default async function AdminLayout({
     !hasAnyRole(session.userData?.roles, [
       "owner",
       "admin",
+      "writer_dep_head",
+      "senior_writer",
       "writer",
       "mod_dep_head",
       "helper_dep_head",

@@ -10,7 +10,7 @@ import { ListPagination } from "@/components/ui/list-pagination";
 import type { AdminAccessUser } from "@/lib/data/admin/access";
 import type { PaginationMeta } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
-import { RESOURCE_TEAM_ROLES, roleRank } from "@/lib/roles";
+import { RESOURCE_TEAM_ROLES, WRITER_TEAM_ROLES, roleRank } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +24,7 @@ import {
   HelpingHand,
   PenLine,
   Shield,
+  Star,
   User,
   UserCog,
 } from "lucide-react";
@@ -40,6 +41,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   junior_mod: "Junior Moderator",
   trial_mod: "Trial Moderator",
   graphic_designer: "Graphic Designer",
+  writer_dep_head: "Writer Dep. Head",
+  senior_writer: "Senior Writer",
   writer: "Writer",
   bot_dev: "Bot Developer",
   former_staff: "Former Staff",
@@ -58,7 +61,8 @@ const ASSIGNABLE_ACCESS_ROLES = Object.entries(ROLE_LABELS).filter(
     value !== "owner" &&
     !RESOURCE_TEAM_ROLES.includes(
       value as (typeof RESOURCE_TEAM_ROLES)[number],
-    ),
+    ) &&
+    !WRITER_TEAM_ROLES.includes(value as (typeof WRITER_TEAM_ROLES)[number]),
 );
 
 export const ROLE_META: Record<
@@ -112,6 +116,14 @@ export const ROLE_META: Record<
   graphic_designer: {
     color: "bg-pink-100 text-pink-800 border-pink-200",
     icon: Brush,
+  },
+  writer_dep_head: {
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: Shield,
+  },
+  senior_writer: {
+    color: "bg-violet-100 text-violet-800 border-violet-200",
+    icon: Star,
   },
   writer: {
     color: "bg-blue-100 text-blue-800 border-blue-200",
@@ -259,7 +271,7 @@ export default function AdminAccessClient({
   const router = useRouter();
   const [users, setUsers] = useState<AccessUser[]>(initialUsers);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("writer");
+  const [role, setRole] = useState<Role>("trial_mod");
   const [nickname, setNickname] = useState("");
   const [discordUserId, setDiscordUserId] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -332,7 +344,7 @@ export default function AdminAccessClient({
     }
 
     setEmail("");
-    setRole("writer");
+    setRole("trial_mod");
     setNickname("");
     setDiscordUserId("");
     setSuggestions([]);
@@ -463,7 +475,7 @@ export default function AdminAccessClient({
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Access</h1>
-      <p className="text-sm text-gray-500 mb-6">Share admin or writer access</p>
+      <p className="text-sm text-gray-500 mb-6">Share admin and staff access</p>
 
       {/* Share box */}
       <div className="relative border rounded-xl p-4 bg-white mb-8 space-y-4">
