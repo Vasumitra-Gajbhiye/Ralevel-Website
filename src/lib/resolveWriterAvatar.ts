@@ -4,11 +4,13 @@ const cloudinaryBase = () =>
 /** Resolve a writer avatar to a loadable src (full URL, site path, or Cloudinary key). */
 export function resolveWriterAvatar(src: string): string {
   const trimmed = src.trim();
-  if (
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("/")
-  ) {
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/writer_avatars/")) {
+    return `${cloudinaryBase()}${trimmed}`;
+  }
+  if (trimmed.startsWith("/")) {
     return trimmed;
   }
   return `${cloudinaryBase()}/${trimmed}`;

@@ -59,7 +59,7 @@ export default async function BlogV2Page({
 
   const metadata = {
     title: blog.metadata?.title ?? blog.title,
-    author: blog.metadata?.author ?? "",
+    author: blog.author?.name ?? blog.metadata?.author ?? "",
     date: blog.metadata?.date
       ? formatBlogMediumDate(blog.metadata.date)
       : "",
@@ -67,8 +67,10 @@ export default async function BlogV2Page({
     image: blog.metadata?.image,
     description: blog.metadata?.description,
     readTimeMinutes: blog.metadata?.readTimeMinutes,
-    authorBio: blog.metadata?.authorBio,
-    authorFollowers: blog.metadata?.authorFollowers,
+    authorBio: blog.author?.bio ?? blog.metadata?.authorBio,
+    authorFollowers:
+      blog.author?.followerCount ?? blog.metadata?.authorFollowers,
+    authorAvatar: blog.author?.avatar,
   };
 
   return (

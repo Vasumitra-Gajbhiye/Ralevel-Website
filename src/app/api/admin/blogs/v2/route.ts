@@ -1,6 +1,7 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAdminBlogsV2List } from "@/lib/data/admin/blogsV2";
+import { resolveBlogAuthorFromOwnerId } from "@/lib/data/admin/writerProfile";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
 import { slugify } from "@/lib/slugify";
@@ -42,7 +43,8 @@ export async function POST(req: Request) {
 
   await connectDB();
 
-  const authorName = auth.user?.name || "";
+  const author = await resolveBlogAuthorFromOwnerId(auth.userData.id);
+  const authorName = author?.name ?? "Writer";
   const today = new Date().toISOString().split("T")[0];
 
   const blog = await BlogV2.create({
@@ -52,6 +54,8 @@ export async function POST(req: Request) {
     metadata: {
       title: "Untitled document",
       author: authorName,
+      authorBio: author?.bio,
+      authorFollowers: author?.followerCount ?? 0,
       date: today,
     },
     content: [],

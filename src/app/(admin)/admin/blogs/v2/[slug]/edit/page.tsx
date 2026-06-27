@@ -19,11 +19,19 @@ export default async function BlogV2EditPage({
 
   if (!blog) notFound();
 
+  const {
+    author: _author,
+    authorBio: _authorBio,
+    authorFollowers: _authorFollowers,
+    ...editorMetadata
+  } = blog.metadata ?? {};
+
   return (
     <BlogEditorClient
       slug={slug}
       initialTitle={blog.title}
-      initialMetadata={blog.metadata ?? {}}
+      initialMetadata={editorMetadata}
+      authorProfile={blog.author}
       initialContent={blog.content}
     />
   );

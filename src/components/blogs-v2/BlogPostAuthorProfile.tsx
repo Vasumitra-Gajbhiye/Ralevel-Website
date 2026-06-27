@@ -4,12 +4,14 @@ import AuthorAvatar from "@/components/blogs-v2/AuthorAvatar";
 
 type BlogPostAuthorProfileProps = {
   author?: string;
+  authorAvatar?: string;
   authorBio?: string;
   authorFollowers?: number;
 };
 
 export default function BlogPostAuthorProfile({
   author,
+  authorAvatar,
   authorBio,
   authorFollowers,
 }: BlogPostAuthorProfileProps) {
@@ -21,7 +23,12 @@ export default function BlogPostAuthorProfile({
 
   return (
     <section className="mt-12 flex gap-4">
-      <AuthorAvatar author={displayName} className="h-12 w-12" />
+      <AuthorAvatar
+        author={displayName}
+        src={authorAvatar}
+        useUiAvatarsFallback={!authorAvatar?.trim()}
+        className="h-12 w-12"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-4">
           <div>

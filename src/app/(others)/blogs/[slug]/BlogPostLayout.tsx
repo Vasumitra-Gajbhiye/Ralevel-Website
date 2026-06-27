@@ -26,6 +26,7 @@ type BlogPostLayoutProps = {
     readTimeMinutes?: number;
     authorBio?: string;
     authorFollowers?: number;
+    authorAvatar?: string;
   };
   children: React.ReactNode;
   showToc?: boolean;
@@ -200,6 +201,7 @@ export default function BlogPostLayout({
             title={metadata.title ?? "Untitled"}
             description={metadata.description}
             author={metadata.author}
+            authorAvatar={metadata.authorAvatar}
             displayDate={metadata.date}
             readTimeMinutes={metadata.readTimeMinutes}
             clapCount={likeCount}
@@ -278,6 +280,7 @@ export default function BlogPostLayout({
             />
             <BlogPostAuthorProfile
               author={metadata.author}
+              authorAvatar={metadata.authorAvatar}
               authorBio={metadata.authorBio}
               authorFollowers={metadata.authorFollowers}
             />

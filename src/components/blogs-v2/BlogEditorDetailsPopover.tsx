@@ -9,15 +9,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Settings2 } from "lucide-react";
+import Link from "next/link";
 import type { BlogMetadata } from "./blogMetadata";
 
 type BlogEditorDetailsPopoverProps = {
   metadata: BlogMetadata;
+  authorName: string;
   onMetadataChange: (metadata: BlogMetadata) => void;
 };
 
 export default function BlogEditorDetailsPopover({
   metadata,
+  authorName,
   onMetadataChange,
 }: BlogEditorDetailsPopoverProps) {
   return (
@@ -31,13 +34,12 @@ export default function BlogEditorDetailsPopover({
       <PopoverContent align="start" className="w-80 space-y-4">
         <div className="space-y-1.5">
           <Label className="text-xs text-neutral-500">Author</Label>
-          <Input
-            value={metadata.author ?? ""}
-            onChange={(e) =>
-              onMetadataChange({ ...metadata, author: e.target.value })
-            }
-            placeholder="Author name"
-          />
+          <Input value={authorName} disabled readOnly />
+          <p className="text-xs text-neutral-500">
+            <Link href="/admin/blogs/v2" className="text-blue-600 hover:underline">
+              Edit your name on the Blogs page
+            </Link>
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs text-neutral-500">Date</Label>

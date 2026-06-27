@@ -1,4 +1,8 @@
 import connectDB from "@/lib/mongodb";
+import {
+  resolveBlogAuthorFromOwnerId,
+  type ResolvedBlogAuthor,
+} from "@/lib/data/admin/writerProfile";
 import BlogV2 from "@/models/blogV2";
 import mongoose from "mongoose";
 
@@ -38,10 +42,25 @@ export type BlogV2Public = {
     authorBio?: string;
     authorFollowers?: number;
   };
+  author: ResolvedBlogAuthor | null;
   content: unknown[];
   likeCount: number;
   updatedAt: string;
 };
+
+function applyResolvedAuthorToMetadata(
+  metadata: BlogV2Public["metadata"],
+  author: ResolvedBlogAuthor | null,
+): BlogV2Public["metadata"] {
+  if (!author) return metadata;
+
+  return {
+    ...metadata,
+    author: author.name,
+    authorBio: author.bio,
+    authorFollowers: author.followerCount,
+  };
+}
 
 export async function getBlogV2BySlug(slug: string): Promise<BlogV2Public | null> {
   await connectDB();
@@ -49,11 +68,16 @@ export async function getBlogV2BySlug(slug: string): Promise<BlogV2Public | null
   const blog = await BlogV2.findOne({ slug }).lean<BlogV2Doc>();
   if (!blog) return null;
 
+  const ownerId = blog.ownerId?.toString();
+  const author = ownerId ? await resolveBlogAuthorFromOwnerId(ownerId) : null;
+  const metadata = applyResolvedAuthorToMetadata(blog.metadata ?? {}, author);
+
   return {
     _id: blog._id.toString(),
     title: blog.title,
     slug: blog.slug,
-    metadata: blog.metadata ?? {},
+    metadata,
+    author,
     content: blog.content ?? [],
     likeCount: blog.likeCount ?? 0,
     updatedAt:

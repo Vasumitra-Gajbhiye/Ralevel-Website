@@ -3,6 +3,10 @@ import { buildPaginatedResponse, type PaginatedResult } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
 import BlogV2 from "@/models/blogV2";
 import type { BlogV2Doc } from "@/lib/data/blogsV2";
+import {
+  resolveBlogAuthorFromOwnerId,
+  type ResolvedBlogAuthor,
+} from "@/lib/data/admin/writerProfile";
 import { format } from "date-fns";
 import mongoose from "mongoose";
 
@@ -118,6 +122,7 @@ export type AdminBlogV2Detail = {
     authorBio?: string;
     authorFollowers?: number;
   };
+  author: ResolvedBlogAuthor | null;
   content: unknown[];
   ownerId?: string;
 };
@@ -141,12 +146,16 @@ export async function getAdminBlogV2BySlug(
   const blog = await BlogV2.findOne(query).lean<BlogV2Doc>();
   if (!blog) return null;
 
+  const ownerId = blog.ownerId?.toString();
+  const author = ownerId ? await resolveBlogAuthorFromOwnerId(ownerId) : null;
+
   return {
     _id: blog._id.toString(),
     title: blog.title,
     slug: blog.slug,
     metadata: blog.metadata ?? {},
+    author,
     content: blog.content ?? [],
-    ownerId: blog.ownerId?.toString(),
+    ownerId,
   };
 }

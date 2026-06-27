@@ -74,6 +74,32 @@ function buildRoleRankSwitch() {
   };
 }
 
+export type ResolvedBlogAuthor = {
+  name: string;
+  bio?: string;
+  avatar?: string;
+  followerCount: number;
+};
+
+export function mapWriterProfileToBlogAuthor(
+  profile: WriterProfile,
+): ResolvedBlogAuthor {
+  return {
+    name: profile.name,
+    bio: profile.bio,
+    avatar: profile.avatar,
+    followerCount: profile.followerCount,
+  };
+}
+
+export async function resolveBlogAuthorFromOwnerId(
+  ownerId: string,
+): Promise<ResolvedBlogAuthor | null> {
+  const profile = await getWriterProfile(ownerId);
+  if (!profile) return null;
+  return mapWriterProfileToBlogAuthor(profile);
+}
+
 export async function getWriterProfile(
   userId: string,
 ): Promise<WriterProfile | null> {

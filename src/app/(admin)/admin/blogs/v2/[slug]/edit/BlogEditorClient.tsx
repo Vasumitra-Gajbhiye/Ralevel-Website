@@ -1,7 +1,6 @@
 "use client";
 
 import { BlockNoteEditor } from "@/components/blogs-v2";
-import BlogEditorAuthorProfilePopover from "@/components/blogs-v2/BlogEditorAuthorProfilePopover";
 import BlogEditorDetailsPopover from "@/components/blogs-v2/BlogEditorDetailsPopover";
 import BlogEditorHero from "@/components/blogs-v2/BlogEditorHero";
 import BlogPostAuthorProfile from "@/components/blogs-v2/BlogPostAuthorProfile";
@@ -9,6 +8,7 @@ import BlogPostFooter from "@/components/blogs-v2/BlogPostFooter";
 import BlogPostHeader from "@/components/blogs-v2/BlogPostHeader";
 import type { BlogMetadata } from "@/components/blogs-v2/blogMetadata";
 import { Button } from "@/components/ui/button";
+import type { ResolvedBlogAuthor } from "@/lib/data/admin/writerProfile";
 import { formatBlogMediumDate } from "@/lib/formatBlogDate";
 import type { BlockNoteEditor as BlockNoteEditorType } from "@blocknote/core";
 import { ArrowLeft } from "lucide-react";
@@ -20,6 +20,7 @@ type BlogEditorClientProps = {
   slug: string;
   initialTitle: string;
   initialMetadata: BlogMetadata;
+  authorProfile: ResolvedBlogAuthor | null;
   initialContent?: unknown;
 };
 
@@ -27,12 +28,17 @@ export default function BlogEditorClient({
   slug,
   initialTitle,
   initialMetadata,
+  authorProfile,
   initialContent,
 }: BlogEditorClientProps) {
   const editorRef = useRef<BlockNoteEditorType | null>(null);
   const [title, setTitle] = useState(initialTitle);
   const [metadata, setMetadata] = useState<BlogMetadata>(initialMetadata);
   const [saving, setSaving] = useState(false);
+
+  const authorName = authorProfile?.name ?? "Writer";
+  const authorBio = authorProfile?.bio;
+  const authorFollowers = authorProfile?.followerCount ?? 0;
 
   const handleEditorReady = useCallback((editor: BlockNoteEditorType) => {
     editorRef.current = editor;
@@ -51,7 +57,7 @@ export default function BlogEditorClient({
     setSaving(true);
     try {
       const content = editorRef.current.document;
-      const updatedMetadata = {
+      const saveMetadata: BlogMetadata = {
         ...metadata,
         title: title || metadata.title,
       };
@@ -61,7 +67,7 @@ export default function BlogEditorClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title || "Untitled document",
-          metadata: updatedMetadata,
+          metadata: saveMetadata,
           content,
         }),
       });
@@ -88,10 +94,7 @@ export default function BlogEditorClient({
           </Link>
           <BlogEditorDetailsPopover
             metadata={metadata}
-            onMetadataChange={setMetadata}
-          />
-          <BlogEditorAuthorProfilePopover
-            metadata={metadata}
+            authorName={authorName}
             onMetadataChange={setMetadata}
           />
         </div>
@@ -118,7 +121,8 @@ export default function BlogEditorClient({
               onDescriptionChange={(description) =>
                 setMetadata((m) => ({ ...m, description }))
               }
-              author={metadata.author}
+              author={authorName}
+              authorAvatar={authorProfile?.avatar}
               displayDate={displayDate}
               readTimeMinutes={metadata.readTimeMinutes}
             />
@@ -140,9 +144,10 @@ export default function BlogEditorClient({
             />
             <BlogPostFooter tag={metadata.tag} />
             <BlogPostAuthorProfile
-              author={metadata.author}
-              authorBio={metadata.authorBio}
-              authorFollowers={metadata.authorFollowers}
+              author={authorName}
+              authorAvatar={authorProfile?.avatar}
+              authorBio={authorBio}
+              authorFollowers={authorFollowers}
             />
           </div>
         </div>

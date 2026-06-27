@@ -1,5 +1,6 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { resolveBlogAuthorFromOwnerId } from "@/lib/data/admin/writerProfile";
 import connectDB from "@/lib/mongodb";
 import BlogV2 from "@/models/blogV2";
 import mongoose from "mongoose";
@@ -76,10 +77,25 @@ export async function PATCH(
     blog.title = body.title;
   }
   if (body.metadata) {
-    blog.metadata = { ...blog.metadata, ...body.metadata };
+    const { author: _author, authorBio: _bio, authorFollowers: _followers, ...clientMetadata } =
+      body.metadata;
+    blog.metadata = { ...blog.metadata, ...clientMetadata };
   }
   if (Array.isArray(body.content)) {
     blog.content = body.content;
+  }
+
+  const ownerId = blog.ownerId?.toString();
+  if (ownerId) {
+    const author = await resolveBlogAuthorFromOwnerId(ownerId);
+    if (author) {
+      blog.metadata = {
+        ...blog.metadata,
+        author: author.name,
+        authorBio: author.bio,
+        authorFollowers: author.followerCount,
+      };
+    }
   }
 
   await blog.save();

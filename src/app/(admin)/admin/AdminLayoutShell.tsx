@@ -41,6 +41,11 @@ function AdminSidebarNav({
           Blogs
         </a>
       )}
+      {hasAnyRole(roles, ["owner", "admin"]) && (
+        <a href="/admin/all-blogs" className={linkClass} onClick={onNavigate}>
+          All Blogs
+        </a>
+      )}
 
       {hasAnyRole(roles, WRITER_ACCESS_MANAGE_ROLES) && (
         <a href="/admin/writers" className={linkClass} onClick={onNavigate}>

@@ -9,6 +9,7 @@ type BlogPostHeaderProps = {
   description?: string;
   onDescriptionChange?: (value: string) => void;
   author?: string;
+  authorAvatar?: string;
   displayDate?: string;
   readTimeMinutes?: number;
   showActionBar?: boolean;
@@ -26,6 +27,7 @@ export default function BlogPostHeader({
   description,
   onDescriptionChange,
   author,
+  authorAvatar,
   displayDate,
   readTimeMinutes,
   showActionBar = true,
@@ -83,7 +85,11 @@ export default function BlogPostHeader({
       <div className="mt-8 border-y border-neutral-200 py-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <AuthorAvatar author={authorName} />
+            <AuthorAvatar
+              author={authorName}
+              src={authorAvatar}
+              useUiAvatarsFallback={!authorAvatar?.trim()}
+            />
             <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
               <span className="text-sm font-medium text-black">
                 {authorName}
