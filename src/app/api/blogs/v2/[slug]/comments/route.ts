@@ -1,3 +1,4 @@
+import { assertPublishedBlogBySlug } from "@/lib/blogs-v2/public";
 import {
   createComment,
   listTopLevelComments,
@@ -5,7 +6,6 @@ import {
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import BlogV2 from "@/models/blogV2";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -20,7 +20,7 @@ export async function GET(
 
   await connectDB();
 
-  const blog = await BlogV2.findOne({ slug }).select("_id").lean();
+  const blog = await assertPublishedBlogBySlug(slug);
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -53,7 +53,7 @@ export async function POST(
 
   await connectDB();
 
-  const blog = await BlogV2.findOne({ slug }).select("_id").lean();
+  const blog = await assertPublishedBlogBySlug(slug);
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

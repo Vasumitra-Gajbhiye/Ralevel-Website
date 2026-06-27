@@ -215,7 +215,7 @@ export async function getPublicAuthorBlogs({
   const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
 
   const [result] = await BlogV2.aggregate([
-    { $match: { ownerId: ownerObjectId } },
+    { $match: { ownerId: ownerObjectId, status: "published" } },
     { $sort: { updatedAt: -1 } },
     {
       $facet: {

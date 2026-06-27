@@ -1,8 +1,8 @@
+import { assertPublishedBlogBySlug } from "@/lib/blogs-v2/public";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { toggleBlogV2Like } from "@/lib/data/blogV2Likes";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import BlogV2 from "@/models/blogV2";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -21,7 +21,7 @@ export async function POST(
 
   await connectDB();
 
-  const blog = await BlogV2.findOne({ slug }).select("_id").lean();
+  const blog = await assertPublishedBlogBySlug(slug);
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

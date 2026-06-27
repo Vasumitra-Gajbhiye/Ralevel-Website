@@ -39,7 +39,7 @@ export default function BlogsClient(props: BlogsClientProps) {
 
   const [blogList, setBlogList] = useState(blogs);
   const [creating, setCreating] = useState(false);
-  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [deletingBlogId, setDeletingBlogId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!needsWriterRole) {
@@ -53,23 +53,23 @@ export default function BlogsClient(props: BlogsClientProps) {
       const res = await fetch("/api/admin/blogs/v2", { method: "POST" });
       if (!res.ok) throw new Error("Failed to create blog");
       const blog = await res.json();
-      router.push(`/admin/blogs/v2/${blog.slug}/edit`);
+      router.push(`/admin/blogs/v2/${blog._id}/edit`);
     } finally {
       setCreating(false);
     }
   }
 
-  async function deleteBlog(slug: string) {
-    setDeletingSlug(slug);
+  async function deleteBlog(blogId: string) {
+    setDeletingBlogId(blogId);
     try {
-      const res = await fetch(`/api/admin/blogs/v2/${slug}`, {
+      const res = await fetch(`/api/admin/blogs/v2/${blogId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete blog");
-      setBlogList((prev) => prev.filter((b) => b.slug !== slug));
+      setBlogList((prev) => prev.filter((b) => b._id !== blogId));
       router.refresh();
     } finally {
-      setDeletingSlug(null);
+      setDeletingBlogId(null);
     }
   }
 
@@ -108,7 +108,7 @@ export default function BlogsClient(props: BlogsClientProps) {
           blogs={blogList}
           emptyMessage="No blogs yet. Create your first one."
           session={session}
-          deletingSlug={deletingSlug}
+          deletingBlogId={deletingBlogId}
           onDelete={deleteBlog}
         />
         <ListPagination

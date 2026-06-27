@@ -8,6 +8,7 @@ import {
 import type { AdminBlogV2 } from "@/lib/data/admin/blogsV2";
 import BlogV2 from "@/models/blogV2";
 import UserData from "@/models/userData";
+import type { BlogV2ReviewType, BlogV2Status } from "@/types/blogV2";
 import { format } from "date-fns";
 import mongoose from "mongoose";
 
@@ -23,7 +24,8 @@ export type WriterProfile = {
 export type WriterOverviewBlog = {
   _id: string;
   title: string;
-  slug: string;
+  slug?: string | null;
+  status: BlogV2Status;
   updatedAtLabel: string;
 };
 
@@ -233,6 +235,7 @@ export async function getAdminWritersOverview({
                 _id: 1,
                 title: 1,
                 slug: 1,
+                status: 1,
                 updatedAt: 1,
               },
               totalBlogCount: 1,
@@ -253,7 +256,8 @@ export async function getAdminWritersOverview({
       recentBlogs: Array<{
         _id: mongoose.Types.ObjectId;
         title: string;
-        slug: string;
+        slug?: string | null;
+        status?: BlogV2Status;
         updatedAt: Date;
       }>;
       totalBlogCount: number;
@@ -262,7 +266,8 @@ export async function getAdminWritersOverview({
       recentBlogs: user.recentBlogs.map((blog) => ({
         _id: blog._id.toString(),
         title: blog.title,
-        slug: blog.slug,
+        slug: blog.slug ?? null,
+        status: blog.status ?? "draft",
         updatedAtLabel: formatUpdatedAt(blog.updatedAt),
       })),
       totalBlogCount: user.totalBlogCount ?? 0,
@@ -304,8 +309,11 @@ export async function getAdminBlogsForOwner({
       $project: {
         title: 1,
         slug: 1,
+        status: 1,
         updatedAt: 1,
         ownerId: 1,
+        submittedAt: 1,
+        reviewType: 1,
         ownerName: "$owner.name",
         ownerEmail: "$owner.email",
       },
@@ -324,15 +332,19 @@ export async function getAdminBlogsForOwner({
     (blog: {
       _id: mongoose.Types.ObjectId;
       title: string;
-      slug: string;
+      slug?: string | null;
+      status?: BlogV2Status;
       updatedAt: Date;
       ownerId?: mongoose.Types.ObjectId;
       ownerName?: string;
       ownerEmail?: string;
+      submittedAt?: Date | null;
+      reviewType?: BlogV2ReviewType | null;
     }) => ({
       _id: blog._id.toString(),
       title: blog.title,
-      slug: blog.slug,
+      slug: blog.slug ?? null,
+      status: blog.status ?? "draft",
       updatedAt:
         blog.updatedAt instanceof Date
           ? blog.updatedAt.toISOString()
@@ -341,6 +353,12 @@ export async function getAdminBlogsForOwner({
       ownerId: blog.ownerId?.toString(),
       ownerName: blog.ownerName,
       ownerEmail: blog.ownerEmail,
+      submittedAt: blog.submittedAt
+        ? blog.submittedAt instanceof Date
+          ? blog.submittedAt.toISOString()
+          : String(blog.submittedAt)
+        : null,
+      reviewType: blog.reviewType ?? null,
     }),
   );
 

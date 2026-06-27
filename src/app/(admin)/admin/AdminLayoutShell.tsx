@@ -8,6 +8,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  BLOG_REVIEW_ROLES,
   hasAnyRole,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
@@ -41,7 +42,7 @@ function AdminSidebarNav({
           Blogs
         </a>
       )}
-      {hasAnyRole(roles, ["owner", "admin"]) && (
+      {hasAnyRole(roles, BLOG_REVIEW_ROLES) && (
         <a href="/admin/all-blogs" className={linkClass} onClick={onNavigate}>
           All Blogs
         </a>

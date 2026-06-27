@@ -2,10 +2,11 @@ import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAdminBlogsV2List } from "@/lib/data/admin/blogsV2";
 import { resolveBlogAuthorFromOwnerId } from "@/lib/data/admin/writerProfile";
+import { ensureBlogV2Migrated } from "@/lib/blogs-v2/migrate";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
-import { slugify } from "@/lib/slugify";
 import BlogV2 from "@/models/blogV2";
+import { randomBytes } from "crypto";
 import mongoose from "mongoose";
 import { WRITER_TEAM_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
   if (csrfError) return csrfError;
 
   await connectDB();
+  await ensureBlogV2Migrated();
 
   const author = await resolveBlogAuthorFromOwnerId(auth.userData.id);
   const authorName = author?.name ?? "Writer";
@@ -49,7 +51,8 @@ export async function POST(req: Request) {
   const blog = await BlogV2.create({
     ownerId: new mongoose.Types.ObjectId(auth.userData.id),
     title: "Untitled document",
-    slug: slugify(`Untitled-${Date.now()}`),
+    status: "draft",
+    previewToken: randomBytes(24).toString("hex"),
     metadata: {
       title: "Untitled document",
       author: authorName,

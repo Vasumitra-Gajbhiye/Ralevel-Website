@@ -1,4 +1,5 @@
 import {
+  BLOG_REVIEW_ROLES,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
   WRITER_ACCESS_MANAGE_ROLES,
@@ -20,7 +21,7 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
   },
   {
     prefix: "/admin/all-blogs",
-    roles: ["owner", "admin"],
+    roles: BLOG_REVIEW_ROLES,
     message: "You don't have permission to view all blogs.",
   },
   {

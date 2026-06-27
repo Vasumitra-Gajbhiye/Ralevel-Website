@@ -1,11 +1,10 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { uploadBlogHeroToCloudinary } from "@/lib/cloudinaryUpload";
+import { findBlogForAccess } from "@/lib/blogs-v2/access";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
-import BlogV2 from "@/models/blogV2";
-import { randomUUID } from "crypto";
-import mongoose from "mongoose";
 import { WRITER_TEAM_ROLES } from "@/lib/roles";
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
 const MAX_HERO_SIZE_BYTES = 5 * 1024 * 1024;
@@ -14,7 +13,7 @@ const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ slug: string }> },
+  context: { params: Promise<{ blogId: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
     roles: [...WRITER_TEAM_ROLES],
@@ -26,19 +25,13 @@ export async function POST(
 
   await connectDB();
 
-  const { slug } = await context.params;
-
-  const isAdminLike = auth.userData.roles.some(
-    (r) => r === "admin" || r === "owner",
+  const { blogId } = await context.params;
+  const blog = await findBlogForAccess(
+    blogId,
+    auth.userData.id,
+    auth.userData.roles,
   );
-  const query = isAdminLike
-    ? { slug }
-    : {
-        slug,
-        ownerId: new mongoose.Types.ObjectId(auth.userData.id),
-      };
 
-  const blog = await BlogV2.findOne(query);
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -73,7 +66,7 @@ export async function POST(
     const buffer = Buffer.from(arrayBuffer);
 
     const { path } = await uploadBlogHeroToCloudinary(buffer, {
-      slug,
+      slug: blogId,
       mimeType: file.type,
       uniqueId: randomUUID().slice(0, 8),
     });

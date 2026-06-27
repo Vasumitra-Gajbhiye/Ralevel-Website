@@ -17,7 +17,7 @@ const MAX_HERO_SIZE_BYTES = 5 * 1024 * 1024;
 const HERO_ACCEPT = "image/jpeg,image/png,image/webp";
 
 type BlogHeroImageFieldProps = {
-  slug: string;
+  blogId: string;
   value: string;
   onChange: (value: string) => void;
 };
@@ -30,7 +30,7 @@ function defaultTabForImage(value: string): "url" | "upload" {
 }
 
 export default function BlogHeroImageField({
-  slug,
+  blogId,
   value,
   onChange,
 }: BlogHeroImageFieldProps) {
@@ -60,7 +60,7 @@ export default function BlogHeroImageField({
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`/api/admin/blogs/v2/${slug}/upload-hero`, {
+      const res = await fetch(`/api/admin/blogs/v2/${blogId}/upload-hero`, {
         method: "POST",
         body: formData,
       });

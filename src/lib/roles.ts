@@ -64,6 +64,12 @@ export const WRITER_TEAM_ROLES = [
   "writer",
 ] as const satisfies readonly Role[];
 
+export const BLOG_REVIEW_ROLES = [
+  "owner",
+  "admin",
+  "writer_dep_head",
+] as const satisfies readonly Role[];
+
 export type WriterTeamRole = (typeof WRITER_TEAM_ROLES)[number];
 
 /**

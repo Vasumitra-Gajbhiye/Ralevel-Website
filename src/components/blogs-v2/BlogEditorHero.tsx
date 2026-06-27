@@ -17,13 +17,13 @@ import { useState } from "react";
 import BlogHeroImageField from "./BlogHeroImageField";
 
 type BlogEditorHeroProps = {
-  slug: string;
+  blogId: string;
   image: string;
   onImageChange: (value: string) => void;
 };
 
 export default function BlogEditorHero({
-  slug,
+  blogId,
   image,
   onImageChange,
 }: BlogEditorHeroProps) {
@@ -70,7 +70,7 @@ export default function BlogEditorHero({
             <DialogTitle>Hero image</DialogTitle>
           </DialogHeader>
           <BlogHeroImageField
-            slug={slug}
+            blogId={blogId}
             value={image}
             onChange={(value) => {
               onImageChange(value);
