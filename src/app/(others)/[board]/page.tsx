@@ -1,71 +1,37 @@
+import { getBoardBySlug, levelToSlug } from "@/lib/boards";
 import Link from "next/link";
 
-const boards = [
-  {
-    name: "Cambridge",
-    slug: "cambridge",
-    levels: ["AS Level", "A2 Level"],
-  },
-  {
-    name: "Edexcel IAL",
-    slug: "edexcel-ial",
-    levels: ["Year 1", "Year 2"],
-  },
-  {
-    name: "Edexcel UK",
-    slug: "edexcel-uk",
-    levels: ["Year 1", "Year 2"],
-  },
-  {
-    name: "AQA",
-    slug: "aqa",
-    levels: ["A Level"],
-  },
-  {
-    name: "OCR",
-    slug: "ocr",
-    levels: ["A Level"],
-  },
-  {
-    name: "WJEC",
-    slug: "wjec",
-    levels: ["A Level"],
-  },
-];
+type Props = {
+  params: Promise<{ board: string }>;
+};
 
-export default function BoardNavigation() {
+export default async function BoardPage({ params }: Props) {
+  const { board: boardSlug } = await params;
+  const board = getBoardBySlug(boardSlug)!;
+
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
-      {/* Heading */}
-      <h1 className="text-4xl font-semibold tracking-tight text-ink">
-        Choose Your Board
+      <Link
+        href="/boards"
+        className="text-sm text-slate-500 hover:text-cyan-600 transition"
+      >
+        ← All boards
+      </Link>
+
+      <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink">
+        {board.name}
       </h1>
-      <p className="mt-3 text-slate-600">
-        Access structured notes, questions, and resources by exam board.
-      </p>
+      <p className="mt-3 text-slate-600">Choose your level to get started.</p>
 
-      {/* Boards */}
-      <div className="mt-12 space-y-10">
-        {boards.map((board) => (
-          <div key={board.slug}>
-            {/* Board Title */}
-            <h2 className="text-2xl font-semibold text-ink">{board.name}</h2>
-
-            {/* Levels */}
-            <div className="mt-4 space-y-2">
-              {board.levels.map((level) => (
-                <Link
-                  key={level}
-                  href={`/${board.slug}/${level
-                    .toLowerCase()
-                    .replace(/\s+/g, "-")}`}
-                  className="block text-cyan-600 text-lg hover:text-cyan-800 transition"
-                >
-                  {level}
-                </Link>
-              ))}
-            </div>
-          </div>
+      <div className="mt-12 space-y-2">
+        {board.levels.map((level) => (
+          <Link
+            key={level}
+            href={`/${board.slug}/${levelToSlug(level)}`}
+            className="block text-cyan-600 text-lg hover:text-cyan-800 transition"
+          >
+            {level}
+          </Link>
         ))}
       </div>
     </section>
