@@ -170,19 +170,6 @@ function HeroNavigation({
               router={router}
               scrolled={scrolled}
             />
-            <motion.a
-              whileHover={{ scale: 1.08 }}
-              href="https://www.reddit.com/r/alevel/"
-              target="_blank"
-              rel="noreferrer"
-              className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition-all duration-300 ${
-                scrolled
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-white/20 text-white hover:bg-white/30"
-              }`}
-            >
-              Join Now
-            </motion.a>
           </div>
 
           <motion.button
@@ -272,14 +259,6 @@ function DefaultNavigation({
               user={user}
               router={router}
             />
-            <a
-              href="https://www.reddit.com/r/alevel/"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-sm hover:scale-105 hover:bg-blue-700 transition-all duration-300"
-            >
-              Join Now
-            </a>
           </div>
 
           <button

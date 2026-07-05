@@ -24,36 +24,25 @@ function MobileAuthFooter({
   isSignedIn: boolean;
   onClose: () => void;
 }) {
+  if (isSignedIn) return null;
+
   return (
     <div className="p-6 border-t flex flex-col gap-3">
-      <a
-        href="https://www.reddit.com/r/alevel/"
-        target="_blank"
-        rel="noreferrer"
+      <Link
+        href="/sign-in"
         onClick={onClose}
-        className="block w-full text-center bg-blue-600 text-white font-semibold py-3 rounded-full hover:bg-blue-700 transition"
+        className="block w-full text-center bg-blue-500 text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition flex items-center justify-center gap-2"
       >
-        Join Now
-      </a>
-      {!isSignedIn && (
-        <>
-          <Link
-            href="/sign-in"
-            onClick={onClose}
-            className="block w-full text-center bg-blue-500 text-white font-semibold py-3 rounded-full hover:bg-blue-600 transition flex items-center justify-center gap-2"
-          >
-            <LogIn size={18} />
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            onClick={onClose}
-            className="block w-full text-center border border-blue-500 text-blue-600 font-semibold py-3 rounded-full hover:bg-blue-50 transition"
-          >
-            Sign up
-          </Link>
-        </>
-      )}
+        <LogIn size={18} />
+        Sign in
+      </Link>
+      <Link
+        href="/sign-up"
+        onClick={onClose}
+        className="block w-full text-center border border-blue-500 text-blue-600 font-semibold py-3 rounded-full hover:bg-blue-50 transition"
+      >
+        Sign up
+      </Link>
     </div>
   );
 }
