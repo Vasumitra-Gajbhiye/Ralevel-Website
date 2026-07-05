@@ -53,3 +53,12 @@ export function getBoardBySlug(slug: string) {
 export function levelToSlug(level: string) {
   return level.toLowerCase().replace(/\s+/g, "-");
 }
+
+export function slugToLevel(slug: string) {
+  for (const board of BOARDS) {
+    for (const level of board.levels) {
+      if (levelToSlug(level) === slug) return level;
+    }
+  }
+  return undefined;
+}

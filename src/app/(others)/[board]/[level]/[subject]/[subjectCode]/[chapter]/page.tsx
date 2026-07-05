@@ -5,14 +5,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +18,16 @@ import subjectGuide from "@/models/subjectGuide";
 import { SquareArrowOutUpRight } from "lucide-react";
 import Link from "next/link";
 import ExpandableMistakes from "./components/ExpandableMistakes";
+import { Fragment } from "react";
+
+function hasItems<T>(value: T[] | undefined | null): value is T[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function hasText(value: string | undefined | null): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export default async function ChapterPage({
   params,
 }: {
@@ -48,56 +51,26 @@ export default async function ChapterPage({
   const foundChapter = chapterData?.chapters?.[0];
 
   const baseUrl = `/${board}/${level}/${subject}/${subjectCode}/${chapter}`;
+  const chapterTitle =
+    foundChapter?.title ?? chapter.replace(/-/g, " ");
 
-  // console.log(foundChapter);
-  return (
-    <div className="max-w-4xl mx-auto px-6 pt-12 pb-16 space-y-12">
-      <Breadcrumb className="mb-2">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}`}>{board}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
+  const hasKeyConcepts = hasItems(foundChapter?.keyConcepts);
+  const hasTopics = hasItems(foundChapter?.topics);
+  const hasCommonMistakes = hasItems(foundChapter?.commonMistakes);
+  const hasExamTips = hasItems(foundChapter?.examinerTips);
+  const hasChapterSummary = hasText(foundChapter?.chapterSummary);
+  const hasIntroduction = hasText(foundChapter?.introduction);
 
-          <BreadcrumbSeparator />
+  const hasAnyContent =
+    hasKeyConcepts ||
+    hasTopics ||
+    hasCommonMistakes ||
+    hasExamTips ||
+    hasChapterSummary;
 
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}/${level}`}>{level}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}/${level}/${subject}/${subjectCode}`}>
-                {subject} {subjectCode}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbPage>{chapter.replace(/-/g, " ")}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      {/* Chapter Title */}
-      <div className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight">
-          {foundChapter.title}
-        </h1>
-        <p className="text-neutral-600 text-lg leading-relaxed">
-          {foundChapter.introduction}
-        </p>
-      </div>
-
-      {/* Key Concepts */}
-      <section className="space-y-6">
+  const contentSections = [
+    hasKeyConcepts ? (
+      <section key="key-concepts" className="space-y-6">
         <h2 className="text-2xl font-semibold">Key Concepts</h2>
 
         <ExpandableMistakes size={410}>
@@ -117,16 +90,13 @@ export default async function ChapterPage({
           </div>
         </ExpandableMistakes>
       </section>
-
-      <Separator className="my-12" />
-
-      {/* Topics */}
-      <section className="space-y-6">
+    ) : null,
+    hasTopics ? (
+      <section key="topics" className="space-y-6">
         <h2 className="text-2xl font-semibold">Topics in this Chapter</h2>
 
         <div className="grid gap-3">
           {foundChapter.topics.map((topic: any, i: number) => {
-            // console.log(topic.title);
             return (
               <Link href={`${baseUrl}/${topic.slug}`} key={i}>
                 <Button
@@ -140,11 +110,9 @@ export default async function ChapterPage({
           })}
         </div>
       </section>
-
-      <Separator className="my-12" />
-
-      {/* Common Mistakes */}
-      <section className="space-y-6">
+    ) : null,
+    hasCommonMistakes ? (
+      <section key="common-mistakes" className="space-y-6">
         <h2 className="text-2xl font-semibold">Common Mistakes</h2>
 
         <ExpandableMistakes size={250}>
@@ -158,11 +126,9 @@ export default async function ChapterPage({
           </Accordion>
         </ExpandableMistakes>
       </section>
-
-      <Separator className="my-12" />
-
-      {/* Exam Tips */}
-      <section className="space-y-6">
+    ) : null,
+    hasExamTips ? (
+      <section key="exam-tips" className="space-y-6">
         <h2 className="text-2xl font-semibold">Exam Tips</h2>
 
         {foundChapter.examinerTips.map((tip: any, i: number) => {
@@ -175,11 +141,9 @@ export default async function ChapterPage({
           );
         })}
       </section>
-
-      <Separator className="my-12" />
-
-      {/* Practice Section */}
-      <section className="space-y-6">
+    ) : null,
+    hasAnyContent ? (
+      <section key="practice" className="space-y-6">
         <h2 className="text-2xl font-semibold">Practice</h2>
 
         <div className="flex flex-wrap gap-3">
@@ -211,16 +175,68 @@ export default async function ChapterPage({
           </Link>
         </div>
       </section>
-
-      <Separator className="my-12" />
-
-      {/* Chapter Summary */}
-      <section className="space-y-4">
+    ) : null,
+    hasChapterSummary ? (
+      <section key="chapter-summary" className="space-y-4">
         <h2 className="text-2xl font-semibold">Chapter Summary</h2>
         <p className="text-neutral-600 leading-relaxed">
           {foundChapter.chapterSummary}
         </p>
       </section>
+    ) : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 pt-12 pb-16 space-y-12">
+      <SubjectBreadcrumb
+        className="mb-2"
+        board={board}
+        level={level}
+        subject={subject}
+        subjectCode={subjectCode}
+        currentPage={chapterTitle}
+      />
+
+      <div className="space-y-4">
+        <h1 className="text-4xl font-semibold tracking-tight">{chapterTitle}</h1>
+        {hasIntroduction && (
+          <p className="text-neutral-600 text-lg leading-relaxed">
+            {foundChapter.introduction}
+          </p>
+        )}
+      </div>
+
+      {hasAnyContent ? (
+        contentSections.map((section, index) => (
+          <Fragment key={index}>
+            {index > 0 && <Separator className="my-12" />}
+            {section}
+          </Fragment>
+        ))
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 sm:p-10">
+          <h2 className="text-2xl font-semibold text-ink">
+            No resources available yet
+          </h2>
+
+          <p className="mt-4 text-slate-600 leading-relaxed">
+            We don&apos;t have notes, practice questions, or study materials for{" "}
+            <span className="font-medium text-ink">{chapterTitle}</span> right
+            now.
+          </p>
+
+          <p className="mt-4 text-slate-600 leading-relaxed">
+            You can still find helpful materials in our{" "}
+            <Link
+              href="/resources"
+              className="font-medium text-cyan-600 hover:text-cyan-700 hover:underline"
+            >
+              resource repository
+            </Link>
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
 }

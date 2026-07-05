@@ -2,16 +2,9 @@ import {
   getSubjectPathsForStaticParams,
   getSubjectTopics,
 } from "@/lib/data/curriculum";
+import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
+import { formatSubjectLabel } from "@/lib/curriculum-labels";
 import Link from "next/link";
-
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 
 export const revalidate = 86400;
 
@@ -47,31 +40,14 @@ export default async function SubjectHome({
 
   return (
     <div className="max-w-4xl mx-auto px-6 pb-16 mt-12">
-      <Breadcrumb className="my-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}`}>{board}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}/${level}`}>{level}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbPage>
-              {subject} {subjectCode}
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <SubjectBreadcrumb
+        className="my-4"
+        board={board}
+        level={level}
+        subject={subject}
+        subjectCode={subjectCode}
+        currentPage={`${formatSubjectLabel(subject)} ${subjectCode}`}
+      />
 
       <h1 className="text-4xl font-semibold tracking-tight mb-12">
         {subject.toUpperCase()} {subjectCode}

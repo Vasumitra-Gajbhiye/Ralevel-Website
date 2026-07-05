@@ -2,16 +2,8 @@ import {
   getTopicPageData,
   getTopicPathsForStaticParams,
 } from "@/lib/data/curriculum";
+import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import Link from "next/link";
 
 export const revalidate = 86400;
 
@@ -63,48 +55,18 @@ export default async function TopicPage({
 
   return (
     <div className="max-w-3xl mx-auto px-6 pb-16 mt-12">
-      <Breadcrumb className="my-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}`}>{board}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}/${level}`}>{level}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href={`/${board}/${level}/${subject}/${subjectCode}`}>
-                {subject} {subjectCode}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link
-                href={`/${board}/${level}/${subject}/${subjectCode}/${chapter}`}
-              >
-                {chapter.replace(/-/g, " ")}
-              </Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-
-          <BreadcrumbSeparator />
-
-          <BreadcrumbItem>
-            <BreadcrumbPage>{topicDoc.title}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <SubjectBreadcrumb
+        className="my-4"
+        board={board}
+        level={level}
+        subject={subject}
+        subjectCode={subjectCode}
+        chapter={{
+          slug: chapter,
+          title: chapterTopics[0]?.chapterTitle,
+        }}
+        currentPage={topicDoc.title}
+      />
 
       <MarkdownRenderer content={topicDoc.detailedNotesMarkdown} />
 
