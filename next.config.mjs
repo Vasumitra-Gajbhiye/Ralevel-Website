@@ -89,6 +89,11 @@ const nextConfig = {
         destination: "/apply/:path*",
         permanent: true,
       },
+      {
+        source: "/boards",
+        destination: "/home",
+        permanent: true,
+      },
     ];
   },
 

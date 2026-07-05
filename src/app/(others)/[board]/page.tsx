@@ -5,6 +5,12 @@ type Props = {
   params: Promise<{ board: string }>;
 };
 
+const LEVEL_COLORS = [
+  "bg-sky-100 hover:bg-sky-200/80",
+  "bg-emerald-100 hover:bg-emerald-200/80",
+  "bg-violet-100 hover:bg-violet-200/80",
+];
+
 export default async function BoardPage({ params }: Props) {
   const { board: boardSlug } = await params;
   const board = getBoardBySlug(boardSlug)!;
@@ -12,10 +18,10 @@ export default async function BoardPage({ params }: Props) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
       <Link
-        href="/boards"
+        href="/home"
         className="text-sm text-slate-500 hover:text-cyan-600 transition"
       >
-        ← All boards
+        ← Home
       </Link>
 
       <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink">
@@ -23,14 +29,18 @@ export default async function BoardPage({ params }: Props) {
       </h1>
       <p className="mt-3 text-slate-600">Choose your level to get started.</p>
 
-      <div className="mt-12 space-y-2">
-        {board.levels.map((level) => (
+      <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {board.levels.map((level, index) => (
           <Link
             key={level}
             href={`/${board.slug}/${levelToSlug(level)}`}
-            className="block text-cyan-600 text-lg hover:text-cyan-800 transition"
+            className={`group flex items-center justify-center rounded-2xl px-6 py-10 text-center shadow-sm transition-all duration-200 hover:scale-[1.03] hover:shadow-md ${
+              LEVEL_COLORS[index] ?? "bg-slate-100 hover:bg-slate-200/80"
+            }`}
           >
-            {level}
+            <span className="text-xl font-semibold text-ink group-hover:text-slate-900 transition-colors">
+              {level}
+            </span>
           </Link>
         ))}
       </div>
