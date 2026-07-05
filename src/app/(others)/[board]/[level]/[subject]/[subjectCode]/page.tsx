@@ -59,7 +59,7 @@ export default async function SubjectHome({
 
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href={`/${level}`}>{level}</Link>
+              <Link href={`/${board}/${level}`}>{level}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
 
