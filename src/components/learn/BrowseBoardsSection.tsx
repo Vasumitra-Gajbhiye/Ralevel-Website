@@ -4,14 +4,21 @@ import { boardPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 import LearnSectionHeading from "./LearnSectionHeading";
 
-export default function BrowseBoardsSection() {
+type BrowseBoardsSectionProps = {
+  title?: string;
+  description?: string;
+  id?: string;
+};
+
+export default function BrowseBoardsSection({
+  title = "Browse by Board",
+  description = "Select your exam board to find resources tailored to your syllabus.",
+  id = "browse-boards",
+}: BrowseBoardsSectionProps) {
   return (
-    <section id="browse-boards">
+    <section id={id}>
       <div className="space-y-8">
-        <LearnSectionHeading
-          title="Browse by Board"
-          description="Select your exam board to find resources tailored to your syllabus."
-        />
+        <LearnSectionHeading title={title} description={description} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {BOARDS.map((board) => (

@@ -1,18 +1,26 @@
+import type { PopularSubject } from "@/lib/learn-hub-data";
 import { POPULAR_SUBJECTS } from "@/lib/learn-hub-data";
 import Link from "next/link";
 import LearnSectionHeading from "./LearnSectionHeading";
 
-export default function PopularSubjectsSection() {
+type PopularSubjectsSectionProps = {
+  title?: string;
+  description?: string;
+  items?: PopularSubject[];
+};
+
+export default function PopularSubjectsSection({
+  title = "Popular Subjects",
+  description = "Jump straight into the most studied subjects.",
+  items = POPULAR_SUBJECTS,
+}: PopularSubjectsSectionProps) {
   return (
     <section>
       <div className="space-y-6">
-        <LearnSectionHeading
-          title="Popular Subjects"
-          description="Jump straight into the most studied subjects."
-        />
+        <LearnSectionHeading title={title} description={description} />
 
         <div className="flex flex-wrap gap-3">
-          {POPULAR_SUBJECTS.map((subject) => (
+          {items.map((subject) => (
             <Link
               key={subject.name}
               href={subject.href}

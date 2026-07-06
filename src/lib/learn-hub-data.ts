@@ -42,7 +42,7 @@ export const STUDY_MODES: StudyMode[] = [
     title: "Notes",
     description: "Structured syllabus notes with examples and diagrams.",
     cta: "Start studying",
-    href: "/learn/modes/notes",
+    href: "/notes",
     icon: BookOpen,
   },
   {
@@ -50,7 +50,7 @@ export const STUDY_MODES: StudyMode[] = [
     title: "Flashcards",
     description: "Memorise concepts using spaced repetition.",
     cta: "Start studying",
-    href: "/learn/modes/flashcards",
+    href: "/flashcards",
     icon: Layers,
   },
   {
@@ -58,7 +58,7 @@ export const STUDY_MODES: StudyMode[] = [
     title: "MCQ Practice",
     description: "Practice topic-wise multiple choice questions.",
     cta: "Start practicing",
-    href: "/learn/modes/mcq",
+    href: "/mcq-practice",
     icon: CircleCheck,
   },
   {
@@ -66,7 +66,7 @@ export const STUDY_MODES: StudyMode[] = [
     title: "Theory Quiz",
     description: "Test your understanding with written-answer questions.",
     cta: "Take a quiz",
-    href: "/learn/modes/theory-quiz",
+    href: "/theory-practice",
     icon: PenLine,
   },
 ];
@@ -146,15 +146,3 @@ export const RECENT_UPDATES: RecentUpdate[] = [
     date: "2 weeks ago",
   },
 ];
-
-const STUDY_MODE_MAP = new Map(
-  STUDY_MODES.map((mode) => [mode.slug, mode]),
-);
-
-export function getStudyMode(slug: string): StudyMode | undefined {
-  return STUDY_MODE_MAP.get(slug as StudyModeSlug);
-}
-
-export function isValidStudyModeSlug(slug: string): slug is StudyModeSlug {
-  return STUDY_MODE_MAP.has(slug as StudyModeSlug);
-}

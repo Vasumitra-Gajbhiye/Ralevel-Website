@@ -1,19 +1,27 @@
+import type { ContinueLearningItem } from "@/lib/learn-hub-data";
 import { CONTINUE_LEARNING_ITEMS } from "@/lib/learn-hub-data";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import LearnSectionHeading from "./LearnSectionHeading";
 
-export default function ContinueLearningSection() {
+type ContinueLearningSectionProps = {
+  title?: string;
+  description?: string;
+  items?: ContinueLearningItem[];
+};
+
+export default function ContinueLearningSection({
+  title = "Continue Learning",
+  description = "Pick up where you left off.",
+  items = CONTINUE_LEARNING_ITEMS,
+}: ContinueLearningSectionProps) {
   return (
     <section>
       <div className="space-y-6">
-        <LearnSectionHeading
-          title="Continue Learning"
-          description="Pick up where you left off."
-        />
+        <LearnSectionHeading title={title} description={description} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CONTINUE_LEARNING_ITEMS.map((item) => (
+          {items.map((item) => (
             <Link
               key={item.id}
               href={item.href}
