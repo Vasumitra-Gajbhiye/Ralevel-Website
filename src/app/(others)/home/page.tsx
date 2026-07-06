@@ -1,4 +1,5 @@
 import { BOARDS } from "@/lib/boards";
+import { boardPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 
 export const metadata = {
@@ -30,7 +31,7 @@ export default function HomePage() {
         {BOARDS.map((board) => (
           <Link
             key={board.slug}
-            href={`/${board.slug}`}
+            href={boardPath(board.slug)}
             className={`group flex items-center justify-center rounded-2xl px-6 py-10 text-center shadow-sm transition-all duration-200 hover:scale-[1.03] hover:shadow-md ${
               BOARD_COLORS[board.slug] ?? "bg-slate-100 hover:bg-slate-200/80"
             }`}

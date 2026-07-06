@@ -1,5 +1,6 @@
 import { getBoardBySlug } from "@/lib/boards";
 import { getSubjectsForLevel } from "@/lib/data/curriculum";
+import { boardPath, subjectPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 
 export const revalidate = 86400;
@@ -26,7 +27,7 @@ export default async function LevelPage({ params }: Props) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
       <Link
-        href={`/${board}`}
+        href={boardPath(board)}
         className="text-sm text-slate-500 hover:text-cyan-600 transition"
       >
         ← {boardName}
@@ -47,9 +48,12 @@ export default async function LevelPage({ params }: Props) {
             {subjects.map((subject) => (
               <Link
                 key={subject.subjectName}
-                href={`/${board}/${level}/${subject.subjectName.toLowerCase()}/${
-                  subject.examCode
-                }`}
+                href={subjectPath(
+                  board,
+                  level,
+                  subject.subjectName.toLowerCase(),
+                  subject.examCode,
+                )}
                 className="group rounded-xl border border-slate-200 p-5 hover:border-cyan-400 hover:shadow-sm transition"
               >
                 <div className="flex items-center justify-between">

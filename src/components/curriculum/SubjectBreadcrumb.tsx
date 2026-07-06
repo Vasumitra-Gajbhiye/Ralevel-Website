@@ -12,6 +12,12 @@ import {
   formatLevelLabel,
   formatSubjectLabel,
 } from "@/lib/curriculum-labels";
+import {
+  boardPath,
+  chapterPath,
+  levelPath,
+  subjectPath,
+} from "@/lib/curriculum-routes";
 import Link from "next/link";
 import { Fragment } from "react";
 
@@ -38,19 +44,19 @@ export function getSubjectBreadcrumbSegments({
   chapter,
   currentPage,
 }: Omit<SubjectBreadcrumbProps, "className">): BreadcrumbSegment[] {
-  const subjectHref = `/${board}/${level}/${subject}/${subjectCode}`;
+  const subjectHref = subjectPath(board, level, subject, subjectCode);
   const subjectLabel = `${formatSubjectLabel(subject)} ${subjectCode}`;
 
   const segments: BreadcrumbSegment[] = [
-    { label: formatBoardLabel(board), href: `/${board}` },
-    { label: formatLevelLabel(level), href: `/${board}/${level}` },
+    { label: formatBoardLabel(board), href: boardPath(board) },
+    { label: formatLevelLabel(level), href: levelPath(board, level) },
   ];
 
   if (chapter) {
     segments.push({ label: subjectLabel, href: subjectHref });
     segments.push({
       label: chapter.title ?? formatChapterLabel(chapter.slug),
-      href: `${subjectHref}/${chapter.slug}`,
+      href: chapterPath(board, level, subject, subjectCode, chapter.slug),
     });
   } else if (currentPage !== subjectLabel) {
     segments.push({ label: subjectLabel, href: subjectHref });

@@ -1,4 +1,5 @@
 import { getBoardBySlug, levelToSlug } from "@/lib/boards";
+import { boardPath, levelPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 
 type Props = {
@@ -33,7 +34,7 @@ export default async function BoardPage({ params }: Props) {
         {board.levels.map((level, index) => (
           <Link
             key={level}
-            href={`/${board.slug}/${levelToSlug(level)}`}
+            href={levelPath(board.slug, levelToSlug(level))}
             className={`group flex items-center justify-center rounded-2xl px-6 py-10 text-center shadow-sm transition-all duration-200 hover:scale-[1.03] hover:shadow-md ${
               LEVEL_COLORS[index] ?? "bg-slate-100 hover:bg-slate-200/80"
             }`}

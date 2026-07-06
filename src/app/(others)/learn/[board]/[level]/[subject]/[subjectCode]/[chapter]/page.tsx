@@ -6,6 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
+import { chapterPath } from "@/lib/curriculum-routes";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,7 +51,7 @@ export default async function ChapterPage({
 
   const foundChapter = chapterData?.chapters?.[0];
 
-  const baseUrl = `/${board}/${level}/${subject}/${subjectCode}/${chapter}`;
+  const baseUrl = chapterPath(board, level, subject, subjectCode, chapter);
   const chapterTitle =
     foundChapter?.title ?? chapter.replace(/-/g, " ");
 

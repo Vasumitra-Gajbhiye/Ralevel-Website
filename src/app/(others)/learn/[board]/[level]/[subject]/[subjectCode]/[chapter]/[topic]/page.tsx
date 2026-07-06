@@ -4,6 +4,7 @@ import {
 } from "@/lib/data/curriculum";
 import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
 import MarkdownRenderer from "@/components/MarkdownRenderer";
+import { topicPath } from "@/lib/curriculum-routes";
 
 export const revalidate = 86400;
 
@@ -73,7 +74,14 @@ export default async function TopicPage({
       <div className="flex justify-between items-center mt-16 pt-8 border-t">
         {prevTopic ? (
           <a
-            href={`/${board}/${level}/${subject}/${subjectCode}/${chapter}/${prevTopic.slug}`}
+            href={topicPath(
+              board,
+              level,
+              subject,
+              subjectCode,
+              chapter,
+              prevTopic.slug,
+            )}
             className="text-cyan-600 font-medium hover:underline"
           >
             ← {prevTopic.title}
@@ -84,7 +92,14 @@ export default async function TopicPage({
 
         {nextTopic && (
           <a
-            href={`/${board}/${level}/${subject}/${subjectCode}/${chapter}/${nextTopic.slug}`}
+            href={topicPath(
+              board,
+              level,
+              subject,
+              subjectCode,
+              chapter,
+              nextTopic.slug,
+            )}
             className="text-cyan-600 font-medium hover:underline"
           >
             {nextTopic.title} →

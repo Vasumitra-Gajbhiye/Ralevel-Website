@@ -4,6 +4,7 @@ import {
 } from "@/lib/data/curriculum";
 import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
 import { formatSubjectLabel } from "@/lib/curriculum-labels";
+import { chapterPath, topicPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 
 export const revalidate = 86400;
@@ -61,7 +62,13 @@ export default async function SubjectHome({
           return (
             <div key={chapterSlug}>
               <Link
-                href={`/${board}/${level}/${subject}/${subjectCode}/${chapterSlug}`}
+                href={chapterPath(
+                  board,
+                  level,
+                  subject,
+                  subjectCode,
+                  chapterSlug,
+                )}
                 className="inline-block"
               >
                 <h2 className="text-2xl font-semibold mb-4 hover:underline">
@@ -73,7 +80,14 @@ export default async function SubjectHome({
                 {chapterTopics.map((t) => (
                   <li key={t.slug}>
                     <Link
-                      href={`/${board}/${level}/${subject}/${subjectCode}/${chapterSlug}/${t.slug}`}
+                      href={topicPath(
+                        board,
+                        level,
+                        subject,
+                        subjectCode,
+                        chapterSlug,
+                        t.slug,
+                      )}
                       className="text-cyan-600 hover:underline"
                     >
                       {t.topicId} {t.title}

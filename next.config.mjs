@@ -24,6 +24,10 @@
 // export default withMDX(nextConfig);
 
 import createMDX from "@next/mdx";
+
+const BOARD_ROUTE_PATTERN =
+  "cambridge|edexcel-uk|edexcel-ial|aqa|ocr|wjec";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
@@ -92,6 +96,16 @@ const nextConfig = {
       {
         source: "/boards",
         destination: "/home",
+        permanent: true,
+      },
+      {
+        source: `/:board(${BOARD_ROUTE_PATTERN})`,
+        destination: "/learn/:board",
+        permanent: true,
+      },
+      {
+        source: `/:board(${BOARD_ROUTE_PATTERN})/:path*`,
+        destination: "/learn/:board/:path*",
         permanent: true,
       },
     ];
