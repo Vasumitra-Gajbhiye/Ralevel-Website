@@ -95,7 +95,12 @@ const nextConfig = {
       },
       {
         source: "/boards",
-        destination: "/home",
+        destination: "/learn",
+        permanent: true,
+      },
+      {
+        source: "/home",
+        destination: "/learn",
         permanent: true,
       },
       {

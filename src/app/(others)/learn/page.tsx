@@ -3,7 +3,7 @@ import { boardPath } from "@/lib/curriculum-routes";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Home | r/alevel",
+  title: "Learn | r/alevel",
   description:
     "Access structured notes, questions, and resources by exam board.",
 };
@@ -17,7 +17,7 @@ const BOARD_COLORS: Record<string, string> = {
   wjec: "bg-teal-100 hover:bg-teal-200/80",
 };
 
-export default function HomePage() {
+export default function LearnPage() {
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
       <h1 className="text-4xl font-semibold tracking-tight text-ink">

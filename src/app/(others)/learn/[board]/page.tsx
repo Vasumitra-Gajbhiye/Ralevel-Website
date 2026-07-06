@@ -19,10 +19,10 @@ export default async function BoardPage({ params }: Props) {
   return (
     <section className="max-w-5xl mx-auto px-6 py-12">
       <Link
-        href="/home"
+        href="/learn"
         className="text-sm text-slate-500 hover:text-cyan-600 transition"
       >
-        ← Home
+        ← All boards
       </Link>
 
       <h1 className="mt-4 text-4xl font-semibold tracking-tight text-ink">
