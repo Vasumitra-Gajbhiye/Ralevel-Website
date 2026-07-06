@@ -40,3 +40,15 @@ export function topicPath(
 ) {
   return `${chapterPath(board, level, subject, subjectCode, chapter)}/${topic}`;
 }
+
+export function topicSubPath(
+  board: string,
+  level: string,
+  subject: string,
+  subjectCode: string,
+  chapter: string,
+  topic: string,
+  subPage: string,
+) {
+  return `${topicPath(board, level, subject, subjectCode, chapter, topic)}/${subPage}`;
+}

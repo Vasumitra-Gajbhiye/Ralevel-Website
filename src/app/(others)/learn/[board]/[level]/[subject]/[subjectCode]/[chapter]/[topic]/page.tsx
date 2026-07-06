@@ -1,9 +1,10 @@
+import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
+import TopicStudyModeButtons from "@/components/curriculum/TopicStudyModeButtons";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 import {
   getTopicPageData,
   getTopicPathsForStaticParams,
 } from "@/lib/data/curriculum";
-import SubjectBreadcrumb from "@/components/curriculum/SubjectBreadcrumb";
-import MarkdownRenderer from "@/components/MarkdownRenderer";
 import { topicPath } from "@/lib/curriculum-routes";
 
 export const revalidate = 86400;
@@ -69,7 +70,22 @@ export default async function TopicPage({
         currentPage={topicDoc.title}
       />
 
-      <MarkdownRenderer content={topicDoc.detailedNotesMarkdown} />
+      <h1 className="text-3xl font-semibold tracking-tight text-ink mb-6">
+        {topicDoc.title}
+      </h1>
+
+      <TopicStudyModeButtons
+        board={board}
+        level={level}
+        subject={subject}
+        subjectCode={subjectCode}
+        chapter={chapter}
+        topic={topic}
+      />
+
+      <div className="mt-10">
+        <MarkdownRenderer content={topicDoc.detailedNotesMarkdown} />
+      </div>
 
       <div className="flex justify-between items-center mt-16 pt-8 border-t">
         {prevTopic ? (
