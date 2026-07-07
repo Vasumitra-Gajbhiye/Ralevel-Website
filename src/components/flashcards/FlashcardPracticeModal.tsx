@@ -1,8 +1,15 @@
 "use client";
 
+import FlashcardContentRenderer from "@/components/flashcards/FlashcardContentRenderer";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import type { TopicFlashcardSetSummary } from "@/lib/data/topic-flashcards-dummy";
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import type { TopicFlashcardSetSummary } from "@/types/topic-flashcards";
 import { cn } from "@/lib/utils";
 import type { PracticeRating } from "@/types/flashcards";
 import { Brain, Lightbulb, RefreshCcw, X } from "lucide-react";
@@ -105,16 +112,20 @@ export default function FlashcardPracticeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "fixed inset-0 z-50 flex flex-col items-center justify-center",
-          "max-w-none w-full h-full translate-x-0 translate-y-0",
-          "rounded-none border-0 bg-white p-4 sm:p-8",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "[&>button]:hidden",
-        )}
-      >
+      <DialogPortal>
+        <DialogOverlay className="fixed inset-0 z-50 bg-white" />
+        <DialogPrimitive.Content
+          className={cn(
+            "fixed inset-0 z-50 flex flex-col",
+            "max-w-none w-full h-full",
+            "left-0 top-0 translate-x-0 translate-y-0",
+            "!rounded-none border-0 bg-white p-0 gap-0 shadow-none",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100",
+            "data-[state=closed]:slide-out-to-left-0 data-[state=open]:slide-in-from-left-0",
+          )}
+        >
         <DialogTitle className="sr-only">
           {set.title} — Flashcard Practice
         </DialogTitle>
@@ -122,32 +133,37 @@ export default function FlashcardPracticeModal({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 sm:right-8 sm:top-8 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-800"
+          className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center text-slate-500 transition hover:text-slate-900"
           aria-label="Close practice"
         >
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6" />
         </button>
 
-        {view !== "results" && (
-          <div className="absolute top-4 sm:top-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 sm:px-8">
-            <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
-              <span className="font-medium text-slate-600">{set.title}</span>
-              <span>
+        <header className="shrink-0 border-b border-slate-200 px-4 sm:px-8 py-4 pr-16">
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+            <span className="text-sm font-medium text-slate-600 truncate">
+              {set.title}
+            </span>
+            {view !== "results" && (
+              <span className="text-sm text-slate-500 shrink-0">
                 {cardIndex + 1} / {totalCards}
               </span>
-            </div>
-            <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+            )}
+          </div>
+          {view !== "results" && (
+            <div className="mx-auto mt-3 h-1 w-full max-w-4xl bg-slate-200 overflow-hidden">
               <div
                 className="h-full bg-cyan-600 transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-          </div>
-        )}
+          )}
+        </header>
 
-        <div className="w-full max-w-4xl mt-12 sm:mt-16">
+        <div className="flex flex-1 items-center justify-center p-4 sm:p-8 bg-white">
+          <div className="w-full max-w-4xl">
           {view === "results" ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-sm text-center">
+            <div className="border border-slate-200 bg-white p-8 sm:p-12 text-center rounded-none">
               <h2 className="text-2xl sm:text-3xl font-semibold text-ink">
                 Session complete
               </h2>
@@ -198,16 +214,19 @@ export default function FlashcardPracticeModal({
               </div>
             </div>
           ) : currentCard ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-10 shadow-sm min-h-[480px] flex flex-col">
+            <div className="border border-slate-200 bg-white p-6 sm:p-10 min-h-[480px] flex flex-col rounded-none">
               {view === "prompt" ? (
                 <>
                   <span className="inline-flex w-fit items-center rounded-full bg-cyan-100 px-3 py-1 text-xs font-medium text-cyan-800">
                     Prompt
                   </span>
 
-                  <p className="mt-6 text-2xl sm:text-3xl font-medium text-ink leading-relaxed flex-1">
-                    {currentCard.question}
-                  </p>
+                  <div className="mt-6 flex-1">
+                    <FlashcardContentRenderer
+                      text={currentCard.question}
+                      media={currentCard.questionMedia}
+                    />
+                  </div>
 
                   {currentCard.hint && (
                     <div className="mt-6">
@@ -220,9 +239,12 @@ export default function FlashcardPracticeModal({
                         {showHint ? "Hide hint" : "Show hint"}
                       </button>
                       {showHint && (
-                        <p className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-xl p-4 animate-in fade-in duration-200">
-                          {currentCard.hint}
-                        </p>
+                        <div className="mt-3 text-sm text-slate-600 bg-slate-50 rounded-xl p-4 animate-in fade-in duration-200">
+                          <FlashcardContentRenderer
+                            text={currentCard.hint}
+                            size="sm"
+                          />
+                        </div>
                       )}
                     </div>
                   )}
@@ -246,9 +268,12 @@ export default function FlashcardPracticeModal({
                     Answer
                   </span>
 
-                  <p className="mt-6 text-2xl sm:text-3xl font-medium text-ink leading-relaxed">
-                    {currentCard.answer}
-                  </p>
+                  <div className="mt-6">
+                    <FlashcardContentRenderer
+                      text={currentCard.answer}
+                      media={currentCard.answerMedia}
+                    />
+                  </div>
 
                   {currentCard.tags && currentCard.tags.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -292,8 +317,10 @@ export default function FlashcardPracticeModal({
               )}
             </div>
           ) : null}
+          </div>
         </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 }

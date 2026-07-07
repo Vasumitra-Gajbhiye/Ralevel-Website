@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { TopicFlashcardSetSummary } from "@/lib/data/topic-flashcards-dummy";
+import type { TopicFlashcardSetSummary } from "@/types/topic-flashcards";
 import { Play } from "lucide-react";
 
 function getDifficultyStyle(level: string) {

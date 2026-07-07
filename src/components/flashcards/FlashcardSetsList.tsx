@@ -2,7 +2,7 @@
 
 import FlashcardPracticeModal from "@/components/flashcards/FlashcardPracticeModal";
 import FlashcardSetCard from "@/components/flashcards/FlashcardSetCard";
-import type { TopicFlashcardSetSummary } from "@/lib/data/topic-flashcards-dummy";
+import type { TopicFlashcardSetSummary } from "@/types/topic-flashcards";
 import { useState } from "react";
 
 type FlashcardSetsListProps = {
