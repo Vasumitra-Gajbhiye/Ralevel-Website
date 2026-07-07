@@ -6,7 +6,8 @@
     "discord-bot"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "start:standalone": "node .next/standalone/server.js",
