@@ -1,6 +1,7 @@
 import "server-only";
 
 import connectDB from "@/lib/mongodb";
+import { canVoteOnFormType } from "@/lib/forms/access";
 import { isAdmin } from "@/lib/roles";
 import type { Role } from "@/lib/roles";
 import UserData from "@/models/userData";
@@ -56,9 +57,12 @@ export async function resolveInchargeMembers(
 export async function canVoteOnForm(input: {
   roles?: Role[];
   email?: string | null;
-  form: FormInchargeConfig;
+  form: FormInchargeConfig & { formType?: string };
 }): Promise<boolean> {
   if (isAdmin(input.roles)) return true;
+  if (input.form.formType && canVoteOnFormType(input.roles, input.form.formType)) {
+    return true;
+  }
   if (!input.email) return false;
 
   const members = await resolveInchargeMembers(input.form.inchargeNicknames);

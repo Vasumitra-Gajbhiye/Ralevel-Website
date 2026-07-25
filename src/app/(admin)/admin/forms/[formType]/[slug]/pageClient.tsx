@@ -30,6 +30,7 @@ type Props = {
   summarySubmissions: any[];
   pagination: PaginationMeta;
   inchargeMembers: InchargeMemberView[];
+  canManage: boolean;
 };
 
 export default function AdminFormPageClient({
@@ -39,6 +40,7 @@ export default function AdminFormPageClient({
   summarySubmissions,
   pagination,
   inchargeMembers,
+  canManage,
 }: Props) {
   const router = useRouter();
   const hasResponses = totalResponses > 0;
@@ -112,6 +114,7 @@ export default function AdminFormPageClient({
             formSlug={form.slug}
             initialNicknames={form.inchargeNicknames ?? []}
             initialMembers={inchargeMembers}
+            canManage={canManage}
           />
         </TabsContent>
       </Tabs>

@@ -1,18 +1,14 @@
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
-  // 1) Auth: only admins/owners can toggle forms
   const session = await getAuthSession();
-  const roles = session?.userData?.roles as string[] | undefined;
-
-  if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const roles = session?.userData?.roles as Role[] | undefined;
 
   const csrfError = enforceSameOrigin(req);
   if (csrfError) return csrfError;
@@ -37,6 +33,10 @@ export async function PATCH(req: Request) {
 
   if (!form) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
+  }
+
+  if (!canManageFormType(roles, form.formType)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (form.status === "permanently-closed") {

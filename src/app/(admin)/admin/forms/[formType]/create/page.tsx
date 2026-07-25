@@ -1,12 +1,23 @@
+import NoAccess from "@/components/NoAccess";
+import { getAuthSession } from "@/lib/getAuthSession";
+import { canManageFormType } from "@/lib/roles";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import CreateForm from "./CreateForm";
+
 export default async function CreateFormPage({
   params,
 }: {
   params: Promise<{ formType: string }>;
 }) {
   const { formType } = await params;
+  const session = await getAuthSession();
+
+  if (!canManageFormType(session?.userData?.roles, formType)) {
+    return (
+      <NoAccess message="You don't have permission to create form cycles for this form type." />
+    );
+  }
 
   return (
     <div className="max-w-5xl space-y-6">

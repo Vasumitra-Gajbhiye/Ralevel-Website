@@ -24,14 +24,16 @@ type Props = {
   formSlug: string;
   initialNicknames: string[];
   initialMembers: InchargeMemberView[];
+  canManage: boolean;
 };
 
 export default function Incharge({
   formSlug,
   initialNicknames,
   initialMembers,
+  canManage,
 }: Props) {
-  const { session, loading: sessionLoading } = useAuthSession();
+  const { loading: sessionLoading } = useAuthSession();
   const [nicknames, setNicknames] = useState<string[]>(initialNicknames);
   const [members, setMembers] = useState<InchargeMemberView[]>(initialMembers);
   const [search, setSearch] = useState("");
@@ -40,19 +42,15 @@ export default function Incharge({
   const [isSaving, setIsSaving] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isAdmin =
-    session?.userData?.roles?.includes("admin") ||
-    session?.userData?.roles?.includes("owner");
-
   const canAdd =
-    isAdmin &&
+    canManage &&
     !isSaving &&
     search.trim().length > 0 &&
     !nicknames.includes(search.trim().toLowerCase()) &&
     nicknames.length < MAX_INCHARGE_NICKNAMES;
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canManage) return;
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -69,7 +67,7 @@ export default function Incharge({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [search, isAdmin]);
+  }, [search, canManage]);
 
   async function persistNicknames(nextNicknames: string[]) {
     setIsSaving(true);
@@ -123,7 +121,7 @@ export default function Incharge({
   }
 
   async function handleRemove(nickname: string) {
-    if (!isAdmin || isSaving) return;
+    if (!canManage || isSaving) return;
     await persistNicknames(nicknames.filter((n) => n !== nickname));
   }
 
@@ -136,9 +134,9 @@ export default function Incharge({
           They receive Discord pings on new submissions and reminder pings if
           they have not voted within 7 days.
         </p>
-        {!sessionLoading && !isAdmin && (
+        {!sessionLoading && !canManage && (
           <p className="text-sm text-muted-foreground">
-            Only admins can add or remove incharge members.
+            Only authorized staff can add or remove incharge members.
           </p>
         )}
       </div>
@@ -162,7 +160,7 @@ export default function Incharge({
                     {member.email} · {member.discordUserId}
                   </p>
                 </div>
-                {isAdmin && (
+                {canManage && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -180,7 +178,7 @@ export default function Incharge({
         )}
       </div>
 
-      {isAdmin && (
+      {canManage && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[240px] space-y-2 relative">

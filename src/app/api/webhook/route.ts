@@ -38,14 +38,14 @@
 // }
 
 import connectDB from "@/lib/mongodb";
+import { getStripeServer } from "@/lib/stripe";
 import { Campaign } from "@/models/Campaign";
 import { Donor } from "@/models/Donor"; // Import the new model
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import type Stripe from "stripe";
 
 export async function POST(req: Request) {
+  const stripe = getStripeServer();
   const body = await req.text();
   const signature = req.headers.get("stripe-signature") as string;
 

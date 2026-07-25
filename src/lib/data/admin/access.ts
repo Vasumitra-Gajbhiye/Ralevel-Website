@@ -61,6 +61,7 @@ export async function getAdminAccessList({
           { $limit: limit },
           {
             $project: {
+              _id: 0,
               name: 1,
               email: 1,
               roles: 1,

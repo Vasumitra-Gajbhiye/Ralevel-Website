@@ -1,9 +1,11 @@
 import { resolveInchargeMembers } from "@/lib/forms/incharge";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
   parsePaginationParams,
 } from "@/lib/pagination";
+import { canManageFormType } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormSubmission from "@/models/FormSubmission";
 import { FormDocument } from "@/types/form";
@@ -55,6 +57,12 @@ export default async function AdminFormPage({
     form.inchargeNicknames ?? [],
   );
 
+  const session = await getAuthSession();
+  const canManage = canManageFormType(
+    session?.userData?.roles,
+    form.formType,
+  );
+
   return (
     <AdminFormPageClient
       form={form}
@@ -63,6 +71,7 @@ export default async function AdminFormPage({
       summarySubmissions={summarySubmissions}
       pagination={pagination}
       inchargeMembers={inchargeMembers}
+      canManage={canManage}
     />
   );
 }

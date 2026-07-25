@@ -14,10 +14,12 @@ export default function FormClient({
   forms,
   formType,
   pagination,
+  canManage,
 }: {
   forms: any[];
   formType: string;
   pagination: PaginationMeta;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [localForms, setLocalForms] = useState(forms);
@@ -82,9 +84,11 @@ export default function FormClient({
           {formType} — Cycles
         </h1>
 
-        <Link href={`/admin/forms/${formType}/create`}>
-          <Button variant="default">+ New Cycle</Button>
-        </Link>
+        {canManage && (
+          <Link href={`/admin/forms/${formType}/create`}>
+            <Button variant="default">+ New Cycle</Button>
+          </Link>
+        )}
       </div>
       <div className="space-y-6">
         {/* Header */}
@@ -120,22 +124,24 @@ export default function FormClient({
                     submissions
                   </div>
 
-                  <div
-                    className="flex items-center gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="text-sm text-muted-foreground">
-                      {form.status === "open" ? "Open" : "Closed"}
-                    </span>
+                  {canManage && (
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="text-sm text-muted-foreground">
+                        {form.status === "open" ? "Open" : "Closed"}
+                      </span>
 
-                    <Switch
-                      checked={
-                        form.status === "closed" ||
-                        form.status === "permanently-closed"
-                      }
-                      onCheckedChange={() => onToggle(form._id)}
-                    />
-                  </div>
+                      <Switch
+                        checked={
+                          form.status === "closed" ||
+                          form.status === "permanently-closed"
+                        }
+                        onCheckedChange={() => onToggle(form._id)}
+                      />
+                    </div>
+                  )}
                   <Link href={`/admin/forms/${formType}/${form.slug}`}>
                     <Button variant="ghost" size="sm" className="gap-1">
                       View

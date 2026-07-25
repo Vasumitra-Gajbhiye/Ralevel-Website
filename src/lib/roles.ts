@@ -7,6 +7,7 @@ export const ROLES = [
   "helper_dep_head",
   "graphic_dep_head",
   "info_dep_head",
+  "reddit_dep_head",
   "resource_dep_head",
   "resource_staff",
   "senior_mod",
@@ -72,6 +73,24 @@ export const BLOG_REVIEW_ROLES = [
 
 export type WriterTeamRole = (typeof WRITER_TEAM_ROLES)[number];
 
+export const FORMS_ACCESS_ROLES = [
+  "owner",
+  "admin",
+  "mod_dep_head",
+  "helper_dep_head",
+  "graphic_dep_head",
+  "info_dep_head",
+  "reddit_dep_head",
+] as const satisfies readonly Role[];
+
+export const REDDIT_FORM_TYPE = "reddit-mod" as const;
+
+export const REDDIT_FORM_MANAGE_ROLES = [
+  "owner",
+  "admin",
+  "reddit_dep_head",
+] as const satisfies readonly Role[];
+
 /**
  * Lower index = higher authority
  */
@@ -93,9 +112,9 @@ export function highestAuthorityRole(roles: Role[]): Role {
  */
 export function hasRequiredRole(
   userRoles: Role[] | undefined,
-  allowedRoles: readonly Role[]
+  allowedRoles: readonly Role[] | undefined
 ) {
-  if (!userRoles || userRoles.length === 0) return false;
+  if (!userRoles?.length || !allowedRoles?.length) return false;
   return allowedRoles.some((r) => userRoles.includes(r));
 }
 
@@ -104,7 +123,7 @@ export function hasRequiredRole(
  */
 export function hasAnyRole(
   userRoles: Role[] | undefined,
-  allowedRoles: readonly Role[]
+  allowedRoles: readonly Role[] | undefined
 ) {
   return hasRequiredRole(userRoles, allowedRoles);
 }
@@ -160,4 +179,20 @@ export function mergeWriterTeamRole(
   assignedRole: WriterTeamRole
 ): Role[] {
   return [...stripWriterTeamRoles(roles), assignedRole];
+}
+
+export function hasFormsAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, FORMS_ACCESS_ROLES);
+}
+
+export function canManageRedditForm(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, REDDIT_FORM_MANAGE_ROLES);
+}
+
+export function canManageFormType(userRoles: Role[] | undefined, formType: string) {
+  if (isAdmin(userRoles)) return true;
+  if (formType === REDDIT_FORM_TYPE) {
+    return canManageRedditForm(userRoles);
+  }
+  return false;
 }

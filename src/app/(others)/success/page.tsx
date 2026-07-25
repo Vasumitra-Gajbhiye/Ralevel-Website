@@ -264,12 +264,10 @@
 // }
 
 // app/success/page.tsx
+import { getStripeServer } from "@/lib/stripe";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import Stripe from "stripe";
 import CopyMessageBlock from "./CopyMessageBlock"; // Import the new client component
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export default async function SuccessPage({
   searchParams,
@@ -285,6 +283,7 @@ export default async function SuccessPage({
 
   let session;
   try {
+    const stripe = getStripeServer();
     session = await stripe.checkout.sessions.retrieve(sessionId);
   } catch (err) {
     redirect("/");

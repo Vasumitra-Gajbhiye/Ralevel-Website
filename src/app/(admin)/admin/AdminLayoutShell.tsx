@@ -88,9 +88,10 @@ function AdminSidebarNav({
         "owner",
         "admin",
         "mod_dep_head",
-        "info_dep_head",
-        "graphic_dep_head",
         "helper_dep_head",
+        "graphic_dep_head",
+        "info_dep_head",
+        "reddit_dep_head",
       ]) && (
         <a href="/admin/forms" className={linkClass} onClick={onNavigate}>
           Form submission

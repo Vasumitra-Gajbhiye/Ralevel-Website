@@ -1,18 +1,12 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import connectDB from "@/lib/mongodb";
+import { FORMS_ACCESS_ROLES } from "@/lib/roles";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [
-      "owner",
-      "admin",
-      "mod_dep_head",
-      "helper_dep_head",
-      "graphic_dep_head",
-      "info_dep_head",
-    ],
+    roles: [...FORMS_ACCESS_ROLES],
   });
   if (auth instanceof Response) return auth;
 

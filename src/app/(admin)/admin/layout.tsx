@@ -29,6 +29,7 @@ export default async function AdminLayout({
       "helper_dep_head",
       "graphic_dep_head",
       "info_dep_head",
+      "reddit_dep_head",
       "informative_team",
       "resource_dep_head",
       "resource_staff",

@@ -1,5 +1,6 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
 import { NextResponse } from "next/server";
@@ -66,30 +67,28 @@ type Form = {
 };
 
 export async function POST(req: Request) {
-  // 1) Auth: only admins/owners can create forms
   const session = await getAuthSession();
-  const roles = session?.userData?.roles as string[] | undefined;
+  const roles = session?.userData?.roles as Role[] | undefined;
 
-  if (!roles || !roles.some((r) => ["owner", "admin"].includes(r))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  // 2) Basic origin check to reduce CSRF risk
+  // Basic origin check to reduce CSRF risk
   const origin = req.headers.get("origin");
   const host = req.headers.get("host");
   if (origin && host && !origin.includes(host)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await connectDB();
-
   let body: Form;
-
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  if (!canManageFormType(roles, body.formType)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await connectDB();
 
   if (!body.title || !body.slug || !body.formType) {
     return NextResponse.json(

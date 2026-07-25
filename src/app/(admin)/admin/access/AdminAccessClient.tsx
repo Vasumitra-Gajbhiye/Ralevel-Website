@@ -52,6 +52,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   helper_dep_head: "HLP Dep. Head",
   graphic_dep_head: "GFX Dep. Head",
   info_dep_head: "COMM Dep. Head",
+  reddit_dep_head: "RD Dep. Head",
   resource_dep_head: "Resource Dep. Head",
   resource_staff: "Resource Staff",
 };
@@ -91,6 +92,10 @@ export const ROLE_META: Record<
   },
   info_dep_head: {
     color: "bg-neutral-100 text-neutral-800 border-neutral-200",
+    icon: Shield,
+  },
+  reddit_dep_head: {
+    color: "bg-orange-100 text-orange-800 border-orange-200",
     icon: Shield,
   },
   resource_dep_head: {

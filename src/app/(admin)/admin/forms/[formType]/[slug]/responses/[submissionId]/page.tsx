@@ -67,7 +67,10 @@ export default async function SubmissionPage({
     ? await canVoteOnForm({
         roles: session.userData?.roles,
         email: session.user?.email,
-        form: { inchargeNicknames: form.inchargeNicknames ?? [] },
+        form: {
+          inchargeNicknames: form.inchargeNicknames ?? [],
+          formType: form.formType,
+        },
       })
     : false;
 

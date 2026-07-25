@@ -1,11 +1,10 @@
 import { getAuthSession } from "@/lib/getAuthSession";
+import { getStripeServer } from "@/lib/stripe";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
+    const stripe = getStripeServer();
     const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

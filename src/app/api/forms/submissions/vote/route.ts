@@ -35,8 +35,8 @@ export async function PATCH(req: Request) {
   }
 
   const form = (await Form.findOne({ slug: submission.formSlug })
-    .select("inchargeNicknames")
-    .lean()) as { inchargeNicknames?: string[] } | null;
+    .select("inchargeNicknames formType")
+    .lean()) as { inchargeNicknames?: string[]; formType?: string } | null;
   if (!form) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
   }
@@ -44,7 +44,10 @@ export async function PATCH(req: Request) {
   const allowed = await canVoteOnForm({
     roles: session.userData?.roles as Role[] | undefined,
     email: session.user.email,
-    form: { inchargeNicknames: form.inchargeNicknames ?? [] },
+    form: {
+      inchargeNicknames: form.inchargeNicknames ?? [],
+      formType: form.formType,
+    },
   });
 
   if (!allowed) {

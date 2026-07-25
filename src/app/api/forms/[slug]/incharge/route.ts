@@ -2,28 +2,16 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { normalizeInchargeNicknames } from "@/lib/forms/incharge";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import { NextResponse } from "next/server";
-
-const INCHARGE_ADMIN_ROLES = ["owner", "admin"] as const;
-
-function canManageIncharge(roles: string[] | undefined): boolean {
-  if (!roles) return false;
-  return roles.some((role) =>
-    (INCHARGE_ADMIN_ROLES as readonly string[]).includes(role),
-  );
-}
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const session = await getAuthSession();
-  const roles = session?.userData?.roles as string[] | undefined;
-
-  if (!canManageIncharge(roles)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const roles = session?.userData?.roles as Role[] | undefined;
 
   const csrfError = enforceSameOrigin(req);
   if (csrfError) return csrfError;
@@ -51,6 +39,10 @@ export async function PATCH(
   const form = await Form.findOne({ slug });
   if (!form) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
+  }
+
+  if (!canManageFormType(roles, form.formType)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   form.inchargeNicknames = nicknames;

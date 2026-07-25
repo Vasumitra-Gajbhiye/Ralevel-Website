@@ -1,5 +1,6 @@
 import {
   BLOG_REVIEW_ROLES,
+  FORMS_ACCESS_ROLES,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
   WRITER_ACCESS_MANAGE_ROLES,
@@ -36,14 +37,7 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
   },
   {
     prefix: "/admin/forms",
-    roles: [
-      "owner",
-      "admin",
-      "mod_dep_head",
-      "helper_dep_head",
-      "graphic_dep_head",
-      "info_dep_head",
-    ],
+    roles: FORMS_ACCESS_ROLES,
     message: "You don't have permission to access Graphic records.",
   },
   {
