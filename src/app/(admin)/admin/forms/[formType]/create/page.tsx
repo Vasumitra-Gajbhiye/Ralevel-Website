@@ -1,6 +1,9 @@
 import NoAccess from "@/components/NoAccess";
 import { getAuthSession } from "@/lib/getAuthSession";
+import connectDB from "@/lib/mongodb";
 import { canManageFormType } from "@/lib/roles";
+import Form from "@/models/Form";
+import FormIndex from "@/models/FormIndex";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import CreateForm from "./CreateForm";
@@ -18,6 +21,20 @@ export default async function CreateFormPage({
       <NoAccess message="You don't have permission to create form cycles for this form type." />
     );
   }
+
+  await connectDB();
+
+  const [previousCycles, formIndex, latestForm] = await Promise.all([
+    Form.find({ formType })
+      .sort({ cycleId: -1 })
+      .select("cycleId title slug status")
+      .lean(),
+    FormIndex.findOne({ slug: formType }).select("activeCycleId").lean(),
+    Form.findOne({ formType }).sort({ cycleId: -1 }).select("cycleId").lean(),
+  ]);
+
+  const nextCycleId =
+    (formIndex?.activeCycleId ?? latestForm?.cycleId ?? 0) + 1;
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -38,7 +55,11 @@ export default async function CreateFormPage({
         </p>
       </div>
 
-      <CreateForm formType={formType} />
+      <CreateForm
+        formType={formType}
+        nextCycleId={nextCycleId}
+        previousCycles={JSON.parse(JSON.stringify(previousCycles))}
+      />
     </div>
   );
 }

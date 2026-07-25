@@ -1,9 +1,26 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateFormValues } from "@/types/form";
@@ -16,12 +33,21 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
+
+type PreviousCycle = {
+  cycleId: number;
+  title: string;
+  slug: string;
+  status: string;
+};
+
 type Props = {
   formType: string;
+  nextCycleId: number;
+  previousCycles: PreviousCycle[];
 };
 
 function SortableField({
@@ -509,24 +535,10 @@ function SelectOptionsEditor({
     </div>
   );
 }
-const onSubmit = async (data: CreateFormValues) => {
-  try {
-    const res = await fetch("/api/forms/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
 
-    if (!res.ok) {
-      throw new Error("Failed to create form");
-    }
-
-    toast.success("Form created successfully");
-  } catch (error) {
-    console.error(error);
-    toast.error("Something went wrong. Please try again.");
-  }
-};
+function formatCycleStatus(status: string) {
+  return status.replaceAll("-", " ");
+}
 
 function SortableIntroBlock({
   block,
@@ -669,10 +681,21 @@ function SortableIntroBlock({
   );
 }
 
-export default function CreateForm({ formType }: Props) {
-  const router = useRouter();
-  //   const [collapsed, setCollapsed] = useState(false);
+export default function CreateForm({
+  formType,
+  nextCycleId,
+  previousCycles,
+}: Props) {
   const [preview, setPreview] = useState(false);
+  const [selectedCycleId, setSelectedCycleId] = useState("");
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [prefilledFrom, setPrefilledFrom] = useState<{
+    cycleId: number;
+    title: string;
+  } | null>(null);
+  const [confirmOverwriteOpen, setConfirmOverwriteOpen] = useState(false);
+  const [pendingCycleId, setPendingCycleId] = useState<number | null>(null);
+
   const form = useForm<CreateFormValues>({
     defaultValues: {
       title: "",
@@ -730,9 +753,165 @@ export default function CreateForm({ formType }: Props) {
     moveIntroBlock(oldIndex, newIndex);
   }
 
+  const onSubmit = async (data: CreateFormValues) => {
+    try {
+      const res = await fetch("/api/forms/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Failed to create form");
+      }
+
+      toast.success("Form created successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
+    }
+  };
+
+  async function loadTemplate(cycleId: number) {
+    setLoadingTemplate(true);
+    try {
+      const res = await fetch(
+        `/api/forms/template?formType=${encodeURIComponent(formType)}&cycleId=${cycleId}`,
+      );
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error ?? "Failed to load template");
+      }
+
+      const data = await res.json();
+      form.reset(data.template);
+      setPrefilledFrom({
+        cycleId: data.source.cycleId,
+        title: data.source.title,
+      });
+      toast.success(`Loaded from Cycle ${data.source.cycleId}`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load template",
+      );
+    } finally {
+      setLoadingTemplate(false);
+      setConfirmOverwriteOpen(false);
+      setPendingCycleId(null);
+    }
+  }
+
+  function handleLoadTemplate() {
+    const cycleId = Number(selectedCycleId);
+    if (!cycleId) {
+      toast.error("Select a cycle to copy from");
+      return;
+    }
+
+    if (form.formState.isDirty) {
+      setPendingCycleId(cycleId);
+      setConfirmOverwriteOpen(true);
+      return;
+    }
+
+    void loadTemplate(cycleId);
+  }
+
   return (
-    <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit, onError)}>
-      {/* BASIC INFO */}
+    <>
+      <AlertDialog open={confirmOverwriteOpen} onOpenChange={setConfirmOverwriteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace current form?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved edits. Loading a template will overwrite the
+              current form content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingCycleId(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingCycleId) {
+                  void loadTemplate(pendingCycleId);
+                }
+              }}
+            >
+              Replace
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <form className="space-y-8" onSubmit={form.handleSubmit(onSubmit, onError)}>
+        {previousCycles.length > 0 && (
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <div className="space-y-1">
+                <h2 className="font-medium">Copy from previous cycle</h2>
+                <p className="text-sm text-muted-foreground">
+                  Load an existing cycle as a starting point. Title and slug will
+                  be set to Cycle {nextCycleId}.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="flex-1 space-y-2">
+                  <Select
+                    value={selectedCycleId}
+                    onValueChange={setSelectedCycleId}
+                    disabled={preview || loadingTemplate}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a past cycle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {previousCycles.map((cycle) => (
+                        <SelectItem
+                          key={cycle.cycleId}
+                          value={String(cycle.cycleId)}
+                        >
+                          Cycle {cycle.cycleId} — {cycle.title} (
+                          {formatCycleStatus(cycle.status)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={preview || loadingTemplate || !selectedCycleId}
+                  onClick={handleLoadTemplate}
+                >
+                  {loadingTemplate ? "Loading..." : "Load template"}
+                </Button>
+              </div>
+
+              {prefilledFrom && (
+                <p className="text-sm text-muted-foreground rounded-md border bg-muted/40 px-3 py-2">
+                  Prefilled from Cycle {prefilledFrom.cycleId} ({prefilledFrom.title}
+                  ) — review title, slug, and content before submitting.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* BASIC INFO */}
       <Card>
         <CardContent className="space-y-4 p-6">
           <h2 className="font-medium">Basic Info</h2>
@@ -917,5 +1096,6 @@ export default function CreateForm({ formType }: Props) {
         </CardContent>
       </Card>
     </form>
+    </>
   );
 }
