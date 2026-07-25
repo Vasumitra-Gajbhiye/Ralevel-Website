@@ -2,17 +2,11 @@
 
 import FlashcardContentRenderer from "@/components/flashcards/FlashcardContentRenderer";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { TopicFlashcardSetSummary } from "@/types/topic-flashcards";
 import { cn } from "@/lib/utils";
 import type { PracticeRating } from "@/types/flashcards";
-import { Brain, Lightbulb, RefreshCcw, X } from "lucide-react";
+import { ArrowLeft, Brain, Lightbulb, RefreshCcw } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type RatingEntry = {
@@ -22,10 +16,9 @@ type RatingEntry = {
 
 type View = "prompt" | "answer" | "results";
 
-type FlashcardPracticeModalProps = {
+type FlashcardPracticeSessionProps = {
   set: TopicFlashcardSetSummary;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  backHref: string;
 };
 
 function getEncouragement(easyCount: number, total: number) {
@@ -35,11 +28,10 @@ function getEncouragement(easyCount: number, total: number) {
   return "Keep practicing — repetition builds strong recall.";
 }
 
-export default function FlashcardPracticeModal({
+export default function FlashcardPracticeSession({
   set,
-  open,
-  onOpenChange,
-}: FlashcardPracticeModalProps) {
+  backHref,
+}: FlashcardPracticeSessionProps) {
   const [cardIndex, setCardIndex] = useState(0);
   const [view, setView] = useState<View>("prompt");
   const [showHint, setShowHint] = useState(false);
@@ -56,12 +48,6 @@ export default function FlashcardPracticeModal({
     setShowHint(false);
     setRatings([]);
   }, []);
-
-  useEffect(() => {
-    if (open) {
-      resetSession();
-    }
-  }, [open, set.id, resetSession]);
 
   const handleReveal = useCallback(() => {
     setView("answer");
@@ -87,7 +73,7 @@ export default function FlashcardPracticeModal({
   );
 
   useEffect(() => {
-    if (!open || view === "results") return;
+    if (view === "results") return;
 
     function handler(e: KeyboardEvent) {
       if (view === "prompt" && e.code === "Space") {
@@ -104,64 +90,46 @@ export default function FlashcardPracticeModal({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, view, handleReveal, handleRating]);
+  }, [view, handleReveal, handleRating]);
 
   const hardCount = ratings.filter((r) => r.rating === "hard").length;
   const mediumCount = ratings.filter((r) => r.rating === "medium").length;
   const easyCount = ratings.filter((r) => r.rating === "easy").length;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogOverlay className="fixed inset-0 z-50 bg-white" />
-        <DialogPrimitive.Content
-          className={cn(
-            "fixed inset-0 z-50 flex flex-col",
-            "max-w-none w-full h-full",
-            "left-0 top-0 translate-x-0 translate-y-0",
-            "!rounded-none border-0 bg-white p-0 gap-0 shadow-none",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100",
-            "data-[state=closed]:slide-out-to-left-0 data-[state=open]:slide-in-from-left-0",
-          )}
-        >
-        <DialogTitle className="sr-only">
-          {set.title} — Flashcard Practice
-        </DialogTitle>
-
-        <button
-          type="button"
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center text-slate-500 transition hover:text-slate-900"
-          aria-label="Close practice"
-        >
-          <X className="h-6 w-6" />
-        </button>
-
-        <header className="shrink-0 border-b border-slate-200 px-4 sm:px-8 py-4 pr-16">
-          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+    <div className="flex min-h-screen flex-col bg-white">
+      <header className="shrink-0 border-b border-slate-200 px-4 sm:px-8 py-4">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <Link
+              href={backHref}
+              className="flex shrink-0 items-center gap-2 text-sm text-slate-600 transition hover:text-cyan-600"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Link>
             <span className="text-sm font-medium text-slate-600 truncate">
               {set.title}
             </span>
-            {view !== "results" && (
-              <span className="text-sm text-slate-500 shrink-0">
-                {cardIndex + 1} / {totalCards}
-              </span>
-            )}
           </div>
           {view !== "results" && (
-            <div className="mx-auto mt-3 h-1 w-full max-w-4xl bg-slate-200 overflow-hidden">
-              <div
-                className="h-full bg-cyan-600 transition-all duration-300 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            <span className="text-sm text-slate-500 shrink-0">
+              {cardIndex + 1} / {totalCards}
+            </span>
           )}
-        </header>
+        </div>
+        {view !== "results" && (
+          <div className="mx-auto mt-3 h-1 w-full max-w-4xl bg-slate-200 overflow-hidden">
+            <div
+              className="h-full bg-cyan-600 transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
+      </header>
 
-        <div className="flex flex-1 items-center justify-center p-4 sm:p-8 bg-white">
-          <div className="w-full max-w-4xl">
+      <div className="flex flex-1 items-center justify-center p-4 sm:p-8 bg-white">
+        <div className="w-full max-w-4xl">
           {view === "results" ? (
             <div className="border border-slate-200 bg-white p-8 sm:p-12 text-center rounded-none">
               <h2 className="text-2xl sm:text-3xl font-semibold text-ink">
@@ -173,9 +141,7 @@ export default function FlashcardPracticeModal({
 
               <div className="mt-8 grid grid-cols-3 gap-4 max-w-md mx-auto">
                 <div className="rounded-2xl bg-rose-50 border border-rose-100 p-4">
-                  <p className="text-2xl font-bold text-rose-700">
-                    {hardCount}
-                  </p>
+                  <p className="text-2xl font-bold text-rose-700">{hardCount}</p>
                   <p className="text-sm text-rose-600 mt-1">Hard</p>
                 </div>
                 <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
@@ -206,10 +172,10 @@ export default function FlashcardPracticeModal({
                   Practice again
                 </Button>
                 <Button
-                  onClick={() => onOpenChange(false)}
+                  asChild
                   className="rounded-full bg-cyan-600 hover:bg-cyan-700 px-6"
                 >
-                  Done
+                  <Link href={backHref}>Done</Link>
                 </Button>
               </div>
             </div>
@@ -317,11 +283,9 @@ export default function FlashcardPracticeModal({
               )}
             </div>
           ) : null}
-          </div>
         </div>
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

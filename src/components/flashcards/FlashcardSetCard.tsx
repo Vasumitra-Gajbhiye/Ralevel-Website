@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import type { TopicFlashcardSetSummary } from "@/types/topic-flashcards";
 import { Play } from "lucide-react";
+import Link from "next/link";
 
 function getDifficultyStyle(level: string) {
   if (level === "Easy") return "bg-green-100 text-green-700";
@@ -10,12 +11,12 @@ function getDifficultyStyle(level: string) {
 
 type FlashcardSetCardProps = {
   set: TopicFlashcardSetSummary;
-  onPractice: () => void;
+  practiceHref: string;
 };
 
 export default function FlashcardSetCard({
   set,
-  onPractice,
+  practiceHref,
 }: FlashcardSetCardProps) {
   const { stats } = set;
 
@@ -48,11 +49,13 @@ export default function FlashcardSetCard({
       )}
 
       <Button
-        onClick={onPractice}
+        asChild
         className="mt-5 w-full rounded-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold"
       >
-        <Play className="h-4 w-4 mr-2" />
-        Practice
+        <Link href={practiceHref}>
+          <Play className="h-4 w-4 mr-2" />
+          Practice
+        </Link>
       </Button>
     </div>
   );

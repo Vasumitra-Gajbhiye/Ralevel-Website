@@ -117,7 +117,7 @@ export const dummyFlashcardSets: TopicFlashcardSetSummary[] = [
     id: "rich-content",
     title: "Rich Content Examples",
     description:
-      "Test cards with LaTeX equations and image layouts (1–4 rows).",
+      "Test cards with LaTeX equations and image layouts (1–4 columns).",
     difficulty: "Easy",
     cards: [
       {
@@ -133,9 +133,9 @@ export const dummyFlashcardSets: TopicFlashcardSetSummary[] = [
         question: "Identify this landmark and state which country it is in.",
         answer: "The Taj Mahal, located in Agra, India.",
         hint: "A famous white marble mausoleum.",
-        tags: ["images", "1-row"],
+        tags: ["images", "1-col"],
         questionMedia: {
-          rows: 1,
+          columns: 1,
           images: [
             {
               src: TAJ_MAHAL_IMAGE,
@@ -147,49 +147,49 @@ export const dummyFlashcardSets: TopicFlashcardSetSummary[] = [
       {
         id: "rc-3",
         question:
-          "This card uses a **2-row** image layout. What is the kinetic energy formula?",
+          "This card uses a **2-column** image layout. What is the kinetic energy formula?",
         answer: "$$E_k = \\frac{1}{2}mv^2$$",
-        tags: ["images", "2-row", "equations"],
+        tags: ["images", "2-col", "equations"],
         questionMedia: {
-          rows: 2,
+          columns: 2,
           images: [
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 1, image 1" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 2, image 1" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 1" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 2" },
           ],
         },
       },
       {
         id: "rc-4",
         question:
-          "This card uses a **3-row** image layout. State the equation for gravitational field strength.",
+          "This card uses a **3-column** image layout. State the equation for gravitational field strength.",
         answer: "$$g = \\frac{GM}{r^2}$$",
-        tags: ["images", "3-row", "equations"],
+        tags: ["images", "3-col", "equations"],
         questionMedia: {
-          rows: 3,
+          columns: 3,
           images: [
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 1" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 2" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 3" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 1" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 2" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 3" },
           ],
         },
       },
       {
         id: "rc-5",
         question:
-          "This card uses a **4-row** image layout (maximum). What is the density formula?",
+          "This card uses a **4-column** image layout (maximum). What is the density formula?",
         answer: "$$\\rho = \\frac{m}{V}$$",
-        tags: ["images", "4-row", "equations"],
+        tags: ["images", "4-col", "equations"],
         questionMedia: {
-          rows: 4,
+          columns: 4,
           images: [
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 1" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 2" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 3" },
-            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — row 4" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 1" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 2" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 3" },
+            { src: TAJ_MAHAL_IMAGE, alt: "Taj Mahal — column 4" },
           ],
         },
         answerMedia: {
-          rows: 1,
+          columns: 1,
           images: [
             {
               src: TAJ_MAHAL_IMAGE,
@@ -208,3 +208,9 @@ export const dummyFlashcardSets: TopicFlashcardSetSummary[] = [
     },
   },
 ];
+
+export function getTopicFlashcardSet(
+  setId: string,
+): TopicFlashcardSetSummary | null {
+  return dummyFlashcardSets.find((set) => set.id === setId) ?? null;
+}

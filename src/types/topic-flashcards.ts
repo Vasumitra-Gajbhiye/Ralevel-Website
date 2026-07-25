@@ -1,5 +1,5 @@
-/** Number of rows in the image grid (1–4). Images fill left-to-right, top-to-bottom. */
-export type FlashcardImageRowLayout = 1 | 2 | 3 | 4;
+/** Number of columns in the image grid (1–4). Images fill left-to-right, top-to-bottom. */
+export type FlashcardImageColumnLayout = 1 | 2 | 3 | 4;
 
 export type FlashcardImage = {
   src: string;
@@ -8,7 +8,7 @@ export type FlashcardImage = {
 
 export type FlashcardMedia = {
   images: FlashcardImage[];
-  rows: FlashcardImageRowLayout;
+  columns: FlashcardImageColumnLayout;
 };
 
 export type TopicFlashcard = {

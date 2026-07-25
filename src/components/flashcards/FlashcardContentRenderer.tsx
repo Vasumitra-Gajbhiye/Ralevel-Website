@@ -31,15 +31,13 @@ export default function FlashcardContentRenderer({
 }
 
 function FlashcardImageGrid({ media }: { media: FlashcardMedia }) {
-  const { images, rows } = media;
-  const cols = Math.max(1, Math.ceil(images.length / rows));
+  const { images, columns } = media;
 
   return (
     <div
       className="grid gap-3"
       style={{
-        gridTemplateRows: `repeat(${rows}, minmax(0, auto))`,
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
       }}
     >
       {images.map((image, index) => (
