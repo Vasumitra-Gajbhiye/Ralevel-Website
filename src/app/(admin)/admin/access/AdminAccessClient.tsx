@@ -10,7 +10,11 @@ import { ListPagination } from "@/components/ui/list-pagination";
 import type { AdminAccessUser } from "@/lib/data/admin/access";
 import type { PaginationMeta } from "@/lib/pagination";
 import type { Role } from "@/lib/roles";
-import { RESOURCE_TEAM_ROLES, WRITER_TEAM_ROLES, roleRank } from "@/lib/roles";
+import {
+  ACCESS_PAGE_ASSIGNABLE_ROLES,
+  roleRank,
+} from "@/lib/roles";
+import { isSuperAdminEmail } from "@/lib/superAdmin";
 import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -57,14 +61,10 @@ export const ROLE_LABELS: Record<Role, string> = {
   resource_staff: "Resource Staff",
 };
 
-const ASSIGNABLE_ACCESS_ROLES = Object.entries(ROLE_LABELS).filter(
-  ([value]) =>
-    value !== "owner" &&
-    !RESOURCE_TEAM_ROLES.includes(
-      value as (typeof RESOURCE_TEAM_ROLES)[number],
-    ) &&
-    !WRITER_TEAM_ROLES.includes(value as (typeof WRITER_TEAM_ROLES)[number]),
-);
+const ASSIGNABLE_ACCESS_ROLES = ACCESS_PAGE_ASSIGNABLE_ROLES.map((value) => [
+  value,
+  ROLE_LABELS[value],
+] as const);
 
 export const ROLE_META: Record<
   Role | "owner",
@@ -219,14 +219,19 @@ function RoleMultiBadge({
   const meta = ROLE_META[primary];
   const Icon = meta.icon;
 
+  const assignableRoles = roles.filter((role) =>
+    ACCESS_PAGE_ASSIGNABLE_ROLES.includes(role),
+  );
+
   function toggle(role: Role) {
     if (!onChange) return;
 
-    if (roles.includes(role)) {
-      if (roles.length === 1) return; // prevent zero-role state
-      onChange(roles.filter((r) => r !== role));
+    if (assignableRoles.includes(role)) {
+      const next = assignableRoles.filter((r) => r !== role);
+      if (next.length === 0) return;
+      onChange(next);
     } else {
-      onChange([...roles, role]);
+      onChange([...assignableRoles, role]);
     }
   }
 
@@ -252,8 +257,8 @@ function RoleMultiBadge({
           {ASSIGNABLE_ACCESS_ROLES.map(([value, label]) => (
             <DropdownMenuCheckboxItem
               key={value}
-              checked={roles.includes(value as Role)}
-              onCheckedChange={() => toggle(value as Role)}
+              checked={assignableRoles.includes(value)}
+              onCheckedChange={() => toggle(value)}
             >
               {label}
             </DropdownMenuCheckboxItem>
@@ -290,8 +295,9 @@ export default function AdminAccessClient({
 
   const [confirmDelete, setConfirmDelete] = useState<{
     email: string;
-    reason: "owner" | "self" | "normal";
+    reason: "super_admin" | "owner" | "self" | "demote" | "remove";
   } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -449,8 +455,9 @@ export default function AdminAccessClient({
     }));
   }
   async function updateRoles(email: string, roles: Role[]) {
+    setActionError(null);
     try {
-      await fetch("/api/admin/access", {
+      const res = await fetch("/api/admin/access", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -458,19 +465,34 @@ export default function AdminAccessClient({
           roles,
         }),
       });
+
+      if (!res.ok) {
+        const text = await res.text();
+        setActionError(text || "Failed to update roles");
+        return;
+      }
     } catch (e) {
       console.log(e);
+      setActionError("Failed to update roles");
+      return;
     }
 
     router.refresh();
   }
 
   async function revoke(email: string) {
-    await fetch("/api/admin/access", {
+    setActionError(null);
+    const res = await fetch("/api/admin/access", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
+
+    if (!res.ok) {
+      const text = await res.text();
+      setActionError(text || "Failed to revoke access");
+      return;
+    }
 
     router.refresh();
   }
@@ -481,6 +503,15 @@ export default function AdminAccessClient({
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Access</h1>
       <p className="text-sm text-gray-500 mb-6">Share admin and staff access</p>
+
+      {actionError && (
+        <div
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {actionError}
+        </div>
+      )}
 
       {/* Share box */}
       <div className="relative border rounded-xl p-4 bg-white mb-8 space-y-4">
@@ -585,15 +616,25 @@ export default function AdminAccessClient({
             </thead>
             <tbody className="divide-y">
               {users.map((u) => {
+                const actorIsSuperAdmin = isSuperAdminEmail(
+                  session?.user?.email,
+                );
+                const isSuperAdminTarget = isSuperAdminEmail(u.email);
                 const isSelf = u.email === session?.user?.email;
                 const isOwner = u.roles.includes("owner");
+                const isFormerStaffOnly =
+                  u.roles.length === 1 && u.roles[0] === "former_staff";
+                const isProtected =
+                  isSuperAdminTarget ||
+                  (isOwner && !actorIsSuperAdmin) ||
+                  isSelf;
                 const saveState = identitySaveState[u.email];
                 const showSaveButton =
-                  !isOwner &&
-                  !isSelf &&
+                  !isProtected &&
                   (isIdentityDirty(u) ||
                     saveState === "saving" ||
                     saveState === "saved");
+                const removeLabel = isFormerStaffOnly ? "Remove" : "Demote";
 
                 return (
                   <tr key={u.email} className="align-middle">
@@ -607,7 +648,7 @@ export default function AdminAccessClient({
                         onChange={(e) =>
                           updateIdentityDraft(u, "nickname", e.target.value)
                         }
-                        disabled={isOwner || isSelf}
+                        disabled={isProtected}
                         placeholder="nickname"
                         className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50"
                       />
@@ -619,7 +660,7 @@ export default function AdminAccessClient({
                         onChange={(e) =>
                           updateIdentityDraft(u, "discordUserId", e.target.value)
                         }
-                        disabled={isOwner || isSelf}
+                        disabled={isProtected}
                         placeholder="Discord ID"
                         className="w-full border rounded px-2 py-1 text-sm disabled:bg-gray-50"
                       />
@@ -628,7 +669,7 @@ export default function AdminAccessClient({
                     <td className="px-4 py-3">
                       <RoleMultiBadge
                         roles={u.roles}
-                        disabled={isOwner || isSelf}
+                        disabled={isProtected}
                         onChange={(newRoles) => updateRoles(u.email, newRoles)}
                       />
                     </td>
@@ -653,7 +694,12 @@ export default function AdminAccessClient({
                       )}
                       <button
                         onClick={() => {
-                          if (isOwner) {
+                          if (isSuperAdminTarget) {
+                            setConfirmDelete({
+                              email: u.email,
+                              reason: "super_admin",
+                            });
+                          } else if (isOwner && !actorIsSuperAdmin) {
                             setConfirmDelete({
                               email: u.email,
                               reason: "owner",
@@ -663,20 +709,25 @@ export default function AdminAccessClient({
                               email: u.email,
                               reason: "self",
                             });
+                          } else if (isFormerStaffOnly) {
+                            setConfirmDelete({
+                              email: u.email,
+                              reason: "remove",
+                            });
                           } else {
                             setConfirmDelete({
                               email: u.email,
-                              reason: "normal",
+                              reason: "demote",
                             });
                           }
                         }}
                         className={`text-xs ${
-                          isOwner || isSelf
+                          isProtected
                             ? "text-gray-400 cursor-not-allowed"
                             : "text-red-600 hover:underline"
                         }`}
                       >
-                        Remove
+                        {removeLabel}
                       </button>
                     </td>
                   </tr>
@@ -699,6 +750,25 @@ export default function AdminAccessClient({
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-lg">
+            {confirmDelete.reason === "super_admin" && (
+              <>
+                <h3 className="text-lg font-semibold mb-2">
+                  Action not allowed
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  The super admin account cannot be modified or removed.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </>
+            )}
+
             {confirmDelete.reason === "owner" && (
               <>
                 <h3 className="text-lg font-semibold mb-2">
@@ -738,13 +808,44 @@ export default function AdminAccessClient({
               </>
             )}
 
-            {confirmDelete.reason === "normal" && (
+            {confirmDelete.reason === "demote" && (
+              <>
+                <h3 className="text-lg font-semibold mb-2">
+                  Demote to Former Staff?
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  This will revoke active staff access for{" "}
+                  <span className="font-medium">{confirmDelete.email}</span> and
+                  mark them as Former Staff. You can remove them entirely later.
+                </p>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2 text-sm border rounded hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await revoke(confirmDelete.email);
+                      setConfirmDelete(null);
+                    }}
+                    className="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Demote
+                  </button>
+                </div>
+              </>
+            )}
+
+            {confirmDelete.reason === "remove" && (
               <>
                 <h3 className="text-lg font-semibold mb-2">Remove access?</h3>
                 <p className="text-sm text-gray-600 mb-4">
-                  This will revoke access for{" "}
-                  <span className="font-medium">{confirmDelete.email}</span>.
-                  This action cannot be undone.
+                  This will fully revoke access for{" "}
+                  <span className="font-medium">{confirmDelete.email}</span> and
+                  remove them from this list.
                 </p>
 
                 <div className="flex justify-end gap-2">

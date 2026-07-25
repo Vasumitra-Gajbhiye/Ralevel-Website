@@ -7,6 +7,7 @@
  */
 import { ensureUserData } from "@/lib/ensureUserData";
 import type { Role } from "@/lib/roles";
+import { applySuperAdminRoles } from "@/lib/superAdmin";
 import { sanitizeRoles } from "@/lib/syncClerkUserMetadata";
 import type { AuthSession } from "@/types/auth";
 import { auth, currentUser } from "@clerk/nextjs/server";
@@ -114,7 +115,7 @@ export const getAuthSession = cache(async (): Promise<AuthSession | null> => {
     userDataId = userData._id.toString();
   }
 
-  const resolvedRoles = roles ?? [];
+  const resolvedRoles = applySuperAdminRoles(email, roles ?? []);
 
   return {
     userId,

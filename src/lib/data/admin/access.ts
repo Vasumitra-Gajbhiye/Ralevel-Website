@@ -1,6 +1,10 @@
 import connectDB from "@/lib/mongodb";
 import { buildPaginatedResponse, type PaginatedResult } from "@/lib/pagination";
 import { ROLES, type Role } from "@/lib/roles";
+import {
+  applySuperAdminRoles,
+  SUPER_ADMIN_EMAIL,
+} from "@/lib/superAdmin";
 import UserData from "@/models/userData";
 
 export type AdminAccessUser = {
@@ -45,10 +49,20 @@ export async function getAdminAccessList({
     {
       $addFields: {
         roleRank: buildRoleRankSwitch(),
+        sortPriority: {
+          $cond: [
+            {
+              $eq: [{ $toLower: "$email" }, SUPER_ADMIN_EMAIL.toLowerCase()],
+            },
+            0,
+            1,
+          ],
+        },
       },
     },
     {
       $sort: {
+        sortPriority: 1,
         roleRank: 1,
         email: 1,
       },
@@ -75,7 +89,10 @@ export async function getAdminAccessList({
   ]);
 
   const total = result.metadata[0]?.total ?? 0;
-  const data: AdminAccessUser[] = result.data;
+  const data: AdminAccessUser[] = result.data.map((user: AdminAccessUser) => ({
+    ...user,
+    roles: applySuperAdminRoles(user.email, user.roles),
+  }));
 
   return buildPaginatedResponse(data, total, page, limit);
 }

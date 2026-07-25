@@ -73,6 +73,46 @@ export const BLOG_REVIEW_ROLES = [
 
 export type WriterTeamRole = (typeof WRITER_TEAM_ROLES)[number];
 
+/** Roles editable on /admin/access (excludes owner, writer, resource team). */
+export const ACCESS_PAGE_ASSIGNABLE_ROLES = ROLES.filter(
+  (role): role is Role =>
+    role !== "owner" &&
+    !RESOURCE_TEAM_ROLES.includes(role as ResourceTeamRole) &&
+    !WRITER_TEAM_ROLES.includes(role as WriterTeamRole),
+);
+
+export function sanitizeAccessPageRoles(roles: Role[]): Role[] {
+  const allowed = new Set<Role>(ACCESS_PAGE_ASSIGNABLE_ROLES);
+  return roles.filter((role) => allowed.has(role));
+}
+
+/** True when incoming roles newly grant authority at or above the actor's level. */
+export function hasDisallowedRoleGrant(
+  actorHighest: Role,
+  currentRoles: Role[],
+  incomingRoles: Role[],
+): boolean {
+  const addedRoles = incomingRoles.filter((role) => !currentRoles.includes(role));
+  return addedRoles.some(
+    (role) => roleRank(role) <= roleRank(actorHighest),
+  );
+}
+
+export function mergePreservedStaffRoles(
+  currentRoles: Role[],
+  incomingRoles: Role[],
+): Role[] {
+  const preserved = currentRoles.filter(
+    (role) =>
+      role === "owner" ||
+      WRITER_TEAM_ROLES.includes(role as WriterTeamRole) ||
+      RESOURCE_TEAM_ROLES.includes(role as ResourceTeamRole),
+  );
+  const incomingSet = new Set(incomingRoles);
+  const extra = preserved.filter((role) => !incomingSet.has(role));
+  return [...incomingRoles, ...extra];
+}
+
 export const FORMS_ACCESS_ROLES = [
   "owner",
   "admin",

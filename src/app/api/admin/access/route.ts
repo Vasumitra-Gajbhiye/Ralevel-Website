@@ -5,7 +5,14 @@ import { getAdminAccessList } from "@/lib/data/admin/access";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
 import { invalidateUserCache } from "@/lib/redis-cache";
-import { Role, highestAuthorityRole, roleRank, stripWriterTeamRoles, WRITER_TEAM_ROLES, type WriterTeamRole } from "@/lib/roles";
+import {
+  Role,
+  hasDisallowedRoleGrant,
+  highestAuthorityRole,
+  mergePreservedStaffRoles,
+  sanitizeAccessPageRoles,
+} from "@/lib/roles";
+import { applySuperAdminRoles, isSuperAdminEmail } from "@/lib/superAdmin";
 import {
   findClerkUserIdByEmail,
   syncClerkUserMetadata,
@@ -42,7 +49,12 @@ export async function POST(req: Request) {
 
   await connectDB();
 
-  const actorRoles = auth.userData.roles;
+  const actorEmail = auth.user?.email;
+  const actorIsSuperAdmin = isSuperAdminEmail(actorEmail);
+  const actorRoles = applySuperAdminRoles(
+    actorEmail ?? "",
+    auth.userData.roles as Role[],
+  );
   const actorHighest = highestAuthorityRole(actorRoles);
 
   const { email, roles, nickname, discordUserId } = (await req.json()) as {
@@ -52,48 +64,40 @@ export async function POST(req: Request) {
     discordUserId?: unknown;
   };
 
-  if (!email || !Array.isArray(roles) || roles.length === 0) {
+  const sanitizedRoles = sanitizeAccessPageRoles(roles ?? []);
+
+  if (!email || sanitizedRoles.length === 0) {
     return new Response("Invalid payload", { status: 400 });
   }
 
-  if (roles.some((r) => WRITER_TEAM_ROLES.includes(r as WriterTeamRole))) {
-    return new Response("Writer roles must be assigned via /admin/writers", {
-      status: 403,
-    });
+  if (isSuperAdminEmail(email)) {
+    return new Response("Super admin cannot be modified", { status: 403 });
   }
 
-  if (highestAuthorityRole(roles) === "owner") {
-    return new Response("Owner role cannot be assigned", { status: 403 });
-  }
-
-  if (email === auth.user?.email) {
+  if (!actorIsSuperAdmin && email === actorEmail) {
     return new Response("You cannot modify your own roles", { status: 403 });
   }
 
   const target = await UserData.findOne({ email });
   if (!target) return new Response("User not found", { status: 404 });
 
-  if (target.roles?.includes("owner")) {
+  if (!actorIsSuperAdmin && target.roles?.includes("owner")) {
     return new Response("Owner cannot be modified", { status: 403 });
   }
 
-  const highestIncoming = highestAuthorityRole(roles);
-  if (roleRank(highestIncoming) <= roleRank(actorHighest)) {
+  const currentRoles = (target.roles ?? []) as Role[];
+
+  if (
+    !actorIsSuperAdmin &&
+    hasDisallowedRoleGrant(actorHighest, currentRoles, sanitizedRoles)
+  ) {
     return new Response(
       "You cannot assign a role equal to or higher than your own",
       { status: 403 },
     );
   }
 
-  const currentRoles = (target.roles ?? []) as Role[];
-  const preservedWriterRole = currentRoles.find((r) =>
-    WRITER_TEAM_ROLES.includes(r as WriterTeamRole),
-  );
-
-  target.roles = [
-    ...stripWriterTeamRoles(roles),
-    ...(preservedWriterRole ? [preservedWriterRole] : []),
-  ];
+  target.roles = mergePreservedStaffRoles(currentRoles, sanitizedRoles);
 
   try {
     await applyStaffIdentity(target, { nickname, discordUserId }, email);
@@ -134,25 +138,35 @@ export async function DELETE(req: Request) {
 
   await connectDB();
 
+  const actorEmail = auth.user?.email;
+  const actorIsSuperAdmin = isSuperAdminEmail(actorEmail);
+
   const { email } = (await req.json()) as { email?: string };
 
   if (!email) {
     return new Response("Invalid payload", { status: 400 });
   }
 
-  if (email === auth.user?.email) {
+  if (isSuperAdminEmail(email)) {
+    return new Response("Super admin cannot be removed", { status: 403 });
+  }
+
+  if (!actorIsSuperAdmin && email === actorEmail) {
     return new Response("You cannot remove your own access", { status: 403 });
   }
 
   const target = await UserData.findOne({ email });
   if (!target) return new Response("User not found", { status: 404 });
 
-  if (target.roles?.includes("owner")) {
+  if (!actorIsSuperAdmin && target.roles?.includes("owner")) {
     return new Response("Owner cannot be removed", { status: 403 });
   }
 
   const currentRoles = (target.roles ?? []) as Role[];
-  target.roles = stripWriterTeamRoles(currentRoles);
+  const isFormerStaffOnly =
+    currentRoles.length === 1 && currentRoles[0] === "former_staff";
+
+  target.roles = isFormerStaffOnly ? [] : (["former_staff"] as Role[]);
   await target.save();
 
   const clerkUserId = await findClerkUserIdByEmail(email);
