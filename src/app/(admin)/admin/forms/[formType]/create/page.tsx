@@ -33,8 +33,16 @@ export default async function CreateFormPage({
     Form.findOne({ formType }).sort({ cycleId: -1 }).select("cycleId").lean(),
   ]);
 
-  const nextCycleId =
-    (formIndex?.activeCycleId ?? latestForm?.cycleId ?? 0) + 1;
+  const activeCycleId =
+    formIndex && !Array.isArray(formIndex)
+      ? (formIndex.activeCycleId as number | undefined)
+      : undefined;
+  const latestCycleId =
+    latestForm && !Array.isArray(latestForm)
+      ? (latestForm.cycleId as number | undefined)
+      : undefined;
+
+  const nextCycleId = (activeCycleId ?? latestCycleId ?? 0) + 1;
 
   return (
     <div className="max-w-5xl space-y-6">

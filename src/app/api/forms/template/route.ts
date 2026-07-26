@@ -1,5 +1,5 @@
 import { getAuthSession } from "@/lib/getAuthSession";
-import { buildCreateFormFromCycle } from "@/lib/forms/buildCreateFormFromCycle";
+import { buildCreateFormFromCycle, type SourceFormForCopy } from "@/lib/forms/buildCreateFormFromCycle";
 import connectDB from "@/lib/mongodb";
 import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
@@ -38,17 +38,28 @@ export async function GET(req: Request) {
     Form.findOne({ formType }).sort({ cycleId: -1 }).select("cycleId").lean(),
   ]);
 
-  if (!sourceForm) {
+  if (!sourceForm || Array.isArray(sourceForm)) {
     return NextResponse.json({ error: "Cycle not found" }, { status: 404 });
   }
 
-  const nextCycleId =
-    (formIndex?.activeCycleId ?? latestForm?.cycleId ?? 0) + 1;
+  const activeCycleId =
+    formIndex && !Array.isArray(formIndex)
+      ? (formIndex.activeCycleId as number | undefined)
+      : undefined;
+  const latestCycleId =
+    latestForm && !Array.isArray(latestForm)
+      ? (latestForm.cycleId as number | undefined)
+      : undefined;
 
-  const template = buildCreateFormFromCycle(sourceForm, {
-    formType,
-    nextCycleId,
-  });
+  const nextCycleId = (activeCycleId ?? latestCycleId ?? 0) + 1;
+
+  const template = buildCreateFormFromCycle(
+    sourceForm as unknown as SourceFormForCopy,
+    {
+      formType,
+      nextCycleId,
+    },
+  );
 
   return NextResponse.json({
     template,
