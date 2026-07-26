@@ -41,21 +41,6 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     message: "You don't have permission to access Graphic records.",
   },
   {
-    prefix: "/admin/graphic",
-    roles: ["owner", "admin", "graphic_dep_head"],
-    message: "You don't have permission to access Graphic records.",
-  },
-  {
-    prefix: "/admin/helper",
-    roles: ["owner", "admin", "helper_dep_head"],
-    message: "You don't have permission to access Helper records.",
-  },
-  {
-    prefix: "/admin/info",
-    roles: ["owner", "admin", "info_dep_head"],
-    message: "You don't have permission to access Informative Team records.",
-  },
-  {
     prefix: "/admin/qotd",
     roles: ["owner", "admin", "mod_dep_head"],
     message: "You don't have permission to access Informative Team records.",
@@ -64,11 +49,6 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     prefix: "/admin/scheduling",
     roles: ["owner", "admin", "informative_team", "info_dep_head"],
     message: "You don't have permission to access Scheduling records.",
-  },
-  {
-    prefix: "/admin/team",
-    roles: ["owner", "admin", "mod_dep_head"],
-    message: "You don't have permission to access Staff records.",
   },
   {
     prefix: "/admin/resource-cms",

@@ -59,26 +59,6 @@ function AdminSidebarNav({
           Access
         </a>
       )}
-      {hasAnyRole(roles, ["owner", "admin", "mod_dep_head"]) && (
-        <a href="/admin/team" className={linkClass} onClick={onNavigate}>
-          Mod. Staff
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin", "helper_dep_head"]) && (
-        <a href="/admin/helper" className={linkClass} onClick={onNavigate}>
-          Helper
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin", "graphic_dep_head"]) && (
-        <a href="/admin/graphic" className={linkClass} onClick={onNavigate}>
-          Graphic Dept.
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin", "info_dep_head"]) && (
-        <a href="/admin/info" className={linkClass} onClick={onNavigate}>
-          Community Dept.
-        </a>
-      )}
       {hasAnyRole(roles, RESOURCE_ACCESS_MANAGE_ROLES) && (
         <a href="/admin/resource" className={linkClass} onClick={onNavigate}>
           Resource Dept.
