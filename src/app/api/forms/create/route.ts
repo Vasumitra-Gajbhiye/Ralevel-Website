@@ -3,6 +3,7 @@ import connectDB from "@/lib/mongodb";
 import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 type IntroBlock =
@@ -196,8 +197,14 @@ export async function POST(req: Request) {
 
   await FormIndex.updateOne(
     { slug: body.formType },
-    { $inc: { activeCycleId: 1 } },
+    { $inc: { activeCycleId: 1 }, $set: { status: "open" } },
   );
+
+  revalidatePath("/apply");
+  revalidatePath(`/apply/${body.slug}`);
+  if (body.formType === "resource") {
+    revalidatePath("/apply/resource");
+  }
 
   return NextResponse.json({ success: true }, { status: 201 });
 }

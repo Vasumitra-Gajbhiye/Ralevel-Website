@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import LoginRequiredCard from "./components/LoginRequiredCard";
 import FormPageClient from "./pageClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function FormPage({
   params,
 }: {

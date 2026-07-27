@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongodb";
 import { canManageFormType, type Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
@@ -45,15 +46,30 @@ export async function PATCH(req: Request) {
       { status: 201 },
     );
   }
-  const formIndex = await FormIndex.findOne({ slug: form.formType });
-  const newStatus = form.status === "open" ? "closed" : "open";
-  //   form.status === "open" ? (form.status = "closed") : (form.status = "open");
-  form.status = newStatus;
 
-  //   console.log(formIndex.status);
-  formIndex.status = newStatus === "open" ? "open" : "soon";
+  const formIndex = await FormIndex.findOne({ slug: form.formType });
+  if (!formIndex) {
+    return NextResponse.json(
+      { error: "Form index not found" },
+      { status: 404 },
+    );
+  }
+
+  const newStatus = form.status === "open" ? "closed" : "open";
+  form.status = newStatus;
   await form.save();
-  await formIndex.save();
+
+  // Listing CTA follows the active cycle only
+  if (form.cycleId === formIndex.activeCycleId) {
+    formIndex.status = newStatus === "open" ? "open" : "soon";
+    await formIndex.save();
+  }
+
+  revalidatePath("/apply");
+  revalidatePath(`/apply/${form.slug}`);
+  if (form.formType === "resource") {
+    revalidatePath("/apply/resource");
+  }
 
   return NextResponse.json(
     { success: true, formStatus: form.status },
