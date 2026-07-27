@@ -12,23 +12,26 @@ export type DiscordAppealConfig = {
   reviewerRoleIds: string[];
 };
 
+const ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS = [
+  "1516144911961948252",
+  "1474372339000152250",
+];
+
 function parseReviewerRoleIds(): string[] {
   const explicit = process.env.DISCORD_APPEAL_REVIEWER_ROLE_IDS?.trim();
-  if (explicit) {
-    return explicit
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean);
-  }
+  const baseIds = explicit
+    ? explicit
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    : [
+        process.env.DISCORD_JR_ADMIN_ROLE_ID,
+        process.env.DISCORD_SR_ADMIN_ROLE_ID,
+      ]
+        .map((id) => id?.trim())
+        .filter((id): id is string => Boolean(id));
 
-  const fallback = [
-    process.env.DISCORD_JR_ADMIN_ROLE_ID,
-    process.env.DISCORD_SR_ADMIN_ROLE_ID,
-  ]
-    .map((id) => id?.trim())
-    .filter((id): id is string => Boolean(id));
-
-  return fallback;
+  return [...new Set([...baseIds, ...ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS])];
 }
 
 export function getDiscordPublicKey(): string | null {
