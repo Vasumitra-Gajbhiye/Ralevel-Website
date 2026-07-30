@@ -1,0 +1,617 @@
+// systems/certificates.js
+const { Certificate, Reputation } = require("@ralevel/db");
+const {
+  Events,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  InteractionType,
+  ComponentType,
+} = require("discord.js");
+
+require("../loadEnv");
+
+const {
+  getGuildConfig,
+  getChannelId,
+  getRoleId,
+  resolveRoleKeys,
+  tryGetGuildConfig,
+} = require("../utils/guildConfigStore");
+const {
+  getCertTypeLabel,
+  getCertTypeIdFromCustomId,
+  isValidCertTypeId,
+  syncCertPanel,
+} = require("../utils/certPanel");
+const {
+  buildPendingReviewEmbed,
+  buildResolvedReviewPayload,
+} = require("../utils/certReviewEmbed");
+
+function memberHasCertModRole(member) {
+  const cfg = getGuildConfig();
+  const ids = [
+    ...resolveRoleKeys(cfg.certificates?.modRoleKeys || []),
+    ...(cfg.certificates?.extraModRoleIds || []),
+  ];
+  return ids.some((id) => member?.roles?.cache?.has(id));
+}
+
+module.exports = function certificateSystem(client) {
+  client.once("ready", () => {
+    syncCertPanel(client).catch((err) => {
+      console.error("[CertPanel] Failed to sync panel on ready:", err);
+    });
+  });
+
+  // Utility: get rep count
+  async function getRepCount(userId) {
+    try {
+      const doc = await Reputation.findOne({ userId });
+      return doc?.rep ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // Single InteractionCreate handler for all certificate interactions
+  client.on(Events.InteractionCreate, async (interaction) => {
+    try {
+      const cfgEarly = tryGetGuildConfig();
+      if (cfgEarly?.features?.certificates === false) return;
+
+      // ---------------------------
+      // Modal submit flows (reject modal)
+      // ---------------------------
+      if (interaction.type === InteractionType.ModalSubmit) {
+        const customId = interaction.customId || "";
+        // Reject modal: cert_reject_modal:<appId>
+        if (customId.startsWith("cert_reject_modal:")) {
+          const appId = customId.split(":")[1];
+          if (!appId) return;
+
+          // Only admins should be able (we'll double-check interaction.member roles)
+          const member = interaction.member;
+          if (!member || !memberHasCertModRole(member)) {
+            return interaction.reply({
+              ephemeral: true,
+              content: "❌ Only admins may reject applications.",
+            });
+          }
+
+          // Fetch app
+          const app = await Certificate.findById(appId);
+          if (!app) {
+            return interaction.reply({
+              ephemeral: true,
+              content: "❌ Application not found.",
+            });
+          }
+
+          // Collect reason
+          const reason =
+            interaction.fields.getTextInputValue("reject_reason") ||
+            "No reason provided";
+
+          // Update DB
+          if (app.status !== "pending") {
+            return interaction.reply({
+              ephemeral: true,
+              content: "⚠️ This application was already processed.",
+            });
+          }
+
+          app.status = "rejected";
+          app.reason = reason;
+          app.moderatorId = interaction.user.id;
+          app.resolvedAt = new Date();
+          await app.save();
+
+          if (interaction.message?.edit) {
+            await interaction.message
+              .edit(
+                buildResolvedReviewPayload(app, {
+                  decision: "rejected",
+                  moderatorTag: interaction.user.tag,
+                  reason,
+                }),
+              )
+              .catch(() => {});
+          }
+
+          await interaction.deferReply({ ephemeral: true });
+
+          // DM applicant (best-effort)
+          try {
+            const user = await client.users.fetch(app.userId).catch(() => null);
+            if (user) {
+              await user
+                .send({
+                  embeds: [
+                    new EmbedBuilder()
+                      .setTitle("❌ Certificate Application — Rejected")
+                      .setDescription(
+                        `Your application for **${app.type}** certificate was rejected.`,
+                      )
+                      .addFields(
+                        { name: "Reason", value: reason.slice(0, 1024) },
+                        {
+                          name: "Application ID",
+                          value: `\`${app._id}\``,
+                          inline: true,
+                        },
+                      )
+                      .setColor("#ff4d4d")
+                      .setTimestamp(),
+                  ],
+                })
+                .catch(() => {});
+            }
+          } catch {
+            // Send update
+            try {
+              const updatesCh =
+                await client.channels.fetch(getChannelId("certUpdates"));
+              const applicantUser = await client.users.fetch(app.userId);
+
+              const updateEmbed = new EmbedBuilder()
+                .setTitle("❌ Certificate Application — Rejected")
+                .setDescription(
+                  `Your application for **${app.type}** certificate was rejected.`,
+                )
+                .addFields(
+                  { name: "Reason", value: reason.slice(0, 1024) },
+                  {
+                    name: "Application ID",
+                    value: `\`${app._id}\``,
+                    inline: true,
+                  },
+                )
+                .setColor("#ff4d4d")
+                .setFooter({
+                  text: "You're seeing updates here because your DMs are closed or restricted.",
+                })
+                .setTimestamp();
+
+              await updatesCh.send({
+                content: `<@${applicantUser.id}>`, // 👈 ping the user
+                embeds: [updateEmbed],
+              });
+            } catch (err) {
+              console.error(err);
+            }
+          }
+
+          // Post to review channel
+          await interaction.editReply({ content: `✅ Rejected` });
+
+          try {
+            const reviewCh = await client.channels
+              .fetch(getChannelId("review"))
+              .catch(() => null);
+            if (reviewCh) {
+              const embed = new EmbedBuilder()
+                .setTitle("✅ Certificate Application Rejected")
+                .setDescription(
+                  `Application ID: \`${app._id}\`\n
+                 Moderator: ${interaction.user.tag} \n
+                 Reason: ${reason}
+                `,
+                )
+                .setColor("#ff4d4d")
+                .setTimestamp();
+              await reviewCh.send({
+                embeds: [embed],
+              });
+            }
+          } catch (err) {
+            console.log(err);
+          }
+
+          return;
+        }
+
+        // Details modal by user is NOT used in this version (we use /submit-cert-details or email workflow)
+        return;
+      }
+
+      // For buttons and other interaction types:
+      if (!interaction.isButton()) return;
+
+      const customId = interaction.customId;
+      const user = interaction.user;
+      const guild = interaction.guild;
+      const channel = interaction.channel;
+
+      // ---------------------------
+      // APPLY buttons
+      // ---------------------------
+      const certTypeId = getCertTypeIdFromCustomId(customId);
+      if (certTypeId) {
+        const cfg = getGuildConfig();
+        const panelButtons = cfg.certificates?.panel?.buttons || [];
+        const panelButton = panelButtons.find(
+          (button) => button.certTypeId === certTypeId,
+        );
+
+        if (!panelButton || !isValidCertTypeId(certTypeId)) {
+          return interaction.reply({
+            ephemeral: true,
+            content: "❌ This certificate application is not available.",
+          });
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const type = getCertTypeLabel(certTypeId);
+
+        // If in guild, fetch member for role checks
+        let member = null;
+        if (guild)
+          member = await guild.members.fetch(user.id).catch(() => null);
+
+        // Eligibility: helper requires Senior Helper role
+        if (certTypeId === "helper") {
+          const requiredRoleIds = resolveRoleKeys(["srHelper"]);
+          if (
+            !member ||
+            !requiredRoleIds.some((rid) => member.roles.cache.has(rid))
+          ) {
+            return interaction.editReply({
+              content:
+                `❌ You are not eligible for the ${type} certificate.\n` +
+                "If you think this is an error, contact staff by opening a ticket.",
+            });
+          }
+        }
+
+        // Disallow duplicate pending application of same type
+        const already = await Certificate.findOne({
+          userId: user.id,
+          type,
+          status: "pending",
+        });
+        if (already) {
+          return interaction.editReply({
+            content: `⚠️ You already have a pending ${type} application (ID: \`${already._id}\`).`,
+          });
+        }
+
+        // gather info
+        const rep = await getRepCount(user.id);
+        const joinedAt = member?.joinedAt ?? null;
+
+        // create application
+        const app = await Certificate.create({
+          userId: user.id,
+          userTag: user.tag,
+          type,
+          rep,
+          joinedAt,
+          status: "pending",
+          createdAt: new Date(),
+        });
+
+        const appEmbed = buildPendingReviewEmbed(app, {
+          userTag: user.tag,
+          userId: user.id,
+          channelName: channel?.name ?? null,
+        });
+
+        const approveId = `cert_approve:${app._id}`;
+        const rejectId = `cert_reject:${app._id}`;
+
+        const reviewRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(approveId)
+            .setLabel("Approve")
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(rejectId)
+            .setLabel("Reject")
+            .setStyle(ButtonStyle.Danger),
+        );
+
+        // send to review channel
+        const reviewCh = await client.channels
+          .fetch(getChannelId("review"))
+          .catch(() => null);
+        if (reviewCh) {
+          const reviewMsg = await reviewCh
+            .send({ embeds: [appEmbed], components: [reviewRow] })
+            .catch(() => null);
+          if (reviewMsg) {
+            app.reviewMessageId = reviewMsg.id;
+            app.reviewChannelId = reviewCh.id;
+            await app.save().catch(() => {});
+          }
+        }
+
+        // DM applicant (best-effort)
+        try {
+          const u = await client.users.fetch(user.id);
+          if (u) {
+            await u
+              .send({
+                embeds: [
+                  new EmbedBuilder()
+                    .setTitle("✅ Application Submitted")
+                    .setDescription(
+                      `Your application for **${type}** certificate was submitted and queued for review.`,
+                    )
+                    .addFields(
+                      {
+                        name: "Application ID",
+                        value: `\`${app._id}\``,
+                        inline: false,
+                      },
+                      { name: "Rep", value: `${rep}`, inline: true },
+                      {
+                        name: "Joined",
+                        value: joinedAt
+                          ? `<t:${Math.floor(joinedAt.getTime() / 1000)}:R>`
+                          : "Unknown",
+                        inline: true,
+                      },
+                    )
+                    .setColor("#00B894"),
+                ],
+              })
+              .catch(() => {});
+          }
+        } catch {
+          // Send update
+          try {
+            const updatesCh = await client.channels.fetch(getChannelId("certUpdates"));
+            const applicantUser = await client.users.fetch(user.id);
+
+            const updateEmbed = new EmbedBuilder()
+              .setTitle("✅ Application Submitted")
+              .setDescription(
+                `Your application for **${type}** certificate was submitted and queued for review.`,
+              )
+              .addFields(
+                {
+                  name: "Application ID",
+                  value: ` \`${app._id}\``,
+                  inline: false,
+                },
+                { name: "Rep", value: `${rep}`, inline: true },
+                {
+                  name: "Joined",
+                  value: joinedAt
+                    ? `<t:${Math.floor(joinedAt.getTime() / 1000)}:R>`
+                    : "Unknown",
+                  inline: true,
+                },
+              )
+              .setColor("#00B894")
+              .setFooter({
+                text: "You're seeing updates here because your DMs are closed or restricted.",
+              })
+              .setTimestamp();
+
+            await updatesCh.send({
+              content: `<@${applicantUser.id}>`, // 👈 ping the user
+              embeds: [updateEmbed],
+            });
+          } catch (err) {
+            console.error(err);
+          }
+        }
+
+        return interaction.editReply({
+          content: `✅ Your ${type} application has been submitted (ID: \`${app._id})\`.`,
+        });
+      }
+
+      // ---------------------------
+      // Approve / Reject buttons (admin-only)
+      // Custom IDs:
+      //   cert_approve:<appId>
+      //   cert_reject:<appId>
+      // ---------------------------
+      if (
+        customId.startsWith("cert_approve:") ||
+        customId.startsWith("cert_reject:")
+      ) {
+        // Admin check
+        const member = interaction.member;
+        if (!member || !memberHasCertModRole(member)) {
+          return interaction.reply({
+            ephemeral: true,
+            content: "❌ Only admins may perform this action.",
+          });
+        }
+
+        const [action, appId] = customId.split(":");
+        const app = await Certificate.findById(appId);
+        if (!app) {
+          return interaction.reply({
+            ephemeral: true,
+            content: "❌ Application not found.",
+          });
+        }
+
+        // APPROVE
+        if (action === "cert_approve") {
+          if (app.status !== "pending") {
+            return interaction.reply({
+              ephemeral: true,
+              content: "⚠️ This application has already been processed.",
+            });
+          }
+
+          await interaction.deferUpdate();
+
+          app.status = "approved";
+          app.moderatorId = interaction.user.id;
+          app.resolvedAt = new Date();
+          await app.save();
+
+          await interaction.editReply(
+            buildResolvedReviewPayload(app, {
+              decision: "approved",
+              moderatorTag: interaction.user.tag,
+            }),
+          );
+
+          // If resource type, grant resource contributor role (best-effort)
+          try {
+            if (interaction.guild && app.type === "resource") {
+              const rewardRoleId = getRoleId("resourceContributor");
+              const guildMember = await interaction.guild.members
+                .fetch(app.userId)
+                .catch(() => null);
+              if (guildMember && rewardRoleId)
+                await guildMember.roles.add(rewardRoleId).catch(() => {});
+            }
+          } catch (err) {
+            // ignore
+          }
+
+          // DM applicant: tell them to email or ask mods to use /submit-cert-details
+          try {
+            const u = await client.users.fetch(app.userId).catch(() => null);
+            if (u) {
+              await u
+                .send({
+                  embeds: [
+                    new EmbedBuilder()
+                      .setTitle("✅ Certificate Application Approved")
+                      .setDescription(
+                        `Your application for **${app.type}** certificate has been approved by our Administrative team. 🎉\n\n` +
+                          `**Next step:** Please send your **legal full name** and **email** to **r.alevelserver@gmail.com**.\n\n` +
+                          `Your **legal full name** will be used in the certificate and cannot be changed later.\n\n` +
+                          `Application ID:  \`${app._id}\`\n\n` +
+                          `⚠️ **Note:** \n\n` +
+                          `When you send details via email, please mention your Application ID in the email.\n\n` +
+                          `Your full legal name will remain confidental.\n\n` +
+                          `Please send us the details from the email on which you'd like to receive the certificate.\n`,
+                      )
+                      .setColor("#00B894")
+                      .setTimestamp(),
+                  ],
+                })
+                .catch(() => {});
+            }
+          } catch (err) {
+            console.log(err);
+            // Send update
+            try {
+              const updatesCh =
+                await client.channels.fetch(getChannelId("certUpdates"));
+              const applicantUser = await client.users.fetch(app.userId);
+
+              const updateEmbed = new EmbedBuilder()
+                .setTitle("✅ Certificate Application Approved")
+                .setDescription(
+                  `Your application for **${app.type}** certificate has been approved by our Administrative team. 🎉\n\n` +
+                    `**Next step:** Please send your **legal full name** and **email** to **r.alevelserver@gmail.com**.\n\n` +
+                    `Your **legal full name** will be used in the certificate and cannot be changed later.\n\n` +
+                    `Application ID:  \`${app._id}\`\n\n` +
+                    `⚠️ **Note:** \n\n` +
+                    `When you send details via email, please mention your Application ID in the email.\n\n` +
+                    `Your full legal name will remain confidental.\n\n` +
+                    `Please send us the details from the email on which you'd like to receive the certificate.\n`,
+                )
+                .setColor("#00B894")
+                .setFooter({
+                  text: "You're seeing updates here because your DMs are closed or restricted.",
+                })
+                .setTimestamp();
+
+              await updatesCh.send({
+                content: `<@${applicantUser.id}>`, // 👈 ping the user
+                embeds: [updateEmbed],
+              });
+            } catch (err) {
+              console.error(err);
+            }
+          }
+
+          // Post to review channel
+          try {
+            const reviewCh = await client.channels
+              .fetch(getChannelId("review"))
+              .catch(() => null);
+            if (reviewCh) {
+              const embed = new EmbedBuilder()
+                .setTitle("✅ Certificate Application Approved")
+                .setDescription(
+                  `Application ID: \`${app._id}\`\n
+                 Moderator: ${interaction.user.tag}
+                `,
+                )
+                .setColor("#00B894")
+                .setTimestamp();
+              await reviewCh.send({
+                embeds: [embed],
+              });
+            }
+          } catch (err) {
+            console.log(err);
+          }
+
+          await interaction
+            .followUp({ ephemeral: true, content: "✅ Approved" })
+            .catch(() => {});
+          return;
+        }
+
+        // REJECT → show modal (do NOT defer before showModal)
+        if (action === "cert_reject") {
+          if (app.status !== "pending") {
+            return interaction.reply({
+              ephemeral: true,
+              content: "⚠️ This application has already been processed.",
+            });
+          }
+
+          // Build and show modal for rejection reason
+          const modal = new ModalBuilder()
+            .setCustomId(`cert_reject_modal:${appId}`)
+            .setTitle("Reject Certificate Application");
+
+          const reasonInput = new TextInputBuilder()
+            .setCustomId("reject_reason")
+            .setLabel("Rejection Reason")
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder("Explain briefly why this application is rejected")
+            .setRequired(true)
+            .setMinLength(3)
+            .setMaxLength(1000);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(reasonInput),
+          );
+
+          // show modal (no defer before)
+          return interaction.showModal(modal);
+        }
+      }
+
+      return;
+    } catch (err) {
+      console.error("[certificates] Interaction handler error:", err);
+      // Best-effort safe reply
+      try {
+        if (interaction && !interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            ephemeral: true,
+            content: "⚠️ An error occurred while processing this interaction.",
+          });
+        } else if (interaction && interaction.deferred) {
+          await interaction.editReply({
+            content: "⚠️ An error occurred while processing this interaction.",
+          });
+        }
+      } catch {}
+    }
+  });
+};

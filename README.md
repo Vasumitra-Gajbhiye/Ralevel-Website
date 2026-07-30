@@ -1,55 +1,29 @@
-# r/alevel Website
+# r/alevel monorepo
 
-Official web platform supporting the r/alevel student learning community.  
+Public website + Discord gateway bot in one repository.
 
-The website provides tools that help students collaborate, contribute resources, and earn recognition for helping others in the community.  
+| Package | Path | Coolify Dockerfile |
+|---------|------|--------------------|
+| `@ralevel/website` | `apps/website` | [`Dockerfile.website`](./Dockerfile.website) |
+| `@ralevel/bot` | `apps/bot` | [`Dockerfile.bot`](./Dockerfile.bot) |
+| `@ralevel/db` / `@ralevel/shared` | `packages/*` | used by the bot |
+| `@r-alevel/discord-bot` | `packages/discord-notify` | REST helpers for website form/appeal notifications |
 
-## Features
+Deploy guide: [`docs/COOLIFY.md`](./docs/COOLIFY.md)
 
-### Certificate System
-Students who consistently help others in the community can earn official r/alevel certificates.
+## Local development
 
-Features include:
-- Certificate generation  
-- Certificate verification system  
-- Public certificate validation  
+```bash
+pnpm install
+docker compose up -d redis
 
-### Admin Dashboard
-Administrative tools for managing the community platform.
+# Website (apps/website/.env.local)
+pnpm dev:website
 
-Includes:
-- Application review system
-- Approval and rejection workflow
-- Community voting for applications
-- Resource management
+# Gateway bot (repo-root .env — see .env.bot.example)
+pnpm dev:bot
+```
 
-### Blog Platform
-Built-in blogging system that allows contributors to share educational content.
+## Website features
 
-Features:
-- Blog editor and publishing system
-- Structured content display
-- Community learning resources
-
-### Resource System
-Centralized repository of helpful academic resources for A-Level students.
-
-### Certificate Verification
-Public verification system allowing anyone to verify the authenticity of r/alevel certificates.
-
-## Purpose
-
-The goal of this project is to create a structured platform that encourages students to help each other while providing recognition for meaningful contributions.
-
-The system motivates collaboration and builds a stronger academic community.
-
-## Tech Stack
-
-- Next.js
-- TypeScript
-- MongoDB
-- Tailwind CSS
-
-## Related Community
-
-Reddit: https://reddit.com/r/alevel  
+Official web platform for the r/alevel student learning community: certificates, admin tools, blogs, resources, Discord form notifications, and ban appeals.

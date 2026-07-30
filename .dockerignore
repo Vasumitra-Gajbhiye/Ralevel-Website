@@ -4,10 +4,14 @@ node_modules
 out
 build
 coverage
+.turbo
+.pnpm-store
 
 # Secrets and local environment files
 .env
 .env.*
+!.env.example
+!.env.bot.example
 *.pem
 auth-trial-*.json
 .clerk
@@ -19,26 +23,28 @@ auth-trial-*.json
 .cursor
 .idea
 
-# Documentation and reviews (not needed at build time)
+# Documentation (not needed at build time) — keep package.json
 *.md
+!package.json
 docs
 PERFORMANCE_REVIEW.md
+posthog-setup-report.md
 
-# Dev-only assets (not referenced by app source)
+# Dev-only assets
 assets-local
 json_files
-scripts
 Json files
 
-# Docker meta (not needed inside build context)
+# Docker meta
 Dockerfile*
-docker-compose.yml
 .dockerignore
+docker-compose.yml
 
 # Logs, OS files, and TypeScript caches
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .DS_Store
 *.tsbuildinfo
 
@@ -48,10 +54,17 @@ yarn-error.log*
 .pnp.js
 .yarn/install-state.gz
 
-# Generated sitemap files (recreated by postbuild during image build)
-public/sitemap.xml
-public/sitemap-0.xml
-public/robots.txt
+# Generated sitemap files
+**/public/sitemap.xml
+**/public/sitemap-0.xml
+**/public/robots.txt
 
-# Syllabus JSON and other local data
-lib/syllabusJson
+# Agents / skill caches
+.agents
+.claude
+
+# Sibling-app sources not needed for a given image are still in context;
+# Dockerfiles only COPY what they need. Exclude heavy local artifacts:
+apps/website/.next
+apps/*/node_modules
+packages/*/node_modules
