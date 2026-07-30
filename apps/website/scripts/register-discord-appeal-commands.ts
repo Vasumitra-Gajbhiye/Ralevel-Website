@@ -10,6 +10,10 @@ const DISCORD_API_BASE = "https://discord.com/api/v10";
 
 const COMMANDS = [
   {
+    name: "ping",
+    description: "Check if the applications bot is responding",
+  },
+  {
     name: "approve-ban-appeal",
     description: "Approve a pending ban appeal submission",
     options: [
