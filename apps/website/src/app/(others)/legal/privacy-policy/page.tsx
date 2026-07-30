@@ -227,6 +227,7 @@ export default function Page() {
                 ["Security & storage", "#security"],
                 ["Third-party services", "#third-party"],
                 ["Your rights", "#rights"],
+                ["Related policies", "#related-policies"],
                 ["Contact", "#contact"],
               ].map(([label, href]) => (
                 <li key={href}>
@@ -359,9 +360,55 @@ export default function Page() {
             <hr className="border-gray-100" />
 
             {/* SECTION 7 */}
+            <section id="related-policies">
+              <h2 className="text-xl font-semibold text-blue-700 mb-3">
+                7. Related policies
+              </h2>
+              <p>
+                Separate privacy policies and terms apply to our Discord bots:
+              </p>
+              <ul className="list-disc pl-6 mt-3 space-y-2">
+                <li>
+                  <strong>Application Bot</strong> —{" "}
+                  <a
+                    href="/legal/application-bot/privacy-policy"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  ·{" "}
+                  <a
+                    href="/legal/application-bot/terms-of-service"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <strong>r/alevel Bot</strong> —{" "}
+                  <a
+                    href="/legal/ralevel-bot/privacy-policy"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  ·{" "}
+                  <a
+                    href="/legal/ralevel-bot/terms-of-service"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
+              </ul>
+            </section>
+
+            <hr className="border-gray-100" />
+
+            {/* SECTION 8 */}
             <section id="contact">
               <h2 className="text-xl font-semibold text-blue-700 mb-3">
-                7. Contact
+                8. Contact
               </h2>
               <p>
                 For privacy requests or questions, reach out to the r/alevel

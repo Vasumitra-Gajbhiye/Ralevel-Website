@@ -2,9 +2,16 @@
  * Register Discord slash commands for ban appeal review.
  *
  * Usage:
- *   npx ts-node --compiler-options '{"module":"CommonJS"}' scripts/register-discord-appeal-commands.ts
+ *   pnpm --filter website register-discord-appeal-commands
+ *
+ * Loads apps/website/.env then .env.local (local overrides).
+ * Needs DISCORD_BOT_TOKEN, DISCORD_CLIENT_ID, DISCORD_GUILD_ID.
  */
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+import path from "node:path";
+
+loadEnv({ path: path.resolve(__dirname, "../.env") });
+loadEnv({ path: path.resolve(__dirname, "../.env.local"), override: true });
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 

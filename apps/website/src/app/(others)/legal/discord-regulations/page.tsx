@@ -212,6 +212,34 @@ export default function DiscordRegulationsPage() {
               >
                 r/alevel Reddit
               </Link>,
+              <Link
+                key={3}
+                className="text-blue-600 underline"
+                href="/legal/application-bot/privacy-policy"
+              >
+                Application Bot Privacy Policy
+              </Link>,
+              <Link
+                key={4}
+                className="text-blue-600 underline"
+                href="/legal/application-bot/terms-of-service"
+              >
+                Application Bot Terms of Service
+              </Link>,
+              <Link
+                key={5}
+                className="text-blue-600 underline"
+                href="/legal/ralevel-bot/privacy-policy"
+              >
+                r/alevel Bot Privacy Policy
+              </Link>,
+              <Link
+                key={6}
+                className="text-blue-600 underline"
+                href="/legal/ralevel-bot/terms-of-service"
+              >
+                r/alevel Bot Terms of Service
+              </Link>,
             ]}
           />
 

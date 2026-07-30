@@ -32,6 +32,13 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
+function channelMessage(content: string) {
+  return {
+    type: INTERACTION_CHANNEL_MESSAGE,
+    data: { content },
+  };
+}
+
 function ephemeralMessage(content: string) {
   return {
     type: INTERACTION_CHANNEL_MESSAGE,
@@ -66,6 +73,11 @@ async function verifyDiscordSignature(
 
 async function handleSlashCommand(interaction: DiscordInteraction) {
   const commandName = interaction.data?.name;
+
+  if (commandName === "ping") {
+    return jsonResponse(channelMessage("Pong!"));
+  }
+
   const submissionId = interaction.data?.options?.find(
     (opt) => opt.name === "submission_id",
   )?.value;
@@ -153,6 +165,14 @@ export async function handleDiscordInteraction(
 
   if (interaction.type === INTERACTION_PING) {
     return jsonResponse({ type: INTERACTION_PING });
+  }
+
+  // /ping works without full appeal config — confirms interactions + signature verify
+  if (
+    interaction.type === INTERACTION_APPLICATION_COMMAND &&
+    interaction.data?.name === "ping"
+  ) {
+    return handleSlashCommand(interaction);
   }
 
   const config = getDiscordAppealBotConfig();
