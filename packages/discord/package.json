@@ -1,5 +1,5 @@
 {
-  "name": "@r-alevel/discord-bot",
+  "name": "@ralevel/discord",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",

@@ -1,19 +1,28 @@
 {
   "name": "ralevel",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.23.1"
+  },
   "scripts": {
-    "dev": "turbo run dev --filter=@ralevel/website",
-    "dev:website": "turbo run dev --filter=@ralevel/website",
-    "build": "turbo run build --filter=@ralevel/website",
-    "build:website": "turbo run build --filter=@ralevel/website",
-    "start:website": "turbo run start --filter=@ralevel/website",
-    "lint": "turbo run lint --filter=@ralevel/website"
+    "dev": "pnpm --filter @ralevel/website dev",
+    "dev:website": "pnpm --filter @ralevel/website dev",
+    "dev:bot": "pnpm --filter @ralevel/applications-bot dev",
+    "build": "turbo run build",
+    "build:website": "pnpm --filter @ralevel/website build",
+    "build:bot": "pnpm --filter @ralevel/applications-bot build",
+    "start:website": "pnpm --filter @ralevel/website start",
+    "start:bot": "pnpm --filter @ralevel/applications-bot start",
+    "lint": "turbo run lint"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
   },
-  "engines": {
-    "node": ">=22.23.1"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vasumitra-Gajbhiye/r-alevel.git"
+  },
+  "license": "ISC"
 }

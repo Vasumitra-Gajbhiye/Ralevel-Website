@@ -1,221 +1,153 @@
-# Coolify deployment
+# Coolify deployment (monorepo)
 
-Production deployment guide for the r/alevel Next.js app using the multi-stage `Dockerfile` and a separate Redis service.
+This repo deploys as **two Coolify applications** from the same git repository:
+
+| Coolify app | Dockerfile | Purpose |
+|-------------|------------|---------|
+| Website | `/Dockerfile.website` | Public Next.js site (`apps/website`) |
+| Applications bot | `/Dockerfile.bot` | Discord pings, reminders, ban-appeal interactions (`apps/bot`) |
+
+Do **not** run both in one container. Restarting the bot must not restart the website.
+
+Base directory for both apps: `/` (repo root). Shared Docker network so the website can reach the bot by internal hostname.
 
 ## Architecture
 
-- **App container**: Next.js standalone server on port `3000` (`node server.js`)
-- **Redis**: Separate Coolify service on the same Docker network (see [REDIS.md](./REDIS.md))
-- **MongoDB**: External (MongoDB Atlas)
-- **Expected image size**: ~280–450 MB (standalone) vs ~1.5–2 GB (naive full `node_modules` approach)
+- **Website container**: Next.js standalone on port `3000`
+- **Applications bot container**: Node HTTP on port `8787` (restart policy: always)
+- **Redis**: Separate Coolify Redis service (website cache / rate limits)
+- **MongoDB**: Shared Atlas DB via `MONGODB_URI` (same database for both apps)
 
-## Prerequisites
+```text
+User → website:3000
+Website → BOT_INTERNAL_URL (e.g. http://applications-bot:8787) for Discord side effects
+Discord Interactions → bot public URL /interactions  (preferred)
+Coolify cron → bot /cron/form-reminders
+```
 
-- Coolify instance with Docker build support
-- Git repository access
-- Domain configured in Coolify (optional for first deploy)
-- At least **4 GB RAM** available during build
+## 1. Redis
 
-## 1. Add Redis (if not already running)
+1. Add a Redis service (`redis:7-alpine` or Coolify template).
+2. Use the **internal** URL (never `localhost` from containers), e.g. `redis://default:PASSWORD@redis:6379`.
 
-1. In Coolify, add a **Redis** service to your project (`redis:7-alpine` or Coolify template).
-2. Deploy Redis first.
-3. Note the **internal** connection URL (hostname is the service name, e.g. `redis://default:PASSWORD@redis:6379`).
-
-Do **not** use `localhost` or `127.0.0.1` for `REDIS_URL` from inside the app container.
-
-## 2. Create the application
+## 2. Website application
 
 | Setting | Value |
 |---------|-------|
-| Build pack | **Dockerfile** |
+| Build pack | Dockerfile |
 | Dockerfile location | `/Dockerfile.website` |
-| Base directory | `/` (repo root — required for pnpm workspace) |
-| Exposed port | **3000** |
-| Health check path | `/` |
-| Health check start period | **60s** (first boot after build) |
+| Base directory | `/` |
+| Exposed port | `3000` |
+| Health check | `/` (start period ~60s) |
 
-## 3. Build-time environment variables
+### Website build variables
 
-`NEXT_PUBLIC_*` variables are inlined at build time. Set these in Coolify **Build Variables** (or equivalent build-time env section):
+Same as before (`MONGODB_URI`, all `NEXT_PUBLIC_*`).
 
-| Variable | Purpose |
-|----------|---------|
-| `MONGODB_URI` | MongoDB Atlas connection string — **required at build time** for SSG routes (`/resources/[slug]`, curriculum pages) that call `generateStaticParams` |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk client auth |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | e.g. `/sign-in` |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | e.g. `/sign-up` |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | e.g. `/` |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | e.g. `/` |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary uploads |
-| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | Analytics |
-| `NEXT_PUBLIC_POSTHOG_HOST` | e.g. `https://eu.i.posthog.com` |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe checkout |
-| `NEXT_PUBLIC_URL` | Public site URL, e.g. `https://ralevel.com` |
-
-If build-time `NEXT_PUBLIC_*` values are missing, the image may build successfully but client-side integrations (Clerk, PostHog, Stripe.js) will fail at runtime.
-
-If `MONGODB_URI` is missing at build time, the Docker build will fail during page data collection (or earlier) because `.env` files are excluded from the image and the `Dockerfile` must declare matching `ARG` names for Coolify to pass build variables through.
-
-**Also set `MONGODB_URI` at runtime** (see section 4) — the final image does not bake in this secret; it is only needed during the builder stage.
-
-## 4. Runtime environment variables
-
-Set these in Coolify **Environment Variables** (runtime only — never bake secrets into the image):
-
-### Core
+### Website runtime (Discord-related)
 
 | Variable | Required | Notes |
 |----------|----------|-------|
-| `NODE_ENV` | Yes | `production` |
-| `MONGODB_URI` | Yes | Same Atlas URI as build time (not baked into the image) |
-| `NEXTAUTH_URL` | Yes | Public URL, e.g. `https://ralevel.com` (used by Stripe redirects) |
+| `BOT_INTERNAL_URL` | Yes for Discord | Internal Coolify URL to bot, e.g. `http://applications-bot:8787` |
+| `INTERNAL_BOT_SECRET` | Yes for Discord | Shared with bot; sent as `x-internal-bot-secret` |
+| `DISCORD_CLIENT_ID` | Ban appeals | OAuth for appeal form |
+| `DISCORD_CLIENT_SECRET` | Ban appeals | OAuth |
+| `DISCORD_PUBLIC_KEY` | Optional | Only if still proxying interactions via website |
+| `DISCORD_GUILD_ID` | Ban appeals | OAuth / config gate |
+| `CRON_SECRET` | Optional | Only if cron still hits website proxy |
 
-### Auth
+**Do not put `DISCORD_BOT_TOKEN` on the website** — it belongs on the bot app.
 
-| Variable | Required |
-|----------|----------|
-| `CLERK_SECRET_KEY` | Yes |
+## 3. Applications bot
 
-### Redis
+| Setting | Value |
+|---------|-------|
+| Build pack | Dockerfile |
+| Dockerfile location | `/Dockerfile.bot` |
+| Base directory | `/` |
+| Exposed port | `8787` |
+| Restart policy | **Always** |
+| Health check | `/health` |
 
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `REDIS_URL` | Recommended | Internal Coolify Redis URL |
-| `REDIS_ENABLED` | Recommended | `true` |
+Give the bot a public hostname (e.g. `applications-bot.ralevel.com`) for Discord Interactions, or keep interactions proxied via the website until cutover.
 
-App degrades gracefully if Redis is unavailable (see [REDIS.md](./REDIS.md)).
+### Bot runtime env
 
-### Payments
-
-| Variable | Required |
-|----------|----------|
-| `STRIPE_SECRET_KEY` | If using Stripe |
-| `STRIPE_WEBHOOK_SECRET` | If using Stripe webhooks |
-
-After deploy, point Stripe webhooks to `https://your-domain/api/webhook`.
-
-### Storage and media
+See [`.env.bot.example`](../../../.env.bot.example):
 
 | Variable | Required |
 |----------|----------|
-| `CLOUDINARY_CLOUD_NAME` | If using Cloudinary |
-| `CLOUDINARY_API_KEY` | If using Cloudinary |
-| `CLOUDINARY_API_SECRET` | If using Cloudinary |
-| `R2_ACCOUNT_ID` | If using R2 |
-| `R2_ACCESS_KEY_ID` | If using R2 |
-| `R2_SECRET_ACCESS_KEY` | If using R2 |
-| `R2_BUCKET_NAME` | If using R2 |
-| `R2_PUBLIC_URL` | If using R2 |
-| `R2_FORMS_BUCKET_NAME` | If using form uploads |
-| `R2_FORMS_PUBLIC_URL` | If using form uploads |
+| `MONGODB_URI` | Yes (same website DB) |
+| `INTERNAL_BOT_SECRET` | Yes (same as website) |
+| `DISCORD_NOTIFICATIONS_ENABLED` | `true` |
+| `DISCORD_BOT_TOKEN` | Yes |
+| `DISCORD_APPLICATIONS_CHANNEL_ID` | Yes |
+| `DISCORD_JR_ADMIN_ROLE_ID` / `DISCORD_SR_ADMIN_ROLE_ID` | Reminders |
+| `DISCORD_PUBLIC_KEY` | Interactions |
+| `DISCORD_GUILD_ID` | Appeals |
+| `DISCORD_BAN_APPEAL_CHANNEL_ID` | Appeals |
+| `DISCORD_APPEAL_REVIEWER_ROLE_IDS` | Optional override |
+| `NEXT_PUBLIC_URL` or `SITE_URL` | Admin links in embeds |
+| `CRON_SECRET` | Reminder cron |
+| `PORT` | Default `8787` |
 
-### Email, AI, and integrations
+Bot permissions: View Channel, Send Messages, Embed Links, mention roles used in reminders; Manage Messages / DM as needed for appeals.
 
-| Variable | Required |
-|----------|----------|
-| `RESEND_API_KEY` | If sending email |
-| `GEMINI_API_KEY` | If using theory evaluation |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | If using Google Drive (full JSON as single-line string) |
-| `DRIVE_ROOT_FOLDER_ID` | If using Google Drive |
+## 4. Discord Developer Portal
 
-### Discord application notifications
+Set **Interactions Endpoint URL** to the bot:
 
-Posts to a Discord channel when a generic intake form is submitted. Runs **inside** the Next.js website container via `packages/discord-notify` (Discord REST — not a separate gateway process).
-
-The main community Discord bot (XP, moderation, etc.) lives in the separate **`ralevel-discord-bot`** repo and is deployed on its own Coolify app. See [`docs/COOLIFY.md`](../../../../docs/COOLIFY.md).
-
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `DISCORD_NOTIFICATIONS_ENABLED` | Yes | `true` to enable |
-| `DISCORD_BOT_TOKEN` | If enabled | Bot token from [Discord Developer Portal](https://discord.com/developers/applications) |
-| `DISCORD_APPLICATIONS_CHANNEL_ID` | If enabled | Snowflake ID of the target channel |
-| `DISCORD_JR_ADMIN_ROLE_ID` | If using reminders | Jr admin role snowflake for day 5/7 reminder pings |
-| `DISCORD_SR_ADMIN_ROLE_ID` | If using reminders | Sr admin role snowflake for day 7 reminder pings |
-
-Bot needs **View Channel**, **Send Messages**, and **Embed Links** in that channel. For role mentions on reminder pings, the bot also needs permission to mention those roles. Notifications are fire-and-forget — a Discord failure does not fail the form submission.
-
-### Form reminder cron (6am IST daily)
-
-Sends escalating Discord reminders for unreviewed form applications (days 3, 5, and 7 after submission).
-
-| Variable | Required | Notes |
-|----------|----------|-------|
-| `CRON_SECRET` | Yes | Bearer token for `GET /api/cron/form-reminders` |
-
-Schedule in Coolify (or host cron) at **`30 0 * * *` UTC** (= 6:00 AM IST):
-
-```bash
-curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
-  "https://ralevel.com/api/cron/form-reminders"
+```text
+https://applications-bot.ralevel.com/interactions
 ```
 
-### QOTD admin
+Until DNS is ready, the website still proxies `POST /api/discord/interactions` → bot `/interactions`.
 
-| Variable | Required |
-|----------|----------|
-| `QOTD_MONGODB_URI` | If using QOTD admin |
-| `QOTD_DATABASE_NAME` | If using QOTD admin |
-| `QOTD_COLLECTION_NAME` | If using QOTD admin |
-| `QOTD_TARGET_DOCUMENT_ID` | If using QOTD admin |
+## 5. Form reminder cron (6am IST)
 
-## 5. Resource limits
-
-| Phase | RAM |
-|-------|-----|
-| Docker build | **≥ 4 GB** recommended (`NODE_OPTIONS=--max-old-space-size=3072` is set in the Dockerfile builder stage) |
-| Runtime | **512 MB–1 GB** usually sufficient |
-
-## 6. Deploy
-
-1. Deploy Redis (if new).
-2. Configure build and runtime variables.
-3. Deploy the Next.js application.
-4. Configure domain and TLS in Coolify reverse proxy.
-
-## 7. Post-deploy verification
-
-- [ ] `GET /` returns 200
-- [ ] Clerk sign-in works
-- [ ] `GET /api/blogs` responds
-- [ ] `GET /sitemap.xml` is served (generated during build via `next-sitemap`)
-- [ ] Redis cache hits on repeated `/api/blogs` calls (optional)
-- [ ] Stripe webhook receives events (if applicable)
-
-## Local Docker smoke test
+Prefer hitting the **bot** directly:
 
 ```bash
-# Build website image (pass NEXT_PUBLIC_* and MONGODB_URI as build args)
-docker build -f Dockerfile.website -t r-alevel-website \
+# Schedule: 30 0 * * * UTC (= 6:00 AM IST)
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://applications-bot.ralevel.com/cron/form-reminders"
+```
+
+Compatibility: `GET https://ralevel.com/api/cron/form-reminders` still proxies to the bot when `BOT_INTERNAL_URL` is set.
+
+## 6. Local development
+
+```bash
+pnpm install
+docker compose up -d   # Redis
+
+# Terminal 1 — website
+pnpm --filter @ralevel/website dev
+
+# Terminal 2 — applications bot
+pnpm --filter @ralevel/applications-bot dev
+```
+
+Set in website env: `BOT_INTERNAL_URL=http://127.0.0.1:8787` and matching `INTERNAL_BOT_SECRET`.
+
+## 7. Docker smoke tests
+
+```bash
+# Website
+docker build -f Dockerfile.website -t ralevel-website \
   --build-arg MONGODB_URI="$MONGODB_URI" \
   --build-arg NEXT_PUBLIC_URL="https://ralevel.com" \
   .
 
-# Run (pass runtime secrets via --env-file)
-docker run --rm -p 3000:3000 --env-file apps/website/.env.production r-alevel-website
-```
-
-Bot image (separate):
-
-```bash
-docker build -f Dockerfile.bot -t r-alevel-bot .
-docker run --rm --env-file .env r-alevel-bot
-```
-
-After a local `pnpm --filter @ralevel/website build`, you can also test standalone output directly:
-
-```bash
-pnpm --filter @ralevel/website start:standalone
+# Bot
+docker build -f Dockerfile.bot -t ralevel-applications-bot .
 ```
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---------|----------------|
-| Build stops at "Running TypeScript" with no error | Truncated Coolify log — scroll for the real error; often OOM on a 4 GB VPS or missing `MONGODB_URI` in build variables / Dockerfile `ARG` |
-| Build fails collecting page data for `/resources/[slug]` | `MONGODB_URI` not available in builder stage, or Atlas IP allowlist blocks the Hetzner VPS |
-| Build OOM | Increase Coolify build memory to ≥ 4 GB; builder heap is capped at 3072 MB |
-| App unreachable from proxy | Ensure `HOSTNAME=0.0.0.0` and port `3000` (set in Dockerfile) |
-| Clerk/Stripe broken on client | Missing `NEXT_PUBLIC_*` at **build** time |
-| Redis connection errors | `REDIS_URL` points to `localhost` instead of Coolify Redis service name |
-| Google Drive errors | `GOOGLE_SERVICE_ACCOUNT_JSON` malformed; use escaped single-line JSON |
+| Form submits but no Discord ping | Bot down, or missing `BOT_INTERNAL_URL` / `INTERNAL_BOT_SECRET` on website |
+| Interactions fail signature | Wrong `DISCORD_PUBLIC_KEY` on bot, or Interactions URL still pointing at old host |
+| Website build OOM | Need ≥ 4 GB build RAM; see builder `NODE_OPTIONS` |
+| Cron no-ops | Hit bot URL; ensure `CRON_SECRET` matches |

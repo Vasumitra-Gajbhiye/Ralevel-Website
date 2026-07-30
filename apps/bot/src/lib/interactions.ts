@@ -1,18 +1,14 @@
+import { verifyKey } from "discord-interactions";
+import { getDiscordAppealBotConfig, getDiscordPublicKey } from "../config.js";
 import {
   parseAppealButtonCustomId,
   reviewDiscordAppealSubmission,
-} from "@/lib/discord-appeal/review";
-import {
-  getDiscordAppealConfig,
-  getDiscordPublicKey,
-} from "@/lib/discord-appeal/config";
-import { verifyKey } from "discord-interactions";
+} from "./appeals.js";
 
 const INTERACTION_PING = 1;
 const INTERACTION_APPLICATION_COMMAND = 2;
 const INTERACTION_MESSAGE_COMPONENT = 3;
 const INTERACTION_CHANNEL_MESSAGE = 4;
-
 const EPHEMERAL_FLAG = 1 << 6;
 
 type DiscordInteraction = {
@@ -29,29 +25,6 @@ type DiscordInteraction = {
   message?: { id: string };
 };
 
-function verifyDiscordSignature(
-  body: string,
-  signature: string,
-  timestamp: string,
-  publicKey: string,
-): Promise<boolean> {
-  try {
-    // Strip any accidental quotes/whitespace from .env copy-paste
-    const normalizedKey = publicKey.replace(/[^0-9a-fA-F]/g, "");
-    if (normalizedKey.length !== 64) {
-      console.error(
-        "[discord-interactions] DISCORD_PUBLIC_KEY must be 64 hex characters",
-      );
-      return Promise.resolve(false);
-    }
-
-    return verifyKey(body, signature, timestamp, normalizedKey);
-  } catch (err) {
-    console.error("[discord-interactions] Signature verification error:", err);
-    return Promise.resolve(false);
-  }
-}
-
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -67,9 +40,28 @@ function ephemeralMessage(content: string) {
 }
 
 function getInteractionUser(interaction: DiscordInteraction) {
-  const user = interaction.member?.user ?? interaction.user;
-  if (!user) return null;
-  return user;
+  return interaction.member?.user ?? interaction.user ?? null;
+}
+
+async function verifyDiscordSignature(
+  body: string,
+  signature: string,
+  timestamp: string,
+  publicKey: string,
+): Promise<boolean> {
+  try {
+    const normalizedKey = publicKey.replace(/[^0-9a-fA-F]/g, "");
+    if (normalizedKey.length !== 64) {
+      console.error(
+        "[discord-interactions] DISCORD_PUBLIC_KEY must be 64 hex characters",
+      );
+      return false;
+    }
+    return verifyKey(body, signature, timestamp, normalizedKey);
+  } catch (err) {
+    console.error("[discord-interactions] Signature verification error:", err);
+    return false;
+  }
 }
 
 async function handleSlashCommand(interaction: DiscordInteraction) {
@@ -104,9 +96,7 @@ async function handleSlashCommand(interaction: DiscordInteraction) {
     reviewerUsername: user.username,
   });
 
-  return jsonResponse(
-    ephemeralMessage(result.ok ? result.message : result.message),
-  );
+  return jsonResponse(ephemeralMessage(result.message));
 }
 
 async function handleButtonClick(interaction: DiscordInteraction) {
@@ -132,14 +122,12 @@ async function handleButtonClick(interaction: DiscordInteraction) {
     reviewerUsername: user.username,
   });
 
-  if (!result.ok) {
-    return jsonResponse(ephemeralMessage(result.message));
-  }
-
   return jsonResponse(ephemeralMessage(result.message));
 }
 
-export async function handleDiscordInteraction(req: Request): Promise<Response> {
+export async function handleDiscordInteraction(
+  req: Request,
+): Promise<Response> {
   const publicKey = getDiscordPublicKey();
   if (!publicKey) {
     return jsonResponse({ error: "DISCORD_PUBLIC_KEY is not configured" }, 503);
@@ -155,20 +143,24 @@ export async function handleDiscordInteraction(req: Request): Promise<Response> 
   }
 
   if (!(await verifyDiscordSignature(body, signature, timestamp, publicKey))) {
-    console.error("[discord-interactions] Invalid signature — check DISCORD_PUBLIC_KEY matches Developer Portal > General Information > Public Key");
+    console.error(
+      "[discord-interactions] Invalid signature — check DISCORD_PUBLIC_KEY",
+    );
     return jsonResponse({ error: "Invalid signature" }, 401);
   }
 
   const interaction = JSON.parse(body) as DiscordInteraction;
 
-  // Discord portal verification — only needs PUBLIC_KEY + valid signature
   if (interaction.type === INTERACTION_PING) {
     return jsonResponse({ type: INTERACTION_PING });
   }
 
-  const config = getDiscordAppealConfig();
+  const config = getDiscordAppealBotConfig();
   if (!config) {
-    return jsonResponse({ error: "Discord appeal is not fully configured" }, 503);
+    return jsonResponse(
+      { error: "Discord appeal is not fully configured" },
+      503,
+    );
   }
 
   if (interaction.type === INTERACTION_APPLICATION_COMMAND) {

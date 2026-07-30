@@ -1,6 +1,5 @@
 import {
   postDiscordAppealReview,
-  sendDiscordAppealAckDm,
 } from "@/lib/discord/notifyDiscordAppeal";
 import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
 import { enforceRateLimit } from "@/lib/rateLimit";
@@ -142,13 +141,7 @@ export async function POST(req: Request) {
       await submission.save();
     }
   } catch (err) {
-    console.error("[discord-appeal] Failed to post staff review message:", err);
-  }
-
-  try {
-    await sendDiscordAppealAckDm(session.discordUserId);
-  } catch (err) {
-    console.error("[discord-appeal] Failed to send acknowledgment DM:", err);
+    console.error("[discord-appeal] Failed to notify applications bot:", err);
   }
 
   return NextResponse.json({ success: true, submissionId });

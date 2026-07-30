@@ -24,8 +24,8 @@
 // export default withMDX(nextConfig);
 
 import createMDX from "@next/mdx";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,9 +35,7 @@ const BOARD_ROUTE_PATTERN =
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
-  // Monorepo: include files outside apps/website in the standalone trace
   outputFileTracingRoot: path.join(__dirname, "../.."),
-  transpilePackages: ["@r-alevel/discord-bot"],
   serverExternalPackages: [
     "@blocknote/core",
     "@blocknote/react",

@@ -1,35 +1,16 @@
-import {
-  notifyNewSubmission,
-  type FormSubmissionNotification,
-} from "@r-alevel/discord-bot";
+import { notifyBotApplicationSubmitted } from "@/lib/discord/botClient";
 
-export type FormSubmissionNotifyInput = Omit<
-  FormSubmissionNotification,
-  "adminUrl"
->;
-
-function isEnabled(): boolean {
-  const flag = process.env.DISCORD_NOTIFICATIONS_ENABLED?.toLowerCase();
-  return flag === "true" || flag === "1";
-}
-
-export function getDiscordConfig():
-  | { botToken: string; channelId: string }
-  | null {
-  if (!isEnabled()) return null;
-
-  const botToken = process.env.DISCORD_BOT_TOKEN?.trim();
-  const channelId = process.env.DISCORD_APPLICATIONS_CHANNEL_ID?.trim();
-
-  if (!botToken || !channelId) {
-    console.warn(
-      "[discord] notifications enabled but DISCORD_BOT_TOKEN or DISCORD_APPLICATIONS_CHANNEL_ID is missing",
-    );
-    return null;
-  }
-
-  return { botToken, channelId };
-}
+export type FormSubmissionNotifyInput = {
+  formTitle: string;
+  formType: string;
+  formSlug: string;
+  cycleId: number;
+  submitterName?: string;
+  submitterEmail?: string;
+  submissionId: string;
+  hasFiles: boolean;
+  pingUserIds: string[];
+};
 
 /** Ensures a valid http(s) origin — Discord rejects bare hosts like `localhost:3000`. */
 export function normalizeSiteUrl(url: string | undefined): string {
@@ -48,14 +29,12 @@ export function buildAdminUrl(input: {
   return `${siteUrl}/admin/forms/${input.formType}/${input.formSlug}/responses/${input.submissionId}`;
 }
 
+/**
+ * Fire-and-forget: asks the applications bot to post the Discord ping.
+ * Does nothing if BOT_INTERNAL_URL / INTERNAL_BOT_SECRET are unset.
+ */
 export async function notifyFormSubmission(
   data: FormSubmissionNotifyInput,
 ): Promise<void> {
-  const config = getDiscordConfig();
-  if (!config) return;
-
-  await notifyNewSubmission(config, {
-    ...data,
-    adminUrl: buildAdminUrl(data),
-  });
+  await notifyBotApplicationSubmitted(data);
 }

@@ -1,22 +1,66 @@
-# r/alevel website
+# r/alevel Website
 
-Next.js public site + Discord REST helpers for form notifications, reminders, and ban appeals.
+Official web platform supporting the r/alevel student learning community.  
 
-| Package | Path | Deploy |
-|---------|------|--------|
-| `@ralevel/website` | `apps/website` | [`Dockerfile.website`](./Dockerfile.website) |
-| `@r-alevel/discord-bot` | `packages/discord-notify` | Bundled into the website image (not a separate process) |
+The website provides tools that help students collaborate, contribute resources, and earn recognition for helping others in the community.  
 
-The **main Discord gateway bot** (XP, moderation, welcome, etc.) lives in a **separate repo** (`ralevel-discord-bot`). It is not part of this codebase.
+## Features
 
-Coolify: [`docs/COOLIFY.md`](./docs/COOLIFY.md)
+### Certificate System
+Students who consistently help others in the community can earn official r/alevel certificates.
 
-## Local development
+Features include:
+- Certificate generation  
+- Certificate verification system  
+- Public certificate validation  
+
+### Admin Dashboard
+Administrative tools for managing the community platform.
+
+Includes:
+- Application review system
+- Approval and rejection workflow
+- Community voting for applications
+- Resource management
+
+### Blog Platform
+Built-in blogging system that allows contributors to share educational content.
+
+Features:
+- Blog editor and publishing system
+- Structured content display
+- Community learning resources
+
+### Resource System
+Centralized repository of helpful academic resources for A-Level students.
+
+### Certificate Verification
+Public verification system allowing anyone to verify the authenticity of r/alevel certificates.
+
+## Purpose
+
+The goal of this project is to create a structured platform that encourages students to help each other while providing recognition for meaningful contributions.
+
+The system motivates collaboration and builds a stronger academic community.
+
+## Tech Stack
+
+- Next.js (apps/website)
+- TypeScript
+- MongoDB
+- Tailwind CSS
+- Applications Discord bot (apps/bot) — form pings, reminders, ban appeals
+
+## Monorepo
 
 ```bash
 pnpm install
-docker compose up -d redis   # optional, for website cache
-
-# Env: apps/website/.env.local
-pnpm dev:website
+pnpm --filter @ralevel/website dev
+pnpm --filter @ralevel/applications-bot dev
 ```
+
+Coolify deploys website and bot as **separate** apps (`Dockerfile.website`, `Dockerfile.bot`). See `apps/website/src/docs/COOLIFY.md`.
+
+## Related Community
+
+Reddit: https://reddit.com/r/alevel  

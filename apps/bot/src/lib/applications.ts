@@ -1,22 +1,50 @@
 import {
+  notifyFormReminder,
+  notifyNewSubmission,
+  type FormReminderNotification,
+  type FormSubmissionNotification,
+} from "@ralevel/discord";
+import {
+  buildAdminUrl,
+  getApplicationsDiscordConfig,
   getReminderRoleIds,
-  notifyFormReminderDiscord,
-} from "@/lib/discord/notifyFormReminder";
+} from "../config.js";
+import connectDB from "../db.js";
 import {
   allInchargeHaveVoted,
   getUnvotedIncharge,
-  resolveInchargeMembers,
-} from "@/lib/forms/incharge";
+} from "./incharge.js";
+import { resolveInchargeMembers } from "./resolveIncharge.js";
 import {
   istCalendarDaysSince,
   pickReminderTier,
   sleep,
-} from "@/lib/forms/reminderSchedule";
-import connectDB from "@/lib/mongodb";
-import Form from "@/models/Form";
-import FormSubmission from "@/models/FormSubmission";
+} from "./reminderSchedule.js";
+import Form from "../models/Form.js";
+import FormSubmission from "../models/FormSubmission.js";
 
 const REMINDER_DELAY_MS = 500;
+
+export type ApplicationSubmittedPayload = Omit<
+  FormSubmissionNotification,
+  "adminUrl"
+>;
+
+export async function handleApplicationSubmitted(
+  data: ApplicationSubmittedPayload,
+): Promise<{ ok: true; skipped?: boolean }> {
+  const config = getApplicationsDiscordConfig();
+  if (!config) {
+    return { ok: true, skipped: true };
+  }
+
+  await notifyNewSubmission(config, {
+    ...data,
+    adminUrl: buildAdminUrl(data),
+  });
+
+  return { ok: true };
+}
 
 type ProcessResult = {
   processed: number;
@@ -112,11 +140,10 @@ export async function processFormReminders(): Promise<ProcessResult> {
       }
 
       const pingUserIds = unvoted.map((member) => member.discordUserId);
-      const pingRoleIds =
-        tier === 3 ? [] : getReminderRoleIds(tier as 5 | 7);
+      const pingRoleIds = tier === 3 ? [] : getReminderRoleIds(tier as 5 | 7);
 
       try {
-        await notifyFormReminderDiscord({
+        const payload: FormReminderNotification = {
           formTitle: form.title,
           formType: form.formType ?? submission.formType,
           formSlug: form.slug,
@@ -128,7 +155,17 @@ export async function processFormReminders(): Promise<ProcessResult> {
           daysPending: daysSinceSubmission,
           pingUserIds,
           pingRoleIds,
-        });
+          adminUrl: buildAdminUrl({
+            formType: form.formType ?? submission.formType,
+            formSlug: form.slug,
+            submissionId: submission._id.toString(),
+          }),
+        };
+
+        const config = getApplicationsDiscordConfig();
+        if (config) {
+          await notifyFormReminder(config, payload);
+        }
 
         await FormSubmission.updateOne(
           { _id: submission._id },

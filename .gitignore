@@ -1,19 +1,17 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-node_modules
-.pnp
+/node_modules
+/.pnp
 .pnp.js
 .yarn/install-state.gz
-.pnpm-store
 
 # testing
-coverage
+/coverage
 
 # next.js
-.next/
-out/
-.turbo
+/.next/
+/out/
 
 # production
 /build
@@ -26,15 +24,13 @@ out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
 # local env files
-.env
 .env*.local
+.env
 .env.local
 .env.development
 .env.production
-!.env.example
 
 # vercel
 .vercel
@@ -43,9 +39,9 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-apps/website/public/sitemap.xml
-apps/website/public/sitemap-0.xml
-apps/website/public/robots.txt
+public/sitemap.xml
+public/sitemap-0.xml
+public/robots.txt
 
 /Json files
 
@@ -53,7 +49,19 @@ auth-trial-476713-d80ef4649e10.json
 
 assets-local/
 json_files/
+scripts/
 
+/lib/syllabusJson
 # clerk configuration (can include secrets)
 .clerk/
 apps/*/.clerk/
+
+# monorepo
+.turbo
+.pnpm-store
+apps/*/.next
+apps/*/node_modules
+packages/*/node_modules
+apps/*/public/sitemap.xml
+apps/*/public/sitemap-0.xml
+apps/*/public/robots.txt
