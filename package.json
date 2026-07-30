@@ -5,19 +5,15 @@
   "scripts": {
     "dev": "turbo run dev --filter=@ralevel/website",
     "dev:website": "turbo run dev --filter=@ralevel/website",
-    "dev:bot": "turbo run dev --filter=@ralevel/bot",
-    "build": "turbo run build",
+    "build": "turbo run build --filter=@ralevel/website",
     "build:website": "turbo run build --filter=@ralevel/website",
     "start:website": "turbo run start --filter=@ralevel/website",
-    "start:bot": "turbo run start --filter=@ralevel/bot",
-    "lint": "turbo run lint",
-    "export-command-catalog": "pnpm --filter @ralevel/bot export-command-catalog",
-    "deploy-commands": "node apps/bot/scripts/deploy-commands.js"
+    "lint": "turbo run lint --filter=@ralevel/website"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.23.1"
   }
 }

@@ -1,29 +1,22 @@
-# r/alevel monorepo
+# r/alevel website
 
-Public website + Discord gateway bot in one repository.
+Next.js public site + Discord REST helpers for form notifications, reminders, and ban appeals.
 
-| Package | Path | Coolify Dockerfile |
-|---------|------|--------------------|
+| Package | Path | Deploy |
+|---------|------|--------|
 | `@ralevel/website` | `apps/website` | [`Dockerfile.website`](./Dockerfile.website) |
-| `@ralevel/bot` | `apps/bot` | [`Dockerfile.bot`](./Dockerfile.bot) |
-| `@ralevel/db` / `@ralevel/shared` | `packages/*` | used by the bot |
-| `@r-alevel/discord-bot` | `packages/discord-notify` | REST helpers for website form/appeal notifications |
+| `@r-alevel/discord-bot` | `packages/discord-notify` | Bundled into the website image (not a separate process) |
 
-Deploy guide: [`docs/COOLIFY.md`](./docs/COOLIFY.md)
+The **main Discord gateway bot** (XP, moderation, welcome, etc.) lives in a **separate repo** (`ralevel-discord-bot`). It is not part of this codebase.
+
+Coolify: [`docs/COOLIFY.md`](./docs/COOLIFY.md)
 
 ## Local development
 
 ```bash
 pnpm install
-docker compose up -d redis
+docker compose up -d redis   # optional, for website cache
 
-# Website (apps/website/.env.local)
+# Env: apps/website/.env.local
 pnpm dev:website
-
-# Gateway bot (repo-root .env — see .env.bot.example)
-pnpm dev:bot
 ```
-
-## Website features
-
-Official web platform for the r/alevel student learning community: certificates, admin tools, blogs, resources, Discord form notifications, and ban appeals.

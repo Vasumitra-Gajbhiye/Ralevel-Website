@@ -121,9 +121,9 @@ After deploy, point Stripe webhooks to `https://your-domain/api/webhook`.
 
 ### Discord application notifications
 
-Posts to a Discord channel when a generic intake form is submitted. Runs inside the Next.js website container via `packages/discord-notify` (no dependency on the gateway bot process).
+Posts to a Discord channel when a generic intake form is submitted. Runs **inside** the Next.js website container via `packages/discord-notify` (Discord REST — not a separate gateway process).
 
-The **Discord gateway bot** (moderation, XP, slash commands, etc.) is a **separate Coolify service** built from `/Dockerfile.bot`. Restart that service without redeploying the website. See the monorepo guide: [`docs/COOLIFY.md`](../../../../docs/COOLIFY.md).
+The main community Discord bot (XP, moderation, etc.) lives in the separate **`ralevel-discord-bot`** repo and is deployed on its own Coolify app. See [`docs/COOLIFY.md`](../../../../docs/COOLIFY.md).
 
 | Variable | Required | Notes |
 |----------|----------|-------|

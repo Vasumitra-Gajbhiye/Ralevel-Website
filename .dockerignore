@@ -11,7 +11,6 @@ coverage
 .env
 .env.*
 !.env.example
-!.env.bot.example
 *.pem
 auth-trial-*.json
 .clerk
