@@ -27,13 +27,13 @@ async function seedCounters() {
     .lean();
   await seedCounter("confessionId", lastConfession?.confessionId ?? 0);
 
-  const lastTask = await Task.findOne()
+  // Prefer newest task that actually has a taskId (legacy/corrupt docs may omit it)
+  const lastTask = await Task.findOne({ taskId: { $exists: true, $ne: "" } })
     .sort({ createdAt: -1 })
     .select("taskId")
     .lean();
-  const taskMax = lastTask
-    ? parseInt(lastTask.taskId.split("-")[1], 10) || 0
-    : 0;
+  const taskIdPart = lastTask?.taskId?.split?.("-")?.[1];
+  const taskMax = taskIdPart ? parseInt(taskIdPart, 10) || 0 : 0;
   await seedCounter("taskId", taskMax);
 }
 
