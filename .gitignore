@@ -54,3 +54,13 @@ scripts/
 /lib/syllabusJson
 # clerk configuration (can include secrets)
 /.clerk/
+
+# monorepo
+.turbo
+.pnpm-store
+apps/*/.next
+apps/*/node_modules
+packages/*/node_modules
+apps/*/public/sitemap.xml
+apps/*/public/sitemap-0.xml
+apps/*/public/robots.txt

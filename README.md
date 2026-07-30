@@ -45,10 +45,21 @@ The system motivates collaboration and builds a stronger academic community.
 
 ## Tech Stack
 
-- Next.js
+- Next.js (apps/website)
 - TypeScript
 - MongoDB
 - Tailwind CSS
+- Applications Discord bot (apps/bot) — form pings, reminders, ban appeals
+
+## Monorepo
+
+```bash
+pnpm install
+pnpm --filter @ralevel/website dev
+pnpm --filter @ralevel/applications-bot dev
+```
+
+Coolify deploys website and bot as **separate** apps (`Dockerfile.website`, `Dockerfile.bot`). See `apps/website/src/docs/COOLIFY.md`.
 
 ## Related Community
 

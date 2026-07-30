@@ -1,16 +1,23 @@
 # Dependencies and build output
 node_modules
+**/node_modules
 .next
+**/.next
 out
 build
 coverage
+.turbo
+.pnpm-store
 
 # Secrets and local environment files
 .env
 .env.*
+!.env.example
+!.env.bot.example
 *.pem
 auth-trial-*.json
 .clerk
+**/.clerk
 
 # Version control and IDE
 .git
@@ -23,6 +30,7 @@ auth-trial-*.json
 *.md
 docs
 PERFORMANCE_REVIEW.md
+posthog-setup-report.md
 
 # Dev-only assets (not referenced by app source)
 assets-local
@@ -39,6 +47,7 @@ docker-compose.yml
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .DS_Store
 *.tsbuildinfo
 
@@ -49,9 +58,9 @@ yarn-error.log*
 .yarn/install-state.gz
 
 # Generated sitemap files (recreated by postbuild during image build)
-public/sitemap.xml
-public/sitemap-0.xml
-public/robots.txt
+**/public/sitemap.xml
+**/public/sitemap-0.xml
+**/public/robots.txt
 
 # Syllabus JSON and other local data
-lib/syllabusJson
+**/lib/syllabusJson
