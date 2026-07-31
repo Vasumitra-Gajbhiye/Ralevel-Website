@@ -6,6 +6,39 @@ import { handleDiscordInteraction } from "./lib/interactions.js";
 
 const PORT = Number(process.env.PORT ?? process.env.BOT_PORT ?? 8787);
 
+function logStartupConfig() {
+  const present = (key: string) => Boolean(process.env[key]?.trim());
+  const checks: [string, boolean][] = [
+    ["MONGODB_URI", present("MONGODB_URI")],
+    ["INTERNAL_BOT_SECRET", present("INTERNAL_BOT_SECRET")],
+    ["DISCORD_BOT_TOKEN", present("DISCORD_BOT_TOKEN")],
+    ["DISCORD_PUBLIC_KEY", present("DISCORD_PUBLIC_KEY")],
+    ["DISCORD_GUILD_ID", present("DISCORD_GUILD_ID")],
+    ["DISCORD_BAN_APPEAL_CHANNEL_ID", present("DISCORD_BAN_APPEAL_CHANNEL_ID")],
+    ["DISCORD_APPLICATIONS_CHANNEL_ID", present("DISCORD_APPLICATIONS_CHANNEL_ID")],
+    [
+      "DISCORD_NOTIFICATIONS_ENABLED",
+      present("DISCORD_NOTIFICATIONS_ENABLED"),
+    ],
+    ["CRON_SECRET", present("CRON_SECRET")],
+  ];
+
+  const missing = checks.filter(([, ok]) => !ok).map(([key]) => key);
+  for (const [key, ok] of checks) {
+    console.log(`[applications-bot] env ${key}=${ok ? "set" : "MISSING"}`);
+  }
+  if (missing.includes("DISCORD_PUBLIC_KEY")) {
+    console.error(
+      "[applications-bot] DISCORD_PUBLIC_KEY is missing — Discord Interactions will return 503 (bot appears not responding)",
+    );
+  }
+  if (missing.includes("MONGODB_URI")) {
+    console.error(
+      "[applications-bot] MONGODB_URI is missing — appeals/reminders will fail",
+    );
+  }
+}
+
 function json(res: http.ServerResponse, status: number, body: unknown) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
@@ -132,6 +165,9 @@ async function handleRequest(
       const webReq = toWebRequest(req, raw);
       const response = await handleDiscordInteraction(webReq);
       const responseBody = Buffer.from(await response.arrayBuffer());
+      console.log(
+        `[interactions] ${response.status} (${responseBody.byteLength} bytes)`,
+      );
       const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         headers[key] = value;
@@ -158,6 +194,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
+  logStartupConfig();
   console.log(`[applications-bot] listening on :${PORT}`);
 });
 

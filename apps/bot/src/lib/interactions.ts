@@ -142,6 +142,9 @@ export async function handleDiscordInteraction(
 ): Promise<Response> {
   const publicKey = getDiscordPublicKey();
   if (!publicKey) {
+    console.error(
+      "[discord-interactions] DISCORD_PUBLIC_KEY is not configured — returning 503",
+    );
     return jsonResponse({ error: "DISCORD_PUBLIC_KEY is not configured" }, 503);
   }
 
