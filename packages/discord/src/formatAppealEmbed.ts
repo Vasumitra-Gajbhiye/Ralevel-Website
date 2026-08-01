@@ -87,3 +87,56 @@ export function buildAppealActionRow(submissionId: string, disabled = false) {
     ],
   };
 }
+
+export type PendingAppealListItem = {
+  submissionId: string;
+  discordUsername: string;
+  appealType: DiscordAppealNotification["appealType"];
+  submittedAt: Date | string;
+};
+
+const SHORT_TYPE_LABELS: Record<
+  DiscordAppealNotification["appealType"],
+  string
+> = {
+  ban: "Ban",
+  warning: "Warnings",
+  timeout: "Timeout",
+};
+
+function formatSubmittedDate(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "unknown date";
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatPendingAppealsListEmbed(input: {
+  items: PendingAppealListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}): DiscordEmbed {
+  const totalPages = Math.max(1, Math.ceil(input.total / input.pageSize));
+
+  let description: string;
+  if (input.total === 0 || input.items.length === 0) {
+    description = "No pending appeals.";
+  } else {
+    description = input.items
+      .map((item) => {
+        const typeLabel = SHORT_TYPE_LABELS[item.appealType] ?? item.appealType;
+        return `\`${item.submissionId}\` — **${item.discordUsername}** · ${typeLabel} · ${formatSubmittedDate(item.submittedAt)}`;
+      })
+      .join("\n");
+  }
+
+  return {
+    title: `Pending Appeals (${input.total})`,
+    description,
+    color: STATUS_COLORS.pending,
+    timestamp: new Date().toISOString(),
+    footer: {
+      text: `Page ${input.page}/${totalPages} · Use /appeal submission_id:<id>`,
+    },
+  };
+}

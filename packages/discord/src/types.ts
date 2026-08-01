@@ -28,9 +28,10 @@ export type FormSubmissionNotification = {
 
 export type DiscordEmbed = {
   title: string;
+  description?: string;
   url?: string;
   color: number;
-  fields: { name: string; value: string; inline?: boolean }[];
+  fields?: { name: string; value: string; inline?: boolean }[];
   timestamp: string;
   footer?: { text: string };
 };

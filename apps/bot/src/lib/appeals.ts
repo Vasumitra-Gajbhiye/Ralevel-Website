@@ -77,7 +77,7 @@ async function fetchGuildMemberRoles(
   return member.roles ?? [];
 }
 
-async function isDiscordAppealReviewer(
+export async function isDiscordAppealReviewer(
   discordUserId: string,
 ): Promise<boolean> {
   const config = getDiscordAppealBotConfig();
@@ -90,6 +90,89 @@ async function isDiscordAppealReviewer(
   );
 
   return roles.some((roleId) => config.reviewerRoleIds.includes(roleId));
+}
+
+export const PENDING_APPEALS_PAGE_SIZE = 15;
+
+export type PendingAppealSummary = {
+  submissionId: string;
+  discordUserId: string;
+  discordUsername: string;
+  appealType: DiscordAppealNotification["appealType"];
+  submittedAt: Date;
+};
+
+export async function listPendingAppeals(input: {
+  page?: number;
+  pageSize?: number;
+}): Promise<{
+  items: PendingAppealSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const pageSize = input.pageSize ?? PENDING_APPEALS_PAGE_SIZE;
+  const page = Math.max(1, Math.floor(input.page ?? 1));
+  const skip = (page - 1) * pageSize;
+
+  await connectDB();
+
+  const [total, docs] = await Promise.all([
+    DiscordAppealSubmission.countDocuments({ status: "pending" }),
+    DiscordAppealSubmission.find({ status: "pending" })
+      .sort({ submittedAt: -1 })
+      .skip(skip)
+      .limit(pageSize),
+  ]);
+
+  const items: PendingAppealSummary[] = docs.map((doc) => ({
+    submissionId: doc._id.toString(),
+    discordUserId: String(doc.discordUserId),
+    discordUsername: String(doc.discordUsername),
+    appealType: doc.appealType as DiscordAppealNotification["appealType"],
+    submittedAt:
+      doc.submittedAt instanceof Date
+        ? doc.submittedAt
+        : new Date(String(doc.submittedAt)),
+  }));
+
+  return { items, total, page, pageSize };
+}
+
+export async function getAppealById(submissionId: string): Promise<{
+  submissionId: string;
+  discordUserId: string;
+  discordUsername: string;
+  appealType: DiscordAppealNotification["appealType"];
+  responses: { q1: string; q2: string; q3: string };
+  status: DiscordAppealNotification["status"];
+  reviewedBy?: string;
+  submittedAt: Date;
+} | null> {
+  await connectDB();
+
+  const submission = await DiscordAppealSubmission.findById(submissionId);
+  if (!submission) return null;
+
+  return {
+    submissionId: submission._id.toString(),
+    discordUserId: String(submission.discordUserId),
+    discordUsername: String(submission.discordUsername),
+    appealType: submission.appealType as DiscordAppealNotification["appealType"],
+    responses: {
+      q1: String(submission.responses.q1),
+      q2: String(submission.responses.q2),
+      q3: String(submission.responses.q3),
+    },
+    status: submission.status as DiscordAppealNotification["status"],
+    reviewedBy: submission.reviewedBy?.username
+      ? String(submission.reviewedBy.username)
+      : undefined,
+    submittedAt:
+      submission.submittedAt instanceof Date
+        ? submission.submittedAt
+        : new Date(String(submission.submittedAt)),
+  };
 }
 
 export async function reviewDiscordAppealSubmission(input: {

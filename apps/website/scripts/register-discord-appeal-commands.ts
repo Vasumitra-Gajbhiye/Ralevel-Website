@@ -21,6 +21,31 @@ const COMMANDS = [
     description: "Check if the applications bot is responding",
   },
   {
+    name: "appeals",
+    description: "List pending ban appeals",
+    options: [
+      {
+        name: "page",
+        description: "Page number (15 appeals per page)",
+        type: 4,
+        required: false,
+        min_value: 1,
+      },
+    ],
+  },
+  {
+    name: "appeal",
+    description: "Show a ban appeal by submission ID",
+    options: [
+      {
+        name: "submission_id",
+        description: "MongoDB submission ID from the appeal embed footer",
+        type: 3,
+        required: true,
+      },
+    ],
+  },
+  {
     name: "approve-ban-appeal",
     description: "Approve a pending ban appeal submission",
     options: [

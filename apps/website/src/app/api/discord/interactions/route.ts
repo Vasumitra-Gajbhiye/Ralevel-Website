@@ -26,18 +26,36 @@ export async function POST(req: Request) {
     req.headers.get("Content-Type") ?? "application/json",
   );
 
-  const response = await fetch(`${baseUrl}/interactions`, {
-    method: "POST",
-    headers,
-    body,
-  });
+  try {
+    const response = await fetch(`${baseUrl}/interactions`, {
+      method: "POST",
+      headers,
+      body,
+      // Discord requires a reply within ~3s; fail fast if bot is unreachable.
+      signal: AbortSignal.timeout(2500),
+    });
 
-  const responseBody = await response.arrayBuffer();
-  return new NextResponse(responseBody, {
-    status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("Content-Type") ?? "application/json",
-    },
-  });
+    const responseBody = await response.arrayBuffer();
+    return new NextResponse(responseBody, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("Content-Type") ?? "application/json",
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[discord/interactions] proxy to ${baseUrl}/interactions failed:`,
+      message,
+    );
+    return NextResponse.json(
+      {
+        error: "Failed to reach applications bot",
+        botInternalUrl: baseUrl,
+        detail: message,
+      },
+      { status: 502 },
+    );
+  }
 }

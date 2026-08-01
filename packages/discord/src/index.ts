@@ -8,13 +8,14 @@ import type {
 } from "./types";
 
 export type { FormSubmissionNotification, FormReminderNotification } from "./types";
-export type { DiscordAppealNotification } from "./formatAppealEmbed";
+export type { DiscordAppealNotification, PendingAppealListItem } from "./formatAppealEmbed";
 export { DiscordApiError } from "./sendMessage";
 export { sendDirectMessage } from "./sendDirectMessage";
 export { unbanMember } from "./unbanMember";
 export {
   formatAppealEmbed,
   buildAppealActionRow,
+  formatPendingAppealsListEmbed,
 } from "./formatAppealEmbed";
 export {
   postAppealReviewMessage,
