@@ -37,7 +37,14 @@ export default async function AdminFormPage({
     FormSubmission.countDocuments({ formSlug: slug }),
     FormSubmission.find(
       { formSlug: slug },
-      { responses: 1, createdAt: 1, status: 1, formType: 1, votes: 1 },
+      {
+        responses: 1,
+        createdAt: 1,
+        status: 1,
+        formType: 1,
+        votes: 1,
+        decision: 1,
+      },
     )
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -65,12 +72,12 @@ export default async function AdminFormPage({
 
   return (
     <AdminFormPageClient
-      form={form}
+      form={JSON.parse(JSON.stringify(form))}
       totalResponses={totalResponses}
-      submissions={submissions}
-      summarySubmissions={summarySubmissions}
+      submissions={JSON.parse(JSON.stringify(submissions))}
+      summarySubmissions={JSON.parse(JSON.stringify(summarySubmissions))}
       pagination={pagination}
-      inchargeMembers={inchargeMembers}
+      inchargeMembers={JSON.parse(JSON.stringify(inchargeMembers))}
       canManage={canManage}
     />
   );

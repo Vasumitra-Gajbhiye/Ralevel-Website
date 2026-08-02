@@ -4,25 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ListPagination } from "@/components/ui/list-pagination";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import type { DecisionEmailTemplates } from "@/lib/emails/decisionEmail";
+import { ArrowLeft, ChevronRight, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import DecisionEmailsEditor from "./DecisionEmailsEditor";
 
 export default function FormClient({
   forms,
   formType,
   pagination,
   canManage,
+  decisionEmailTemplates,
 }: {
   forms: any[];
   formType: string;
   pagination: PaginationMeta;
   canManage: boolean;
+  decisionEmailTemplates: DecisionEmailTemplates;
 }) {
   const router = useRouter();
   const [localForms, setLocalForms] = useState(forms);
+  const [templates, setTemplates] = useState(decisionEmailTemplates);
+  const [emailsOpen, setEmailsOpen] = useState(false);
   //   const formType = forms.formType;
   const onToggle = async (formId: string) => {
     // Optimistic UI update
@@ -79,17 +85,37 @@ export default function FormClient({
         Back to forms
       </Link>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold capitalize">
           {formType} — Cycles
         </h1>
 
         {canManage && (
-          <Link href={`/admin/forms/${formType}/create`}>
-            <Button variant="default">+ New Cycle</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setEmailsOpen(true)}
+            >
+              <Mail className="h-4 w-4" />
+              Edit decision emails
+            </Button>
+            <Link href={`/admin/forms/${formType}/create`}>
+              <Button variant="default">+ New Cycle</Button>
+            </Link>
+          </div>
         )}
       </div>
+
+      {canManage && (
+        <DecisionEmailsEditor
+          open={emailsOpen}
+          onOpenChange={setEmailsOpen}
+          formType={formType}
+          initialTemplates={templates}
+          onSaved={setTemplates}
+        />
+      )}
       <div className="space-y-6">
         {/* Header */}
 

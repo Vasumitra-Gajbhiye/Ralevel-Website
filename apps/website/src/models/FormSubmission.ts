@@ -77,6 +77,45 @@ const FileSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const DecisionEmailRecordSchema = new mongoose.Schema(
+  {
+    subject: { type: String, required: true },
+    body: { type: String, required: true },
+    wasPersonalized: { type: Boolean, required: true, default: false },
+    templateSubject: { type: String, required: true },
+    templateBody: { type: String, required: true },
+  },
+  { _id: false },
+);
+
+const DecisionSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["accepted", "rejected"],
+      required: true,
+    },
+    sentAt: {
+      type: Date,
+      required: true,
+      default: Date.now,
+    },
+    sentByAdminId: {
+      type: String,
+      required: true,
+    },
+    sentByAdminName: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: DecisionEmailRecordSchema,
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const FormSubmissionSchema = new mongoose.Schema(
   {
     formSlug: {
@@ -139,6 +178,8 @@ const FormSubmissionSchema = new mongoose.Schema(
       day5: { type: Date },
       day7: { type: Date },
     },
+
+    decision: DecisionSchema,
   },
   { timestamps: true }
 );

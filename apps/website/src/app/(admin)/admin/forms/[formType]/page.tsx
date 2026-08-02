@@ -1,3 +1,7 @@
+import {
+  resolveDecisionEmailTemplates,
+  type DecisionEmailTemplates,
+} from "@/lib/emails/decisionEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import {
@@ -6,6 +10,7 @@ import {
 } from "@/lib/pagination";
 import { canManageFormType } from "@/lib/roles";
 import Form from "@/models/Form";
+import FormIndex from "@/models/FormIndex";
 import FormClient from "./formClient";
 
 export default async function AdminFormPage({
@@ -26,13 +31,14 @@ export default async function AdminFormPage({
     new URLSearchParams({ page: queryParams.page ?? "1" }),
   );
 
-  const [forms, total] = await Promise.all([
+  const [forms, total, formIndex] = await Promise.all([
     Form.find({ formType })
       .sort({ cycleId: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
     Form.countDocuments({ formType }),
+    FormIndex.findOne({ slug: formType }).select("decisionEmails").lean(),
   ]);
 
   const pagination = buildPaginatedResponse(
@@ -42,12 +48,18 @@ export default async function AdminFormPage({
     limit,
   ).pagination;
 
+  const decisionEmailTemplates = resolveDecisionEmailTemplates(
+    (formIndex as { decisionEmails?: Partial<DecisionEmailTemplates> } | null)
+      ?.decisionEmails,
+  );
+
   return (
     <FormClient
       forms={JSON.parse(JSON.stringify(forms))}
       formType={formType}
       pagination={pagination}
       canManage={canManage}
+      decisionEmailTemplates={decisionEmailTemplates}
     />
   );
 }

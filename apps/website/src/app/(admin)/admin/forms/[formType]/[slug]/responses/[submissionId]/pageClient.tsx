@@ -1,20 +1,35 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import {
+  resolveDecisionEmailTemplates,
+  stripIntakeSuffix,
+  substituteDecisionVars,
+  type DecisionEmailTemplates,
+  type DecisionStatus,
+} from "@/lib/emails/decisionEmail";
+import { resolveSubmitterEmail } from "@/lib/forms/submitterContact";
 import {
   ArrowLeft,
+  Check,
   FileText,
   Image as ImageIcon,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import DecisionEmailModal, {
+  type SubmissionDecision,
+} from "./DecisionEmailModal";
 
 type Props = {
   submission: Submission;
   form: any;
   canVote: boolean;
+  decisionEmailTemplates: DecisionEmailTemplates;
 };
 
 type Vote = {
@@ -28,7 +43,12 @@ type Submission = {
   _id: string;
   responses: Record<string, any>;
   createdAt: string;
+  submitterName?: string;
+  submitterEmail?: string;
+  cycleId?: number;
+  formType?: string;
   votes?: Vote[];
+  decision?: SubmissionDecision | null;
   files?: {
     fieldId: string;
     originalName: string;
@@ -49,9 +69,20 @@ function formatDate(date: string) {
   });
 }
 
-export default function SubmissionPageClient({ submission, form, canVote }: Props) {
+export default function SubmissionPageClient({
+  submission,
+  form,
+  canVote,
+  decisionEmailTemplates,
+}: Props) {
   const [votes, setVotes] = useState(submission.votes ?? []);
   const [isVoting, setIsVoting] = useState(false);
+  const [decision, setDecision] = useState<SubmissionDecision | null>(
+    submission.decision ?? null,
+  );
+  const [modalDecision, setModalDecision] = useState<DecisionStatus | null>(
+    null,
+  );
 
   const upvotes = votes?.filter((v) => v.vote === 1).length ?? 0;
   const downvotes = votes?.filter((v) => v.vote === -1).length ?? 0;
@@ -63,6 +94,36 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
   const currentVote = votes.find((v) => v.adminId === currentAdminId)?.vote;
 
   const netScore = upvotes - downvotes;
+
+  const templates = useMemo(
+    () => resolveDecisionEmailTemplates(decisionEmailTemplates),
+    [decisionEmailTemplates],
+  );
+
+  const submitterEmail = useMemo(
+    () => resolveSubmitterEmail(submission, form),
+    [submission, form],
+  );
+
+  const emailVars = useMemo(
+    () => ({
+      name: submission.submitterName,
+      email: submitterEmail,
+      formTitle: stripIntakeSuffix(form.title || "your application"),
+      formType: form.formType || submission.formType,
+      cycle: form.cycleId ?? submission.cycleId,
+    }),
+    [submission, form, submitterEmail],
+  );
+
+  const modalInitial = useMemo(() => {
+    if (!modalDecision) return { subject: "", body: "" };
+    const template = templates[modalDecision];
+    return {
+      subject: substituteDecisionVars(template.subject, emailVars),
+      body: substituteDecisionVars(template.body, emailVars),
+    };
+  }, [modalDecision, templates, emailVars]);
 
   const handleVote = async (vote: 1 | -1) => {
     try {
@@ -84,7 +145,6 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
         return;
       }
 
-      // Update vote state from server response
       setVotes(json.votes);
     } catch (err) {
       console.error(err);
@@ -92,6 +152,7 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
       setIsVoting(false);
     }
   };
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
       {/* BACK */}
@@ -105,15 +166,33 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
 
       {/* HEADER */}
       <div className="space-y-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold">
             Response #{submission._id.slice(-6)}
           </h1>
+          {decision && (
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${
+                decision.status === "accepted"
+                  ? "border-green-200 bg-green-50 text-green-700"
+                  : "border-red-200 bg-red-50 text-red-700"
+              }`}
+            >
+              {decision.status === "accepted" ? "Accepted" : "Rejected"}
+            </span>
+          )}
         </div>
 
         <p className="text-sm text-muted-foreground">
           Submitted on {formatDate(submission.createdAt)}
         </p>
+        {decision && (
+          <p className="text-sm text-muted-foreground">
+            Decision email sent by {decision.sentByAdminName} on{" "}
+            {formatDate(decision.sentAt)}
+            {decision.email.wasPersonalized ? " (personalized)" : ""}
+          </p>
+        )}
       </div>
 
       {/* CONTENT */}
@@ -123,7 +202,6 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
 
           return (
             <section key={section.id} className="space-y-4">
-              {/* SECTION HEADER */}
               <div>
                 <h2 className="text-lg font-semibold">{section.title}</h2>
 
@@ -134,18 +212,17 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
                 )}
               </div>
 
-              {/* FIELDS */}
               <div className="space-y-4">
                 {section.fields.map((field: any) => {
                   const value = sectionResponses[field.id];
                   const fieldFiles = submission.files?.filter(
-                    (f) => String(f.fieldId) === String(field.id)
+                    (f) => String(f.fieldId) === String(field.id),
                   );
                   if (
                     (value === undefined || value === null) &&
                     field.type !== "file" &&
                     !submission.files?.some(
-                      (f) => String(f.fieldId) === String(field.id)
+                      (f) => String(f.fieldId) === String(field.id),
                     )
                   )
                     return null;
@@ -231,15 +308,11 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
         })}
       </div>
 
-      {/* ACTION BAR */}
       {/* MODERATION PANEL */}
       <div className="sticky bottom-0 z-20 mt-16 bg-gradient-to-t from-background via-background/95 to-transparent pt-10">
         <div className="mx-auto max-w-4xl rounded-2xl border bg-muted/40 backdrop-blur-md px-6 py-6 shadow-xl space-y-6">
-          {/* TOP ROW */}
-          <div className="flex items-center justify-between">
-            {/* LEFT — SCORE + REACTIONS */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-6">
-              {/* Net Score */}
               <div className="flex flex-col items-center">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground">
                   Score
@@ -249,22 +322,20 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
                     netScore > 0
                       ? "text-green-600"
                       : netScore < 0
-                      ? "text-red-600"
-                      : "text-foreground"
+                        ? "text-red-600"
+                        : "text-foreground"
                   }`}
                 >
                   {netScore}
                 </span>
               </div>
 
-              {/* Reaction Pills */}
               {canVote ? (
-              <div className="flex items-center gap-3">
-                {/* Upvote pill */}
-                <button
-                  disabled={isVoting}
-                  onClick={() => handleVote(1)}
-                  className={`
+                <div className="flex items-center gap-3">
+                  <button
+                    disabled={isVoting}
+                    onClick={() => handleVote(1)}
+                    className={`
               flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition
               ${
                 currentVote === 1
@@ -272,16 +343,15 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
                   : "hover:bg-green-50"
               }
             `}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                  <span>{upvotes}</span>
-                </button>
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                    <span>{upvotes}</span>
+                  </button>
 
-                {/* Downvote pill */}
-                <button
-                  disabled={isVoting}
-                  onClick={() => handleVote(-1)}
-                  className={`
+                  <button
+                    disabled={isVoting}
+                    onClick={() => handleVote(-1)}
+                    className={`
               flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition
               ${
                 currentVote === -1
@@ -289,11 +359,11 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
                   : "hover:bg-red-50"
               }
             `}
-                >
-                  <ThumbsDown className="h-4 w-4" />
-                  <span>{downvotes}</span>
-                </button>
-              </div>
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                    <span>{downvotes}</span>
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-2 rounded-full border px-4 py-2">
@@ -308,15 +378,61 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
               )}
             </div>
 
-            {/* RIGHT — ACTION LABEL */}
-            <div className="text-xs text-muted-foreground">
-              {currentVote === 1 && "You approved this"}
-              {currentVote === -1 && "You rejected this"}
-              {currentVote === undefined && "Cast your vote"}
+            <div className="flex items-center gap-3">
+              {decision ? (
+                <div
+                  className={`text-sm font-medium ${
+                    decision.status === "accepted"
+                      ? "text-green-700"
+                      : "text-red-700"
+                  }`}
+                >
+                  {decision.status === "accepted"
+                    ? "Acceptance email sent"
+                    : "Rejection email sent"}
+                </div>
+              ) : canVote ? (
+                <>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-green-600 hover:bg-green-700"
+                    onClick={() => setModalDecision("accepted")}
+                    disabled={!submitterEmail}
+                    title={
+                      submitterEmail
+                        ? `Send acceptance email to ${submitterEmail}`
+                        : "No submitter email found in this response"
+                    }
+                  >
+                    <Check className="h-4 w-4" />
+                    Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="gap-1.5"
+                    onClick={() => setModalDecision("rejected")}
+                    disabled={!submitterEmail}
+                    title={
+                      submitterEmail
+                        ? `Send rejection email to ${submitterEmail}`
+                        : "No submitter email found in this response"
+                    }
+                  >
+                    <X className="h-4 w-4" />
+                    Reject
+                  </Button>
+                </>
+              ) : (
+                <div className="text-xs text-muted-foreground">
+                  {currentVote === 1 && "You approved this"}
+                  {currentVote === -1 && "You rejected this"}
+                  {currentVote === undefined && "View only"}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* VOTERS LIST (Facebook-style) */}
           {votes?.length > 0 && (
             <div className="border-t pt-4 space-y-3">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -361,6 +477,21 @@ export default function SubmissionPageClient({ submission, form, canVote }: Prop
           )}
         </div>
       </div>
+
+      {modalDecision && (
+        <DecisionEmailModal
+          open={!!modalDecision}
+          onOpenChange={(open) => {
+            if (!open) setModalDecision(null);
+          }}
+          decision={modalDecision}
+          submissionId={submission._id}
+          submitterEmail={submitterEmail}
+          initialSubject={modalInitial.subject}
+          initialBody={modalInitial.body}
+          onSent={(next) => setDecision(next)}
+        />
+      )}
     </div>
   );
 }

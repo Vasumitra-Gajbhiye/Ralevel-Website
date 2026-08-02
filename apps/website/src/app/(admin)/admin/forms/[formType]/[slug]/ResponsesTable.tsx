@@ -96,6 +96,7 @@
 
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -134,6 +135,9 @@ type Submission = {
   responses: Record<string, any>;
   createdAt: string;
   votes?: Vote[];
+  decision?: {
+    status: "accepted" | "rejected";
+  } | null;
 };
 
 export default function ResponsesTable({
@@ -178,6 +182,7 @@ export default function ResponsesTable({
               ))}
               <TableHead>Submitted</TableHead>
               <TableHead>Score</TableHead>
+              <TableHead>Decision</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -273,6 +278,18 @@ export default function ResponsesTable({
                         </HoverCard>
                       );
                     })()}
+                  </TableCell>
+
+                  <TableCell>
+                    {submission.decision?.status === "accepted" ? (
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                        Accepted
+                      </Badge>
+                    ) : submission.decision?.status === "rejected" ? (
+                      <Badge variant="destructive">Rejected</Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
                   </TableCell>
 
                   <TableCell className="text-right">
