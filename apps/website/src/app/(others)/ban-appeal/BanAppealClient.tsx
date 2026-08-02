@@ -12,21 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import type { DiscordIdentity } from "./types";
 
 type BanAppealFormValues = {
   readRules: boolean;
@@ -52,17 +47,27 @@ type BanAppealClientProps = {
   rulesContent: string[];
   userEmail: string;
   userName: string | null;
+  discord: DiscordIdentity;
+  onDiscordDisconnected: () => void;
 };
+
+function discordAvatarUrl(identity: DiscordIdentity): string | null {
+  if (!identity.discordAvatar) return null;
+  return `https://cdn.discordapp.com/avatars/${identity.discordUserId}/${identity.discordAvatar}.png`;
+}
 
 export default function BanAppealClient({
   rulesContent,
   userEmail,
   userName,
+  discord,
+  onDiscordDisconnected,
 }: BanAppealClientProps) {
-  const { user } = useUser();
   const { signOut } = useClerk();
   const [step, setStep] = useState(1);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<"google" | "discord" | null>(
+    null,
+  );
   const [showSuccess, setShowSuccess] = useState(false);
 
   const {
@@ -84,13 +89,6 @@ export default function BanAppealClient({
     mode: "onBlur",
   });
 
-  const displayName = useMemo(
-    () => userName || user?.fullName || userEmail,
-    [userName, user?.fullName, userEmail],
-  );
-
-  const avatarUrl = user?.imageUrl;
-
   async function goNext() {
     if (step === 1) {
       const valid = await trigger(["readRules", "banId"]);
@@ -107,13 +105,32 @@ export default function BanAppealClient({
     setStep((s) => Math.max(1, s - 1));
   }
 
-  async function handleSignOut() {
-    setLoggingOut(true);
+  async function handleDisconnectGoogle() {
+    setDisconnecting("google");
     try {
       await signOut({ redirectUrl: "/ban-appeal" });
     } catch {
       toast.error("Failed to sign out. Please try again.");
-      setLoggingOut(false);
+      setDisconnecting(null);
+    }
+  }
+
+  async function handleDisconnectDiscord() {
+    setDisconnecting("discord");
+    try {
+      const res = await fetch("/api/discord-appeal/session", {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error("Failed to disconnect Discord. Please try again.");
+        return;
+      }
+      toast.success("Disconnected from Discord.");
+      onDiscordDisconnected();
+    } catch {
+      toast.error("Failed to disconnect Discord. Please try again.");
+    } finally {
+      setDisconnecting(null);
     }
   }
 
@@ -141,13 +158,15 @@ export default function BanAppealClient({
     }
   };
 
+  const avatarUrl = discordAvatarUrl(discord);
+
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 py-20">
         <Card className="overflow-hidden border-none shadow-2xl">
           <div className="h-36 w-full bg-gradient-to-r from-indigo-400 to-violet-600" />
 
-          <div className="flex items-start justify-between px-10 pt-8 pb-4">
+          <div className="space-y-4 px-10 pt-8 pb-4">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight">
                 Ban Appeal
@@ -157,46 +176,47 @@ export default function BanAppealClient({
                 notified of the decision by email.
               </p>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+
+            <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm">
+                <span className="font-medium">Google</span>
+                <span className="max-w-[180px] truncate text-muted-foreground">
+                  {userName ? `${userName} · ` : ""}
+                  {userEmail}
+                </span>
                 <button
                   type="button"
-                  className="flex cursor-pointer items-center gap-3 rounded-full border bg-muted/40 px-2 py-1 transition-colors hover:bg-muted/70"
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  disabled={disconnecting === "google"}
+                  onClick={handleDisconnectGoogle}
                 >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 rounded-full"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
-                      style={{ backgroundColor: APPEAL_PURPLE }}
-                    >
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span className="max-w-[140px] truncate text-sm font-medium">
-                    {displayName}
-                  </span>
+                  {disconnecting === "google" ? "…" : "Disconnect"}
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled={loggingOut} onClick={handleSignOut}>
-                  {loggingOut ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing out...
-                    </>
-                  ) : (
-                    "Sign out"
-                  )}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={discord.discordUsername}
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 rounded-full"
+                  />
+                ) : null}
+                <span className="font-medium">@{discord.discordUsername}</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {discord.discordUserId}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline hover:text-foreground"
+                  disabled={disconnecting === "discord"}
+                  onClick={handleDisconnectDiscord}
+                >
+                  {disconnecting === "discord" ? "…" : "Disconnect"}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="px-10 pb-4">

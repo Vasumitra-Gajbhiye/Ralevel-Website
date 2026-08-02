@@ -3,13 +3,14 @@ import {
   buildDiscordOAuthUrl,
   createOAuthState,
   encodeOAuthState,
+  normalizeDiscordOAuthReturnTo,
 } from "@/lib/discord-appeal/oauth";
 import { getDiscordAppealConfig } from "@/lib/discord-appeal/config";
 import { cookies } from "next/headers";
 
 const OAUTH_STATE_COOKIE = "discord_appeal_oauth_state";
 
-export async function GET() {
+export async function GET(req: Request) {
   const config = getDiscordAppealConfig();
   if (!config) {
     return NextResponse.json(
@@ -18,8 +19,13 @@ export async function GET() {
     );
   }
 
+  const url = new URL(req.url);
+  const returnTo = normalizeDiscordOAuthReturnTo(
+    url.searchParams.get("returnTo"),
+  );
+
   const state = createOAuthState();
-  const signedState = encodeOAuthState(state);
+  const signedState = encodeOAuthState(state, returnTo);
   const cookieStore = await cookies();
 
   cookieStore.set(OAUTH_STATE_COOKIE, signedState, {
@@ -30,6 +36,6 @@ export async function GET() {
     maxAge: 10 * 60,
   });
 
-  const url = buildDiscordOAuthUrl(state);
-  return NextResponse.redirect(url);
+  const oauthUrl = buildDiscordOAuthUrl(state);
+  return NextResponse.redirect(oauthUrl);
 }

@@ -35,6 +35,7 @@ function truncate(text: string, max = 900): string {
 function displayName(data: DiscordAppealNotification): string {
   if (data.appealType === "ban") {
     return (
+      data.discordUsername?.trim() ||
       data.submitterName?.trim() ||
       data.submitterEmail?.trim() ||
       data.banId?.trim() ||
@@ -57,13 +58,25 @@ export function formatAppealEmbed(data: DiscordAppealNotification): DiscordEmbed
     data.appealType === "ban"
       ? [
           {
-            name: "Ban ID",
-            value: data.banId?.trim() || "—",
+            name: "Discord ID",
+            value: data.discordUserId?.trim() || "—",
+            inline: true,
+          },
+          {
+            name: "Discord",
+            value: data.discordUsername?.trim()
+              ? `@${data.discordUsername.trim()}`
+              : "—",
             inline: true,
           },
           {
             name: "Email",
             value: data.submitterEmail?.trim() || "—",
+            inline: true,
+          },
+          {
+            name: "Ban ID",
+            value: data.banId?.trim() || "—",
             inline: true,
           },
         ]

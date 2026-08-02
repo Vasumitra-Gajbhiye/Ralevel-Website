@@ -168,19 +168,58 @@ export async function exchangeCodeForUser(
   return user;
 }
 
+export const DISCORD_OAUTH_RETURN_PATHS = [
+  "/ban-appeal",
+  "/discord-appeal-form",
+] as const;
+
+export type DiscordOAuthReturnPath =
+  (typeof DISCORD_OAUTH_RETURN_PATHS)[number];
+
+export function normalizeDiscordOAuthReturnTo(
+  value: string | null | undefined,
+): DiscordOAuthReturnPath {
+  if (
+    value &&
+    (DISCORD_OAUTH_RETURN_PATHS as readonly string[]).includes(value)
+  ) {
+    return value as DiscordOAuthReturnPath;
+  }
+  return "/discord-appeal-form";
+}
+
 export function createOAuthState(): string {
   return crypto.randomBytes(16).toString("hex");
 }
 
-export function encodeOAuthState(state: string): string {
+export type EncodedOAuthState = {
+  state: string;
+  returnTo: DiscordOAuthReturnPath;
+};
+
+export function encodeOAuthState(
+  state: string,
+  returnTo: DiscordOAuthReturnPath = "/discord-appeal-form",
+): string {
   const exp = Date.now() + 10 * 60 * 1000;
-  const payload = Buffer.from(JSON.stringify({ state, exp })).toString(
-    "base64url",
-  );
+  const payload = Buffer.from(
+    JSON.stringify({
+      state,
+      returnTo: normalizeDiscordOAuthReturnTo(returnTo),
+      exp,
+    }),
+  ).toString("base64url");
   return `${payload}.${signPayload(payload)}`;
 }
 
+/** @deprecated Prefer decodeOAuthStatePayload — returns only the CSRF state string. */
 export function decodeOAuthState(token: string): string | null {
+  return decodeOAuthStatePayload(token)?.state ?? null;
+}
+
+export function decodeOAuthStatePayload(
+  token: string,
+): EncodedOAuthState | null {
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
 
@@ -197,10 +236,16 @@ export function decodeOAuthState(token: string): string | null {
   try {
     const data = JSON.parse(
       Buffer.from(payload, "base64url").toString("utf8"),
-    ) as { state: string; exp: number };
+    ) as { state?: string; returnTo?: string; exp?: number };
 
-    if (!data.state || Date.now() > data.exp) return null;
-    return data.state;
+    if (!data.state || typeof data.exp !== "number" || Date.now() > data.exp) {
+      return null;
+    }
+
+    return {
+      state: data.state,
+      returnTo: normalizeDiscordOAuthReturnTo(data.returnTo),
+    };
   } catch {
     return null;
   }

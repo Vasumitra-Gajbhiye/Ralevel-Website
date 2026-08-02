@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { getAuthSession } from "@/lib/getAuthSession";
-import BanAppealClient from "./BanAppealClient";
-import BanAppealLoginCard from "./BanAppealLoginCard";
+import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
+import BanAppealPageClient from "./pageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -19,18 +18,28 @@ function loadRulesContent(): string[] {
     .map((line) => line.slice(2).trim());
 }
 
-export default async function BanAppealPage() {
-  const session = await getAuthSession();
-  if (!session) {
-    return <BanAppealLoginCard />;
-  }
-
+export default async function BanAppealPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  const discordSession = await getDiscordAppealSession();
   const rulesContent = loadRulesContent();
+
   return (
-    <BanAppealClient
+    <BanAppealPageClient
       rulesContent={rulesContent}
-      userEmail={session.user.email}
-      userName={session.user.name}
+      initialDiscord={
+        discordSession
+          ? {
+              discordUserId: discordSession.discordUserId,
+              discordUsername: discordSession.discordUsername,
+              discordAvatar: discordSession.discordAvatar,
+            }
+          : null
+      }
+      authError={error}
     />
   );
 }

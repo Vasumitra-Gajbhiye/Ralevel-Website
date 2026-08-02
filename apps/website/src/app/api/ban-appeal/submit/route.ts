@@ -1,5 +1,6 @@
 import { banAppealConfirmationEmail } from "@/lib/emails/banAppealEmail";
 import { postDiscordAppealReview } from "@/lib/discord/notifyDiscordAppeal";
+import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
@@ -28,7 +29,15 @@ export async function POST(req: Request) {
   const session = await getAuthSession();
   if (!session) {
     return NextResponse.json(
-      { error: "Authentication required" },
+      { error: "Google or email authentication required" },
+      { status: 401 },
+    );
+  }
+
+  const discordSession = await getDiscordAppealSession();
+  if (!discordSession) {
+    return NextResponse.json(
+      { error: "Discord authentication required" },
       { status: 401 },
     );
   }
@@ -73,10 +82,14 @@ export async function POST(req: Request) {
 
   await connectDB();
 
+  const cooldownSince = new Date(Date.now() - BAN_APPEAL_COOLDOWN_MS);
   const recentBanAppeal = await DiscordAppealSubmission.findOne({
-    clerkUserId: session.userId,
     appealType: "ban",
-    submittedAt: { $gte: new Date(Date.now() - BAN_APPEAL_COOLDOWN_MS) },
+    submittedAt: { $gte: cooldownSince },
+    $or: [
+      { clerkUserId: session.userId },
+      { discordUserId: discordSession.discordUserId },
+    ],
   }).lean();
 
   if (recentBanAppeal) {
@@ -102,6 +115,9 @@ export async function POST(req: Request) {
     submitterEmail,
     clerkUserId: session.userId,
     submitterName,
+    discordUserId: discordSession.discordUserId,
+    discordUsername: discordSession.discordUsername,
+    discordAvatar: discordSession.discordAvatar,
     appealType: "ban",
     responses: {
       q1: (responses!.q1 as string).trim(),
@@ -124,6 +140,8 @@ export async function POST(req: Request) {
       banId,
       submitterEmail,
       submitterName,
+      discordUserId: discordSession.discordUserId,
+      discordUsername: discordSession.discordUsername,
       responses: submission.responses,
       status: "pending",
       sendAckDm: false,

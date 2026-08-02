@@ -3,9 +3,11 @@ import DiscordAppealBan from "@/models/DiscordAppealBan";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  decodeOAuthState,
+  decodeOAuthStatePayload,
   exchangeCodeForUser,
+  normalizeDiscordOAuthReturnTo,
   setDiscordAppealSession,
+  type DiscordOAuthReturnPath,
 } from "@/lib/discord-appeal/oauth";
 import {
   buildDiscordAppealFormUrl,
@@ -14,12 +16,21 @@ import {
 
 const OAUTH_STATE_COOKIE = "discord_appeal_oauth_state";
 
+function redirectWithError(
+  returnTo: DiscordOAuthReturnPath,
+  error: string,
+) {
+  return NextResponse.redirect(
+    buildDiscordAppealFormUrl(`${returnTo}?error=${error}`),
+  );
+}
+
 export async function GET(req: Request) {
+  let returnTo = normalizeDiscordOAuthReturnTo(null);
+
   const config = getDiscordAppealConfig();
   if (!config) {
-    return NextResponse.redirect(
-      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_not_configured"),
-    );
+    return redirectWithError(returnTo, "oauth_not_configured");
   }
 
   const url = new URL(req.url);
@@ -27,27 +38,25 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  if (error) {
-    return NextResponse.redirect(
-      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_denied"),
-    );
-  }
-
-  if (!code || !state) {
-    return NextResponse.redirect(
-      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_invalid"),
-    );
-  }
-
   const cookieStore = await cookies();
   const storedState = cookieStore.get(OAUTH_STATE_COOKIE)?.value;
   cookieStore.delete(OAUTH_STATE_COOKIE);
 
-  const expectedState = storedState ? decodeOAuthState(storedState) : null;
-  if (!expectedState || expectedState !== state) {
-    return NextResponse.redirect(
-      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_state"),
-    );
+  const decoded = storedState ? decodeOAuthStatePayload(storedState) : null;
+  if (decoded) {
+    returnTo = decoded.returnTo;
+  }
+
+  if (error) {
+    return redirectWithError(returnTo, "oauth_denied");
+  }
+
+  if (!code || !state) {
+    return redirectWithError(returnTo, "oauth_invalid");
+  }
+
+  if (!decoded || decoded.state !== state) {
+    return redirectWithError(returnTo, "oauth_state");
   }
 
   try {
@@ -59,9 +68,7 @@ export async function GET(req: Request) {
     }).lean();
 
     if (banned) {
-      return NextResponse.redirect(
-        buildDiscordAppealFormUrl("/discord-appeal-form?error=form_banned"),
-      );
+      return redirectWithError(returnTo, "form_banned");
     }
 
     await setDiscordAppealSession({
@@ -70,11 +77,9 @@ export async function GET(req: Request) {
       discordAvatar: user.avatar ?? undefined,
     });
 
-    return NextResponse.redirect(buildDiscordAppealFormUrl());
+    return NextResponse.redirect(buildDiscordAppealFormUrl(returnTo));
   } catch (err) {
     console.error("[discord-appeal] OAuth callback failed:", err);
-    return NextResponse.redirect(
-      buildDiscordAppealFormUrl("/discord-appeal-form?error=oauth_failed"),
-    );
+    return redirectWithError(returnTo, "oauth_failed");
   }
 }

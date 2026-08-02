@@ -13,13 +13,16 @@ import {
   parseAppealButtonCustomId,
   PENDING_APPEALS_PAGE_SIZE,
   reviewDiscordAppealSubmission,
+  type ReviewAction,
 } from "./appeals.js";
 
 const INTERACTION_PING = 1;
 const INTERACTION_APPLICATION_COMMAND = 2;
 const INTERACTION_MESSAGE_COMPONENT = 3;
 const INTERACTION_CHANNEL_MESSAGE = 4;
+const INTERACTION_DEFERRED_CHANNEL_MESSAGE = 5;
 const EPHEMERAL_FLAG = 1 << 6;
+const DISCORD_API_BASE = "https://discord.com/api/v10";
 
 type DiscordInteractionOption = {
   name: string;
@@ -28,6 +31,8 @@ type DiscordInteractionOption = {
 
 type DiscordInteraction = {
   type: number;
+  application_id?: string;
+  token?: string;
   data?: {
     custom_id?: string;
     name?: string;
@@ -61,6 +66,13 @@ function ephemeralMessage(content: string) {
   };
 }
 
+function deferredEphemeralMessage() {
+  return {
+    type: INTERACTION_DEFERRED_CHANNEL_MESSAGE,
+    data: { flags: EPHEMERAL_FLAG },
+  };
+}
+
 function ephemeralEmbedMessage(input: {
   content?: string;
   embeds: unknown[];
@@ -75,6 +87,73 @@ function ephemeralEmbedMessage(input: {
       flags: EPHEMERAL_FLAG,
     },
   };
+}
+
+async function editOriginalInteractionResponse(
+  applicationId: string,
+  token: string,
+  content: string,
+): Promise<void> {
+  const response = await fetch(
+    `${DISCORD_API_BASE}/webhooks/${applicationId}/${token}/messages/@original`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    },
+  );
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Failed to edit interaction response (${response.status}): ${text.slice(0, 200)}`,
+    );
+  }
+}
+
+function runReviewInBackground(
+  interaction: DiscordInteraction,
+  input: {
+    submissionId: string;
+    action: ReviewAction;
+    reviewerDiscordUserId: string;
+    reviewerUsername: string;
+  },
+): void {
+  const applicationId = interaction.application_id?.trim();
+  const token = interaction.token?.trim();
+
+  void (async () => {
+    try {
+      const result = await reviewDiscordAppealSubmission(input);
+      if (!applicationId || !token) {
+        console.error(
+          "[discord-interactions] Missing application_id/token — cannot edit deferred reply",
+        );
+        return;
+      }
+      await editOriginalInteractionResponse(
+        applicationId,
+        token,
+        result.message,
+      );
+    } catch (err) {
+      console.error("[discord-interactions] Review background work failed:", err);
+      if (!applicationId || !token) return;
+      try {
+        await editOriginalInteractionResponse(
+          applicationId,
+          token,
+          "Something went wrong while reviewing this appeal. Please try again.",
+        );
+      } catch (editErr) {
+        console.error(
+          "[discord-interactions] Failed to edit deferred error reply:",
+          editErr,
+        );
+      }
+    }
+  })();
 }
 
 function getInteractionUser(interaction: DiscordInteraction) {
@@ -214,7 +293,7 @@ async function handleReviewCommand(
     );
   }
 
-  let action: "approve" | "reject" | null = null;
+  let action: ReviewAction | null = null;
   if (commandName === "approve-ban-appeal") action = "approve";
   if (commandName === "reject-ban-appeal") action = "reject";
 
@@ -222,14 +301,14 @@ async function handleReviewCommand(
     return jsonResponse(ephemeralMessage("Unknown command."));
   }
 
-  const result = await reviewDiscordAppealSubmission({
+  runReviewInBackground(interaction, {
     submissionId,
     action,
     reviewerDiscordUserId: user.id,
     reviewerUsername: user.username,
   });
 
-  return jsonResponse(ephemeralMessage(result.message));
+  return jsonResponse(deferredEphemeralMessage());
 }
 
 async function handleSlashCommand(interaction: DiscordInteraction) {
@@ -278,14 +357,14 @@ async function handleButtonClick(interaction: DiscordInteraction) {
     return jsonResponse(ephemeralMessage("Could not identify user."));
   }
 
-  const result = await reviewDiscordAppealSubmission({
+  runReviewInBackground(interaction, {
     submissionId: parsed.submissionId,
     action: parsed.action,
     reviewerDiscordUserId: user.id,
     reviewerUsername: user.username,
   });
 
-  return jsonResponse(ephemeralMessage(result.message));
+  return jsonResponse(deferredEphemeralMessage());
 }
 
 export async function handleDiscordInteraction(

@@ -1,12 +1,14 @@
 # Information
 
+- You must sign in with both Google (or email) and Discord to submit a ban appeal. Use the Discord account that was banned.
+
+- Your Google/email account is used only to notify you of the decision. Do not contact any member of r/alevel Staff regarding the results of your appeal.
+
+- You will be notified of the decision by email once your appeal has been reviewed.
+
 - It is expected that you write full, detailed responses for the questions requiring it.
 
 - You are expected to respond with full honesty.
-
-- You are not to contact any member of r/alevel Staff regarding the results of your appeal.
-
-- You will be notified of the decision by email once your appeal has been reviewed.
 
 - Enter the Ban ID you received when you were banned. Do not share your Ban ID with anyone.
 
@@ -26,4 +28,4 @@
 
 - You are permitted to submit a ban appeal once per week.
 
-- Warning and timeout appeals use a separate form at /discord-appeal-form (Discord sign-in).
+- Warning and timeout appeals use a separate form at /discord-appeal-form (Discord sign-in only).
