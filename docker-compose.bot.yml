@@ -1,0 +1,18 @@
+services:
+  bot:
+    image: ghcr.io/vasumitra-gajbhiye/ralevel-website/bot:latest
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:8787/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
