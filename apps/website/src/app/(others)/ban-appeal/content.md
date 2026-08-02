@@ -10,8 +10,6 @@
 
 - You are expected to respond with full honesty.
 
-- Enter the Ban ID you received when you were banned. Do not share your Ban ID with anyone.
-
 - If your ban reason has a date/time period attached to it, please do not submit an appeal until after that date/time period. If you disregard this, your account will be permanently banned from accessing this form.
 
 - If your ban reason states "unappealable", your appeal will be immediately rejected and your account will be banned from accessing this form.

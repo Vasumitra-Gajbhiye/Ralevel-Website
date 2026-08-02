@@ -11,7 +11,6 @@ import { Resend } from "resend";
 const MIN_RESPONSE_LENGTH = 100;
 const MAX_RESPONSE_LENGTH = 1024;
 const BAN_APPEAL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_BAN_ID_LENGTH = 128;
 
 function validateResponse(value: unknown, label: string): string | null {
   if (typeof value !== "string") return `${label} is required`;
@@ -59,18 +58,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Spam detected" }, { status: 400 });
   }
 
-  const banIdRaw = body.banId;
-  if (typeof banIdRaw !== "string" || !banIdRaw.trim()) {
-    return NextResponse.json({ error: "Ban ID is required" }, { status: 400 });
-  }
-  const banId = banIdRaw.trim();
-  if (banId.length > MAX_BAN_ID_LENGTH) {
-    return NextResponse.json(
-      { error: `Ban ID must be at most ${MAX_BAN_ID_LENGTH} characters` },
-      { status: 400 },
-    );
-  }
-
   const responses = body.responses as Record<string, unknown> | undefined;
   const q1Error = validateResponse(responses?.q1, "Question 1");
   const q2Error = validateResponse(responses?.q2, "Question 2");
@@ -111,7 +98,6 @@ export async function POST(req: Request) {
   const submitterEmail = session.user.email;
 
   const submission = await DiscordAppealSubmission.create({
-    banId,
     submitterEmail,
     clerkUserId: session.userId,
     submitterName,
@@ -137,7 +123,6 @@ export async function POST(req: Request) {
     const messageId = await postDiscordAppealReview({
       submissionId,
       appealType: "ban",
-      banId,
       submitterEmail,
       submitterName,
       discordUserId: discordSession.discordUserId,

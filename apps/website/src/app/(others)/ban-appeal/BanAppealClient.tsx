@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,6 @@ import type { DiscordIdentity } from "./types";
 
 type BanAppealFormValues = {
   readRules: boolean;
-  banId: string;
   q1: string;
   q2: string;
   q3: string;
@@ -35,7 +33,6 @@ type BanAppealFormValues = {
 
 const MIN_CHARS = 100;
 const MAX_CHARS = 1024;
-const MAX_BAN_ID = 128;
 
 const APPEAL_PURPLE = "#674AB3";
 const APPEAL_PURPLE_LIGHT = "#CEA2D7";
@@ -79,7 +76,6 @@ export default function BanAppealClient({
   } = useForm<BanAppealFormValues>({
     defaultValues: {
       readRules: false,
-      banId: "",
       q1: "",
       q2: "",
       q3: "",
@@ -91,7 +87,7 @@ export default function BanAppealClient({
 
   async function goNext() {
     if (step === 1) {
-      const valid = await trigger(["readRules", "banId"]);
+      const valid = await trigger(["readRules"]);
       if (!valid) return;
     }
     if (step === 2) {
@@ -140,7 +136,6 @@ export default function BanAppealClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          banId: data.banId,
           responses: { q1: data.q1, q2: data.q2, q3: data.q3 },
           website: data.website,
         }),
@@ -307,36 +302,6 @@ export default function BanAppealClient({
                     )}
                   </div>
 
-                  <div className="space-y-3 rounded-xl border px-6 py-5">
-                    <Label htmlFor="banId">
-                      Ban ID <span className="text-red-500">*</span>
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enter the Ban ID you received when you were banned. Do not
-                      share it with anyone.
-                    </p>
-                    <Input
-                      id="banId"
-                      autoComplete="off"
-                      placeholder="Your Ban ID"
-                      {...register("banId", {
-                        required: "Ban ID is required",
-                        validate: (value) => {
-                          const trimmed = value.trim();
-                          if (!trimmed) return "Ban ID is required";
-                          if (trimmed.length > MAX_BAN_ID) {
-                            return `Ban ID must be at most ${MAX_BAN_ID} characters`;
-                          }
-                          return true;
-                        },
-                      })}
-                    />
-                    {errors.banId && (
-                      <p className="text-sm text-red-500">
-                        {errors.banId.message}
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
 

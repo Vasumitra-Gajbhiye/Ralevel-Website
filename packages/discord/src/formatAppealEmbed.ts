@@ -38,7 +38,6 @@ function displayName(data: DiscordAppealNotification): string {
       data.discordUsername?.trim() ||
       data.submitterName?.trim() ||
       data.submitterEmail?.trim() ||
-      data.banId?.trim() ||
       "Unknown"
     );
   }
@@ -72,11 +71,6 @@ export function formatAppealEmbed(data: DiscordAppealNotification): DiscordEmbed
           {
             name: "Email",
             value: data.submitterEmail?.trim() || "—",
-            inline: true,
-          },
-          {
-            name: "Ban ID",
-            value: data.banId?.trim() || "—",
             inline: true,
           },
         ]

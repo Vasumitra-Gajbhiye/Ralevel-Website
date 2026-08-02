@@ -35,9 +35,9 @@ function appealDisplayName(doc: {
 }): string {
   if (doc.appealType === "ban") {
     return (
+      (typeof doc.discordUsername === "string" && doc.discordUsername.trim()) ||
       (typeof doc.submitterName === "string" && doc.submitterName.trim()) ||
       (typeof doc.submitterEmail === "string" && doc.submitterEmail.trim()) ||
-      (typeof doc.banId === "string" && doc.banId.trim()) ||
       "Unknown"
     );
   }
