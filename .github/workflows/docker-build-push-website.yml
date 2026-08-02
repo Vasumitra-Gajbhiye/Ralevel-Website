@@ -14,7 +14,6 @@
 #   NEXT_PUBLIC_URL
 #   COOLIFY_WEBSITE_WEBHOOK_URL
 #   COOLIFY_API_TOKEN
-#   COOLIFY_BOT_WEBHOOK_URL
 #
 # Note: everything prefixed NEXT_PUBLIC_ ends up embedded in the client bundle
 # and is visible to anyone who views your site's source - that's normal for
@@ -73,7 +72,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./apps/website/Dockerfile
+          file: ./Dockerfile.website
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=website

@@ -49,7 +49,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./apps/bot/Dockerfile
+          file: ./Dockerfile.bot
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=bot
