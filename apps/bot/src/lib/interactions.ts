@@ -178,12 +178,15 @@ async function handleAppealCommand(
 
   const notification: DiscordAppealNotification = {
     submissionId: appeal.submissionId,
-    discordUserId: appeal.discordUserId,
-    discordUsername: appeal.discordUsername,
+    discordUserId: appeal.discordUserId || undefined,
+    discordUsername: appeal.discordUsername || undefined,
     appealType: appeal.appealType,
     responses: appeal.responses,
     status: appeal.status,
     reviewedBy: appeal.reviewedBy,
+    banId: appeal.banId,
+    submitterEmail: appeal.submitterEmail,
+    submitterName: appeal.submitterName,
   };
 
   const embed = formatAppealEmbed(notification);

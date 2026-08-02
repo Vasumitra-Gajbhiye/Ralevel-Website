@@ -1,22 +1,16 @@
-import {
-  postDiscordAppealReview,
-} from "@/lib/discord/notifyDiscordAppeal";
-import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
-import { enforceRateLimit } from "@/lib/rateLimit";
+import { banAppealConfirmationEmail } from "@/lib/emails/banAppealEmail";
+import { postDiscordAppealReview } from "@/lib/discord/notifyDiscordAppeal";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import DiscordAppealBan from "@/models/DiscordAppealBan";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import DiscordAppealSubmission from "@/models/DiscordAppealSubmission";
 import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
 const MIN_RESPONSE_LENGTH = 100;
 const MAX_RESPONSE_LENGTH = 1024;
-
-const APPEAL_TYPES = ["warning", "timeout"] as const;
-type AppealType = (typeof APPEAL_TYPES)[number];
-
-function isValidAppealType(value: unknown): value is AppealType {
-  return typeof value === "string" && APPEAL_TYPES.includes(value as AppealType);
-}
+const BAN_APPEAL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_BAN_ID_LENGTH = 128;
 
 function validateResponse(value: unknown, label: string): string | null {
   if (typeof value !== "string") return `${label} is required`;
@@ -31,15 +25,15 @@ function validateResponse(value: unknown, label: string): string | null {
 }
 
 export async function POST(req: Request) {
-  const session = await getDiscordAppealSession();
+  const session = await getAuthSession();
   if (!session) {
     return NextResponse.json(
-      { error: "Discord authentication required" },
+      { error: "Authentication required" },
       { status: 401 },
     );
   }
 
-  const rlError = await enforceRateLimit(req, "discord-appeal-submit", {
+  const rlError = await enforceRateLimit(req, "ban-appeal-submit", {
     limit: 5,
     windowSec: 5 * 60,
   });
@@ -56,18 +50,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Spam detected" }, { status: 400 });
   }
 
-  const appealType = body.appealType;
-  if (appealType === "ban") {
+  const banIdRaw = body.banId;
+  if (typeof banIdRaw !== "string" || !banIdRaw.trim()) {
+    return NextResponse.json({ error: "Ban ID is required" }, { status: 400 });
+  }
+  const banId = banIdRaw.trim();
+  if (banId.length > MAX_BAN_ID_LENGTH) {
     return NextResponse.json(
-      {
-        error:
-          "Ban appeals must be submitted at /ban-appeal using a Google or email account.",
-      },
+      { error: `Ban ID must be at most ${MAX_BAN_ID_LENGTH} characters` },
       { status: 400 },
     );
-  }
-  if (!isValidAppealType(appealType)) {
-    return NextResponse.json({ error: "Invalid appeal type" }, { status: 400 });
   }
 
   const responses = body.responses as Record<string, unknown> | undefined;
@@ -81,14 +73,19 @@ export async function POST(req: Request) {
 
   await connectDB();
 
-  const banned = await DiscordAppealBan.findOne({
-    discordUserId: session.discordUserId,
+  const recentBanAppeal = await DiscordAppealSubmission.findOne({
+    clerkUserId: session.userId,
+    appealType: "ban",
+    submittedAt: { $gte: new Date(Date.now() - BAN_APPEAL_COOLDOWN_MS) },
   }).lean();
 
-  if (banned) {
+  if (recentBanAppeal) {
     return NextResponse.json(
-      { error: "You are banned from submitting appeals on this form." },
-      { status: 403 },
+      {
+        error:
+          "You may only submit a ban appeal once per week. Please try again later.",
+      },
+      { status: 429 },
     );
   }
 
@@ -97,11 +94,15 @@ export async function POST(req: Request) {
     req.headers.get("x-real-ip") ??
     undefined;
 
+  const submitterName = session.user.name?.trim() || undefined;
+  const submitterEmail = session.user.email;
+
   const submission = await DiscordAppealSubmission.create({
-    discordUserId: session.discordUserId,
-    discordUsername: session.discordUsername,
-    discordAvatar: session.discordAvatar,
-    appealType,
+    banId,
+    submitterEmail,
+    clerkUserId: session.userId,
+    submitterName,
+    appealType: "ban",
     responses: {
       q1: (responses!.q1 as string).trim(),
       q2: (responses!.q2 as string).trim(),
@@ -119,12 +120,13 @@ export async function POST(req: Request) {
   try {
     const messageId = await postDiscordAppealReview({
       submissionId,
-      discordUserId: session.discordUserId,
-      discordUsername: session.discordUsername,
-      appealType,
+      appealType: "ban",
+      banId,
+      submitterEmail,
+      submitterName,
       responses: submission.responses,
       status: "pending",
-      sendAckDm: true,
+      sendAckDm: false,
     });
 
     if (messageId) {
@@ -132,7 +134,21 @@ export async function POST(req: Request) {
       await submission.save();
     }
   } catch (err) {
-    console.error("[discord-appeal] Failed to notify applications bot:", err);
+    console.error("[ban-appeal] Failed to notify applications bot:", err);
+  }
+
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: "r/alevel <application@ralevel.com>",
+        to: submitterEmail,
+        subject: "We received your ban appeal",
+        html: banAppealConfirmationEmail({ name: submitterName }),
+      });
+    } catch (err) {
+      console.error("[ban-appeal] Failed to send confirmation email:", err);
+    }
   }
 
   return NextResponse.json({ success: true, submissionId });

@@ -18,19 +18,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-type AppealType = "warning" | "timeout";
-
-type AppealFormValues = {
+type BanAppealFormValues = {
   readRules: boolean;
-  appealType: AppealType | "";
+  banId: string;
   q1: string;
   q2: string;
   q3: string;
@@ -38,29 +38,9 @@ type AppealFormValues = {
   website: string;
 };
 
-type DiscordSession = {
-  discordUserId: string;
-  discordUsername: string;
-  discordAvatar?: string;
-};
-
-const APPEAL_TYPE_OPTIONS: { value: AppealType; label: string }[] = [
-  { value: "warning", label: "Warnings Appeal" },
-  { value: "timeout", label: "Immediate Timeout/Mute Removal" },
-];
-
-const STEP_TITLES: Record<AppealType, string> = {
-  warning: "Warnings Appeal",
-  timeout: "Immediate Timeout/Mute Removal",
-};
-
-const Q1_LABELS: Record<AppealType, string> = {
-  warning: "What do you know about why you were warned?",
-  timeout: "What do you know about why you were timed out/muted?",
-};
-
 const MIN_CHARS = 100;
 const MAX_CHARS = 1024;
+const MAX_BAN_ID = 128;
 
 const APPEAL_PURPLE = "#674AB3";
 const APPEAL_PURPLE_LIGHT = "#CEA2D7";
@@ -68,23 +48,20 @@ const APPEAL_PURPLE_LIGHT = "#CEA2D7";
 const stepCircleBase =
   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold";
 
-function discordAvatarUrl(session: DiscordSession): string | null {
-  if (!session.discordAvatar) return null;
-  return `https://cdn.discordapp.com/avatars/${session.discordUserId}/${session.discordAvatar}.png`;
-}
-
-type AppealClientProps = {
+type BanAppealClientProps = {
   rulesContent: string[];
-  authError?: string;
+  userEmail: string;
+  userName: string | null;
 };
 
-export default function AppealClient({
+export default function BanAppealClient({
   rulesContent,
-  authError,
-}: AppealClientProps) {
+  userEmail,
+  userName,
+}: BanAppealClientProps) {
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const [step, setStep] = useState(1);
-  const [session, setSession] = useState<DiscordSession | null>(null);
-  const [sessionLoading, setSessionLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -92,13 +69,12 @@ export default function AppealClient({
     register,
     control,
     handleSubmit,
-    watch,
     trigger,
     formState: { errors, isSubmitting },
-  } = useForm<AppealFormValues>({
+  } = useForm<BanAppealFormValues>({
     defaultValues: {
       readRules: false,
-      appealType: "",
+      banId: "",
       q1: "",
       q2: "",
       q3: "",
@@ -108,55 +84,16 @@ export default function AppealClient({
     mode: "onBlur",
   });
 
-  const appealType = watch("appealType") as AppealType | "";
+  const displayName = useMemo(
+    () => userName || user?.fullName || userEmail,
+    [userName, user?.fullName, userEmail],
+  );
 
-  useEffect(() => {
-    if (authError === "oauth_denied") {
-      toast.error("Discord authorization was cancelled.");
-    } else if (authError === "form_banned") {
-      toast.error("You are banned from accessing this form.");
-    } else if (authError === "oauth_failed" || authError === "oauth_invalid") {
-      toast.error("Discord sign-in failed. Please try again.");
-    } else if (authError === "oauth_state") {
-      toast.error("Discord sign-in expired. Please try again.");
-    }
-  }, [authError]);
-
-  useEffect(() => {
-    async function loadSession() {
-      try {
-        const res = await fetch("/api/discord-appeal/session");
-        if (res.ok) {
-          const data = await res.json();
-          setSession({
-            discordUserId: data.discordUserId,
-            discordUsername: data.discordUsername,
-            discordAvatar: data.discordAvatar,
-          });
-        }
-      } catch {
-        // unauthenticated
-      } finally {
-        setSessionLoading(false);
-      }
-    }
-
-    loadSession();
-  }, []);
-
-  const step2Title = useMemo(() => {
-    if (!appealType) return "Appeal Questions";
-    return STEP_TITLES[appealType];
-  }, [appealType]);
-
-  const q1Label = useMemo(() => {
-    if (!appealType) return "Question 1";
-    return Q1_LABELS[appealType];
-  }, [appealType]);
+  const avatarUrl = user?.imageUrl;
 
   async function goNext() {
     if (step === 1) {
-      const valid = await trigger(["readRules", "appealType"]);
+      const valid = await trigger(["readRules", "banId"]);
       if (!valid) return;
     }
     if (step === 2) {
@@ -170,38 +107,23 @@ export default function AppealClient({
     setStep((s) => Math.max(1, s - 1));
   }
 
-  async function disconnectDiscord() {
+  async function handleSignOut() {
     setLoggingOut(true);
     try {
-      const res = await fetch("/api/discord-appeal/session", {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        toast.error("Failed to disconnect Discord. Please try again.");
-        return;
-      }
-      setSession(null);
-      setStep(1);
-      toast.success("Disconnected from Discord.");
+      await signOut({ redirectUrl: "/ban-appeal" });
     } catch {
-      toast.error("Failed to disconnect Discord. Please try again.");
-    } finally {
+      toast.error("Failed to sign out. Please try again.");
       setLoggingOut(false);
     }
   }
 
-  const onSubmit = async (data: AppealFormValues) => {
-    if (!session) {
-      toast.error("Please connect your Discord account first.");
-      return;
-    }
-
+  const onSubmit = async (data: BanAppealFormValues) => {
     try {
-      const res = await fetch("/api/discord-appeal/submit", {
+      const res = await fetch("/api/ban-appeal/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          appealType: data.appealType,
+          banId: data.banId,
           responses: { q1: data.q1, q2: data.q2, q3: data.q3 },
           website: data.website,
         }),
@@ -219,45 +141,6 @@ export default function AppealClient({
     }
   };
 
-  if (sessionLoading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6 py-24">
-        <Card className="w-full max-w-lg border-muted/60 p-2 shadow-xl">
-          <CardContent className="space-y-6 px-6 py-8 text-center">
-            <h1 className="text-3xl font-semibold tracking-tight">
-              Warning &amp; Timeout Appeal
-            </h1>
-            <p className="text-muted-foreground leading-relaxed">
-              Connect your Discord account to submit a warning or timeout
-              appeal. You must authorize the application on the account that
-              received the penalty.
-            </p>
-            <Button asChild size="lg" className="w-full py-6 text-base">
-              <a href="/api/discord-appeal/auth">Connect with Discord</a>
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Ban appeals use a separate form —{" "}
-              <a href="/ban-appeal" className="underline">
-                go to ban appeal
-              </a>
-              .
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const avatarUrl = discordAvatarUrl(session);
-
   return (
     <>
       <div className="mx-auto max-w-5xl px-4 py-20">
@@ -267,15 +150,11 @@ export default function AppealClient({
           <div className="flex items-start justify-between px-10 pt-8 pb-4">
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold tracking-tight">
-                Warning &amp; Timeout Appeal
+                Ban Appeal
               </h1>
               <p className="max-w-3xl text-base text-muted-foreground">
-                Submit an appeal for a warning or timeout on the r/alevel
-                Discord server. Ban appeals are at{" "}
-                <a href="/ban-appeal" className="underline">
-                  /ban-appeal
-                </a>
-                .
+                Submit a ban appeal for the r/alevel Discord server. You will be
+                notified of the decision by email.
               </p>
             </div>
             <DropdownMenu>
@@ -287,7 +166,7 @@ export default function AppealClient({
                   {avatarUrl ? (
                     <img
                       src={avatarUrl}
-                      alt={session.discordUsername}
+                      alt={displayName}
                       width={32}
                       height={32}
                       className="h-8 w-8 rounded-full"
@@ -297,26 +176,23 @@ export default function AppealClient({
                       className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white"
                       style={{ backgroundColor: APPEAL_PURPLE }}
                     >
-                      {session.discordUsername.charAt(0).toUpperCase()}
+                      {displayName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="text-sm font-medium">
-                    {session.discordUsername}
+                  <span className="max-w-[140px] truncate text-sm font-medium">
+                    {displayName}
                   </span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={loggingOut}
-                  onClick={disconnectDiscord}
-                >
+                <DropdownMenuItem disabled={loggingOut} onClick={handleSignOut}>
                   {loggingOut ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Disconnecting...
+                      Signing out...
                     </>
                   ) : (
-                    "Disconnect Discord"
+                    "Sign out"
                   )}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -412,41 +288,32 @@ export default function AppealClient({
                   </div>
 
                   <div className="space-y-3 rounded-xl border px-6 py-5">
-                    <div>
-                      <Label className="text-base font-semibold uppercase tracking-wide">
-                        Check <span className="text-red-500">*</span>
-                      </Label>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        What are you submitting?
-                      </p>
-                    </div>
-                    <Controller
-                      control={control}
-                      name="appealType"
-                      rules={{ required: "Please select an appeal type" }}
-                      render={({ field }) => (
-                        <div className="space-y-3">
-                          {APPEAL_TYPE_OPTIONS.map((opt) => (
-                            <label
-                              key={opt.value}
-                              className="flex cursor-pointer items-center gap-3"
-                            >
-                              <input
-                                type="radio"
-                                value={opt.value}
-                                checked={field.value === opt.value}
-                                onChange={() => field.onChange(opt.value)}
-                                className="h-4 w-4"
-                              />
-                              <span className="text-sm">{opt.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
+                    <Label htmlFor="banId">
+                      Ban ID <span className="text-red-500">*</span>
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enter the Ban ID you received when you were banned. Do not
+                      share it with anyone.
+                    </p>
+                    <Input
+                      id="banId"
+                      autoComplete="off"
+                      placeholder="Your Ban ID"
+                      {...register("banId", {
+                        required: "Ban ID is required",
+                        validate: (value) => {
+                          const trimmed = value.trim();
+                          if (!trimmed) return "Ban ID is required";
+                          if (trimmed.length > MAX_BAN_ID) {
+                            return `Ban ID must be at most ${MAX_BAN_ID} characters`;
+                          }
+                          return true;
+                        },
+                      })}
                     />
-                    {errors.appealType && (
+                    {errors.banId && (
                       <p className="text-sm text-red-500">
-                        {errors.appealType.message}
+                        {errors.banId.message}
                       </p>
                     )}
                   </div>
@@ -457,7 +324,7 @@ export default function AppealClient({
                 <div className="space-y-8">
                   <div>
                     <h2 className="text-2xl font-semibold uppercase tracking-wide">
-                      {step2Title}
+                      Ban Appeal
                     </h2>
                     <p className="mt-2 text-sm text-muted-foreground">
                       Please provide detailed responses. A proper grammatical
@@ -465,43 +332,47 @@ export default function AppealClient({
                     </p>
                   </div>
 
-                  {(["q1", "q2", "q3"] as const).map((fieldName, index) => {
-                    const labels = [
-                      q1Label,
-                      "Do you feel the action taken was reasonable or unreasonable? Explain why.",
-                      "Why should your appeal be accepted?",
-                    ];
-
-                    return (
-                      <div key={fieldName} className="space-y-3">
-                        <Label htmlFor={fieldName}>
-                          Q{index + 1}. {labels[index]}{" "}
-                          <span className="text-red-500">*</span>
-                        </Label>
-                        <Textarea
-                          id={fieldName}
-                          rows={5}
-                          placeholder={`[Minimum ${MIN_CHARS} Characters]`}
-                          {...register(fieldName, {
-                            required: "This field is required",
-                            minLength: {
-                              value: MIN_CHARS,
-                              message: `Minimum ${MIN_CHARS} characters required`,
-                            },
-                            maxLength: {
-                              value: MAX_CHARS,
-                              message: `Maximum ${MAX_CHARS} characters allowed`,
-                            },
-                          })}
-                        />
-                        {errors[fieldName] && (
-                          <p className="text-sm text-red-500">
-                            {errors[fieldName]?.message}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {(
+                    [
+                      [
+                        "q1",
+                        "What do you know about why you were banned?",
+                      ],
+                      [
+                        "q2",
+                        "Do you feel the action taken was reasonable or unreasonable? Explain why.",
+                      ],
+                      ["q3", "Why should your appeal be accepted?"],
+                    ] as const
+                  ).map(([fieldName, label], index) => (
+                    <div key={fieldName} className="space-y-3">
+                      <Label htmlFor={fieldName}>
+                        Q{index + 1}. {label}{" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Textarea
+                        id={fieldName}
+                        rows={5}
+                        placeholder={`[Minimum ${MIN_CHARS} Characters]`}
+                        {...register(fieldName, {
+                          required: "This field is required",
+                          minLength: {
+                            value: MIN_CHARS,
+                            message: `Minimum ${MIN_CHARS} characters required`,
+                          },
+                          maxLength: {
+                            value: MAX_CHARS,
+                            message: `Maximum ${MAX_CHARS} characters allowed`,
+                          },
+                        })}
+                      />
+                      {errors[fieldName] && (
+                        <p className="text-sm text-red-500">
+                          {errors[fieldName]?.message}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -517,7 +388,8 @@ export default function AppealClient({
                       </Label>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Ensure that you have read through your responses and are
-                        confident with submitting this appeal form.
+                        confident with submitting this appeal form. The decision
+                        will be emailed to {userEmail}.
                       </p>
                     </div>
                     <Controller
@@ -606,7 +478,7 @@ export default function AppealClient({
               Appeal Submitted
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center leading-relaxed">
-              Your appeal has been received. You will be notified via Discord DM
+              Your ban appeal has been received. You will be notified by email
               once it has been reviewed.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -50,10 +50,11 @@ Same as before (`MONGODB_URI`, all `NEXT_PUBLIC_*`).
 |----------|----------|-------|
 | `BOT_INTERNAL_URL` | Yes for Discord | Internal Coolify URL to bot, e.g. `http://applications-bot:8787` |
 | `INTERNAL_BOT_SECRET` | Yes for Discord | Shared with bot; sent as `x-internal-bot-secret` |
-| `DISCORD_CLIENT_ID` | Ban appeals | OAuth for appeal form |
-| `DISCORD_CLIENT_SECRET` | Ban appeals | OAuth |
+| `DISCORD_CLIENT_ID` | Warning/timeout appeals | OAuth for Discord appeal form |
+| `DISCORD_CLIENT_SECRET` | Warning/timeout appeals | OAuth |
 | `DISCORD_PUBLIC_KEY` | Optional | Only if still proxying interactions via website |
-| `DISCORD_GUILD_ID` | Ban appeals | OAuth / config gate |
+| `DISCORD_GUILD_ID` | Warning/timeout appeals | OAuth / config gate |
+| `RESEND_API_KEY` | Ban appeals + forms | Confirmation / decision emails |
 | `CRON_SECRET` | Optional | Only if cron still hits website proxy |
 
 **Do not put `DISCORD_BOT_TOKEN` on the website** — it belongs on the bot app.
@@ -87,6 +88,8 @@ See [`.env.bot.example`](../../../.env.bot.example):
 | `DISCORD_GUILD_ID` | Appeals |
 | `DISCORD_BAN_APPEAL_CHANNEL_ID` | Appeals |
 | `DISCORD_APPEAL_REVIEWER_ROLE_IDS` | Optional override |
+| `RESEND_API_KEY` | Ban appeal outcome emails |
+| `RESEND_FROM_EMAIL` | Optional; defaults to `r/alevel <application@ralevel.com>` |
 | `NEXT_PUBLIC_URL` or `SITE_URL` | Admin links in embeds |
 | `CRON_SECRET` | Reminder cron |
 | `PORT` | Default `8787` |

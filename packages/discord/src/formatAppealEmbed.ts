@@ -2,12 +2,15 @@ import type { DiscordEmbed } from "./types";
 
 export type DiscordAppealNotification = {
   submissionId: string;
-  discordUserId: string;
-  discordUsername: string;
+  discordUserId?: string;
+  discordUsername?: string;
   appealType: "ban" | "warning" | "timeout";
   responses: { q1: string; q2: string; q3: string };
   status: "pending" | "approved" | "rejected";
   reviewedBy?: string;
+  banId?: string;
+  submitterEmail?: string;
+  submitterName?: string;
 };
 
 const APPEAL_TYPE_LABELS: Record<DiscordAppealNotification["appealType"], string> =
@@ -29,8 +32,20 @@ function truncate(text: string, max = 900): string {
   return `${trimmed.slice(0, max - 3)}...`;
 }
 
+function displayName(data: DiscordAppealNotification): string {
+  if (data.appealType === "ban") {
+    return (
+      data.submitterName?.trim() ||
+      data.submitterEmail?.trim() ||
+      data.banId?.trim() ||
+      "Unknown"
+    );
+  }
+  return data.discordUsername?.trim() || "Unknown";
+}
+
 export function formatAppealEmbed(data: DiscordAppealNotification): DiscordEmbed {
-  const title = `${APPEAL_TYPE_LABELS[data.appealType]} — ${data.discordUsername}`;
+  const title = `${APPEAL_TYPE_LABELS[data.appealType]} — ${displayName(data)}`;
   const statusLabel =
     data.status === "pending"
       ? "Pending review"
@@ -38,12 +53,38 @@ export function formatAppealEmbed(data: DiscordAppealNotification): DiscordEmbed
         ? `Approved by ${data.reviewedBy ?? "staff"}`
         : `Rejected by ${data.reviewedBy ?? "staff"}`;
 
+  const identityFields =
+    data.appealType === "ban"
+      ? [
+          {
+            name: "Ban ID",
+            value: data.banId?.trim() || "—",
+            inline: true,
+          },
+          {
+            name: "Email",
+            value: data.submitterEmail?.trim() || "—",
+            inline: true,
+          },
+        ]
+      : [
+          {
+            name: "Discord ID",
+            value: data.discordUserId?.trim() || "—",
+            inline: true,
+          },
+        ];
+
   return {
     title,
     color: STATUS_COLORS[data.status],
     fields: [
-      { name: "Discord ID", value: data.discordUserId, inline: true },
-      { name: "Appeal Type", value: APPEAL_TYPE_LABELS[data.appealType], inline: true },
+      ...identityFields,
+      {
+        name: "Appeal Type",
+        value: APPEAL_TYPE_LABELS[data.appealType],
+        inline: true,
+      },
       { name: "Status", value: statusLabel, inline: true },
       {
         name: "Q1. Why action was taken",

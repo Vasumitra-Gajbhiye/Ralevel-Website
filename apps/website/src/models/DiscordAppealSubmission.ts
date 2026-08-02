@@ -19,9 +19,13 @@ const ResponsesSchema = new mongoose.Schema(
 
 const DiscordAppealSubmissionSchema = new mongoose.Schema(
   {
-    discordUserId: { type: String, required: true, index: true },
-    discordUsername: { type: String, required: true },
+    discordUserId: { type: String, index: true },
+    discordUsername: { type: String },
     discordAvatar: { type: String },
+    banId: { type: String },
+    submitterEmail: { type: String, index: true },
+    clerkUserId: { type: String, index: true },
+    submitterName: { type: String },
     appealType: {
       type: String,
       enum: ["ban", "warning", "timeout"],
@@ -48,6 +52,11 @@ const DiscordAppealSubmissionSchema = new mongoose.Schema(
 
 DiscordAppealSubmissionSchema.index({
   discordUserId: 1,
+  appealType: 1,
+  submittedAt: -1,
+});
+DiscordAppealSubmissionSchema.index({
+  clerkUserId: 1,
   appealType: 1,
   submittedAt: -1,
 });

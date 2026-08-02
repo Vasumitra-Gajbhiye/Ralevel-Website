@@ -2,7 +2,7 @@ import { normalizeSiteUrl } from "@/lib/discord/notifyFormSubmission";
 
 export const DISCORD_APPEAL_INVITE_URL = "https://discord.gg/xEk5GsgfHC";
 
-/** Website-side OAuth config (ban appeal form). Discord token lives on the applications bot. */
+/** Website-side OAuth config (warning/timeout appeal form). Discord token lives on the applications bot. */
 export type DiscordAppealConfig = {
   clientId: string;
   clientSecret: string;

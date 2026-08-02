@@ -4,12 +4,14 @@ import {
   sendDirectMessage,
   type DiscordAppealNotification,
 } from "@ralevel/discord";
+import { Resend } from "resend";
 import {
   DISCORD_APPEAL_INVITE_URL,
   getDiscordAppealBotConfig,
 } from "../config.js";
 import connectDB from "../db.js";
 import DiscordAppealSubmission from "../models/DiscordAppealSubmission.js";
+import { banAppealDecisionEmailHtml } from "./banAppealEmail.js";
 
 const APPEAL_TYPE_LABELS: Record<
   DiscordAppealNotification["appealType"],
@@ -23,6 +25,60 @@ const APPEAL_TYPE_LABELS: Record<
 export type AppealSubmittedPayload = DiscordAppealNotification & {
   sendAckDm?: boolean;
 };
+
+function appealDisplayName(doc: {
+  appealType?: string;
+  discordUsername?: unknown;
+  submitterName?: unknown;
+  submitterEmail?: unknown;
+  banId?: unknown;
+}): string {
+  if (doc.appealType === "ban") {
+    return (
+      (typeof doc.submitterName === "string" && doc.submitterName.trim()) ||
+      (typeof doc.submitterEmail === "string" && doc.submitterEmail.trim()) ||
+      (typeof doc.banId === "string" && doc.banId.trim()) ||
+      "Unknown"
+    );
+  }
+  return (
+    (typeof doc.discordUsername === "string" && doc.discordUsername.trim()) ||
+    "Unknown"
+  );
+}
+
+function toNotification(
+  submission: InstanceType<typeof DiscordAppealSubmission> & {
+    _id: { toString(): string };
+  },
+  overrides?: Partial<DiscordAppealNotification>,
+): DiscordAppealNotification {
+  return {
+    submissionId: submission._id.toString(),
+    discordUserId: submission.discordUserId
+      ? String(submission.discordUserId)
+      : undefined,
+    discordUsername: submission.discordUsername
+      ? String(submission.discordUsername)
+      : undefined,
+    appealType: submission.appealType as DiscordAppealNotification["appealType"],
+    responses: {
+      q1: String(submission.responses.q1),
+      q2: String(submission.responses.q2),
+      q3: String(submission.responses.q3),
+    },
+    status: (overrides?.status ??
+      submission.status) as DiscordAppealNotification["status"],
+    reviewedBy: overrides?.reviewedBy,
+    banId: submission.banId ? String(submission.banId) : undefined,
+    submitterEmail: submission.submitterEmail
+      ? String(submission.submitterEmail)
+      : undefined,
+    submitterName: submission.submitterName
+      ? String(submission.submitterName)
+      : undefined,
+  };
+}
 
 export async function handleAppealSubmitted(
   data: AppealSubmittedPayload,
@@ -39,7 +95,7 @@ export async function handleAppealSubmitted(
     data,
   );
 
-  if (data.sendAckDm !== false) {
+  if (data.sendAckDm !== false && data.discordUserId) {
     try {
       await sendDirectMessage(
         config.botToken,
@@ -127,8 +183,8 @@ export async function listPendingAppeals(input: {
 
   const items: PendingAppealSummary[] = docs.map((doc) => ({
     submissionId: doc._id.toString(),
-    discordUserId: String(doc.discordUserId),
-    discordUsername: String(doc.discordUsername),
+    discordUserId: doc.discordUserId ? String(doc.discordUserId) : "",
+    discordUsername: appealDisplayName(doc),
     appealType: doc.appealType as DiscordAppealNotification["appealType"],
     submittedAt:
       doc.submittedAt instanceof Date
@@ -148,6 +204,9 @@ export async function getAppealById(submissionId: string): Promise<{
   status: DiscordAppealNotification["status"];
   reviewedBy?: string;
   submittedAt: Date;
+  banId?: string;
+  submitterEmail?: string;
+  submitterName?: string;
 } | null> {
   await connectDB();
 
@@ -156,8 +215,10 @@ export async function getAppealById(submissionId: string): Promise<{
 
   return {
     submissionId: submission._id.toString(),
-    discordUserId: String(submission.discordUserId),
-    discordUsername: String(submission.discordUsername),
+    discordUserId: submission.discordUserId
+      ? String(submission.discordUserId)
+      : "",
+    discordUsername: appealDisplayName(submission),
     appealType: submission.appealType as DiscordAppealNotification["appealType"],
     responses: {
       q1: String(submission.responses.q1),
@@ -172,7 +233,46 @@ export async function getAppealById(submissionId: string): Promise<{
       submission.submittedAt instanceof Date
         ? submission.submittedAt
         : new Date(String(submission.submittedAt)),
+    banId: submission.banId ? String(submission.banId) : undefined,
+    submitterEmail: submission.submitterEmail
+      ? String(submission.submitterEmail)
+      : undefined,
+    submitterName: submission.submitterName
+      ? String(submission.submitterName)
+      : undefined,
   };
+}
+
+async function notifyBanAppealByEmail(input: {
+  email: string;
+  name?: string | null;
+  approved: boolean;
+}): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    console.error("[bot] RESEND_API_KEY missing — cannot email ban appeal outcome");
+    return false;
+  }
+
+  const from =
+    process.env.RESEND_FROM_EMAIL?.trim() ||
+    "r/alevel <application@ralevel.com>";
+
+  const resend = new Resend(apiKey);
+  await resend.emails.send({
+    from,
+    to: input.email,
+    subject: input.approved
+      ? "Your ban appeal was approved"
+      : "Your ban appeal was rejected",
+    html: banAppealDecisionEmailHtml({
+      name: input.name,
+      approved: input.approved,
+      inviteUrl: input.approved ? DISCORD_APPEAL_INVITE_URL : undefined,
+    }),
+  });
+
+  return true;
 }
 
 export async function reviewDiscordAppealSubmission(input: {
@@ -217,20 +317,53 @@ export async function reviewDiscordAppealSubmission(input: {
   submission.reviewedAt = new Date();
   await submission.save();
 
-  try {
-    const label = APPEAL_TYPE_LABELS[submission.appealType as keyof typeof APPEAL_TYPE_LABELS];
-    let content: string;
-    if (input.action === "approve") {
-      content = `Your ${label} for the r/alevel Discord server has been approved.`;
-      if (submission.appealType === "ban") {
-        content += ` You can rejoin the server using this invite link: ${DISCORD_APPEAL_INVITE_URL}`;
+  const displayName = appealDisplayName(submission);
+  let notifiedVia: "email" | "DM" | "none" = "none";
+
+  if (submission.appealType === "ban") {
+    const email =
+      typeof submission.submitterEmail === "string"
+        ? submission.submitterEmail.trim()
+        : "";
+    if (email) {
+      try {
+        const sent = await notifyBanAppealByEmail({
+          email,
+          name: submission.submitterName
+            ? String(submission.submitterName)
+            : null,
+          approved: input.action === "approve",
+        });
+        if (sent) notifiedVia = "email";
+      } catch (err) {
+        console.error("[bot] Failed to send ban appeal result email:", err);
       }
     } else {
-      content = `Your ${label} for the r/alevel Discord server has been rejected.`;
+      console.error(
+        "[bot] Ban appeal missing submitterEmail — cannot notify appellant",
+      );
     }
-    await sendDirectMessage(config.botToken, submission.discordUserId, content);
-  } catch (err) {
-    console.error("[bot] Failed to send result DM:", err);
+  } else if (submission.discordUserId) {
+    try {
+      const label =
+        APPEAL_TYPE_LABELS[
+          submission.appealType as keyof typeof APPEAL_TYPE_LABELS
+        ];
+      let content: string;
+      if (input.action === "approve") {
+        content = `Your ${label} for the r/alevel Discord server has been approved.`;
+      } else {
+        content = `Your ${label} for the r/alevel Discord server has been rejected.`;
+      }
+      await sendDirectMessage(
+        config.botToken,
+        String(submission.discordUserId),
+        content,
+      );
+      notifiedVia = "DM";
+    } catch (err) {
+      console.error("[bot] Failed to send result DM:", err);
+    }
   }
 
   if (submission.discordMessageId) {
@@ -239,27 +372,29 @@ export async function reviewDiscordAppealSubmission(input: {
         config.botToken,
         config.banAppealChannelId,
         submission.discordMessageId,
-        {
-          submissionId: submission._id.toString(),
-          discordUserId: submission.discordUserId,
-          discordUsername: submission.discordUsername,
-          appealType: submission.appealType,
-          responses: submission.responses,
+        toNotification(submission, {
           status: newStatus,
           reviewedBy: input.reviewerUsername,
-        },
+        }),
       );
     } catch (err) {
       console.error("[bot] Failed to update review message:", err);
     }
   }
 
+  const notifyLabel =
+    notifiedVia === "email"
+      ? "They have been notified via email."
+      : notifiedVia === "DM"
+        ? "They have been notified via DM."
+        : "They could not be notified automatically.";
+
   return {
     ok: true,
     message:
       input.action === "approve"
-        ? `Appeal approved for ${submission.discordUsername}. They have been notified via DM.`
-        : `Appeal rejected for ${submission.discordUsername}. They have been notified via DM.`,
+        ? `Appeal approved for ${displayName}. ${notifyLabel}`
+        : `Appeal rejected for ${displayName}. ${notifyLabel}`,
   };
 }
 

@@ -17,12 +17,15 @@ type ApplicationSubmittedPayload = {
 
 type AppealSubmittedPayload = {
   submissionId: string;
-  discordUserId: string;
-  discordUsername: string;
+  discordUserId?: string;
+  discordUsername?: string;
   appealType: "ban" | "warning" | "timeout";
   responses: { q1: string; q2: string; q3: string };
   status: "pending" | "approved" | "rejected";
   reviewedBy?: string;
+  banId?: string;
+  submitterEmail?: string;
+  submitterName?: string;
   sendAckDm?: boolean;
 };
 

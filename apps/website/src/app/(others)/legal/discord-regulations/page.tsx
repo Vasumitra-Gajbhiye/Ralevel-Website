@@ -178,7 +178,14 @@ export default function DiscordRegulationsPage() {
                 .
               </>,
               <>
-                If you seek an appeal (ban/penalty), submit it{" "}
+                If you seek a ban appeal, submit it{" "}
+                <Link
+                  className="text-blue-600 underline"
+                  href="/ban-appeal"
+                >
+                  here
+                </Link>
+                . For warning or timeout appeals, submit{" "}
                 <Link
                   className="text-blue-600 underline"
                   href="/discord-appeal-form"
