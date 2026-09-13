@@ -1,6 +1,8 @@
 "use client";
 
 import { cldImage } from "@/lib/cloudinary";
+import { canAccessAdminPanel, sanitizeRoles } from "@/lib/roles";
+import { applySuperAdminRoles } from "@/lib/superAdmin";
 import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
 import { LogIn, Menu } from "lucide-react";
@@ -78,6 +80,7 @@ function DesktopAuthButtons({
 function HeroNavigation({
   pathname,
   isSignedIn,
+  showAdmin,
   user,
   router,
   isActive,
@@ -87,6 +90,7 @@ function HeroNavigation({
 }: {
   pathname: string;
   isSignedIn: boolean;
+  showAdmin: boolean;
   user: ReturnType<typeof useUser>["user"];
   router: ReturnType<typeof useRouter>;
   isActive: boolean;
@@ -94,6 +98,8 @@ function HeroNavigation({
   mounted: boolean;
   scrolled: boolean;
 }) {
+  const isAdminCurrent = pathname.startsWith("/admin");
+
   return (
     <>
       <motion.nav
@@ -161,6 +167,37 @@ function HeroNavigation({
                 </motion.div>
               );
             })}
+            {showAdmin && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: navListItems.length * 0.1 + 0.5 }}
+              >
+                <Link
+                  href="/admin"
+                  className={`relative px-1 py-1 text-sm font-medium transition-all duration-300 ${
+                    isAdminCurrent
+                      ? scrolled
+                        ? "text-blue-600"
+                        : "text-white"
+                      : scrolled
+                        ? "text-black hover:text-blue-600"
+                        : "text-white hover:scale-110"
+                  }`}
+                >
+                  Admin
+                  <motion.span
+                    layoutId="underline-Admin"
+                    className={`absolute left-0 -bottom-1 h-[2px] w-full ${
+                      scrolled ? "bg-blue-600" : "bg-white"
+                    }`}
+                    initial={{ scaleX: 0 }}
+                    whileHover={{ scaleX: 1 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </Link>
+              </motion.div>
+            )}
           </div>
 
           <div className="hidden lg2:flex items-center gap-4">
@@ -189,6 +226,7 @@ function HeroNavigation({
           pathname={pathname}
           mounted={mounted}
           isSignedIn={isSignedIn}
+          showAdmin={showAdmin}
           onClose={() => setIsActive(false)}
         />
       )}
@@ -199,6 +237,7 @@ function HeroNavigation({
 function DefaultNavigation({
   pathname,
   isSignedIn,
+  showAdmin,
   user,
   router,
   isActive,
@@ -207,12 +246,15 @@ function DefaultNavigation({
 }: {
   pathname: string;
   isSignedIn: boolean;
+  showAdmin: boolean;
   user: ReturnType<typeof useUser>["user"];
   router: ReturnType<typeof useRouter>;
   isActive: boolean;
   setIsActive: (v: boolean) => void;
   mounted: boolean;
 }) {
+  const isAdminCurrent = pathname.startsWith("/admin");
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm transition-all duration-300">
@@ -251,6 +293,25 @@ function DefaultNavigation({
                 </Link>
               );
             })}
+            {showAdmin && (
+              <Link
+                href="/admin"
+                className={`relative px-1 py-1 text-sm font-medium transition-all duration-300 ${
+                  isAdminCurrent
+                    ? "text-blue-600"
+                    : "text-gray-700 hover:text-blue-600"
+                }`}
+              >
+                Admin
+                <span
+                  className={`absolute left-0 -bottom-1 h-[2px] w-full bg-blue-600 transform origin-left transition-transform duration-300 ${
+                    isAdminCurrent
+                      ? "scale-x-100"
+                      : "scale-x-0 group-hover:scale-x-100"
+                  }`}
+                />
+              </Link>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-4">
@@ -277,6 +338,7 @@ function DefaultNavigation({
           pathname={pathname}
           mounted={mounted}
           isSignedIn={isSignedIn}
+          showAdmin={showAdmin}
           onClose={() => setIsActive(false)}
         />
       )}
@@ -291,6 +353,13 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
   const [isActive, setIsActive] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const email = user?.primaryEmailAddress?.emailAddress;
+  const roles = applySuperAdminRoles(
+    email ?? "",
+    sanitizeRoles(user?.publicMetadata?.roles)
+  );
+  const showAdmin = !!isSignedIn && canAccessAdminPanel(roles);
 
   useEffect(() => setMounted(true), []);
 
@@ -315,6 +384,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
       <HeroNavigation
         pathname={pathname}
         isSignedIn={!!isSignedIn}
+        showAdmin={showAdmin}
         user={user}
         router={router}
         isActive={isActive}
@@ -329,6 +399,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
     <DefaultNavigation
       pathname={pathname}
       isSignedIn={!!isSignedIn}
+      showAdmin={showAdmin}
       user={user}
       router={router}
       isActive={isActive}

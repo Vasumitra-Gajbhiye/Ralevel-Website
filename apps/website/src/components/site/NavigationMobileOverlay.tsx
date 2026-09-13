@@ -14,6 +14,7 @@ type NavigationMobileOverlayProps = {
   pathname: string;
   mounted: boolean;
   isSignedIn: boolean;
+  showAdmin: boolean;
   onClose: () => void;
 };
 
@@ -51,14 +52,18 @@ function HeroMobileOverlay({
   pathname,
   mounted,
   isSignedIn,
+  showAdmin,
   onClose,
 }: {
   pathname: string;
   mounted: boolean;
   isSignedIn: boolean;
+  showAdmin: boolean;
   onClose: () => void;
 }) {
   if (!mounted) return null;
+
+  const isAdminCurrent = pathname.startsWith("/admin");
 
   return createPortal(
     <AnimatePresence>
@@ -128,6 +133,26 @@ function HeroMobileOverlay({
                 </Link>
               </motion.li>
             ))}
+            {showAdmin && (
+              <motion.li
+                variants={{
+                  hidden: { opacity: 0, x: 40 },
+                  visible: { opacity: 1, x: 0 },
+                }}
+              >
+                <Link
+                  href="/admin"
+                  onClick={onClose}
+                  className={`block text-lg font-semibold py-3 rounded-md px-3 transition-colors ${
+                    isAdminCurrent
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  Admin
+                </Link>
+              </motion.li>
+            )}
             {isSignedIn && (
               <motion.li
                 variants={{
@@ -162,14 +187,17 @@ function DefaultMobileOverlay({
   pathname,
   mounted,
   isSignedIn,
+  showAdmin,
   onClose,
 }: {
   pathname: string;
   mounted: boolean;
   isSignedIn: boolean;
+  showAdmin: boolean;
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
+  const isAdminCurrent = pathname.startsWith("/admin");
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 20);
@@ -241,6 +269,21 @@ function DefaultMobileOverlay({
                 </Link>
               </li>
             ))}
+            {showAdmin && (
+              <li>
+                <Link
+                  href="/admin"
+                  onClick={handleClose}
+                  className={`block w-full text-lg font-semibold py-3 rounded-md px-3 transition-colors ${
+                    isAdminCurrent
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  Admin
+                </Link>
+              </li>
+            )}
             {isSignedIn && (
               <li>
                 <Link
@@ -271,6 +314,7 @@ export default function NavigationMobileOverlay({
   pathname,
   mounted,
   isSignedIn,
+  showAdmin,
   onClose,
 }: NavigationMobileOverlayProps) {
   if (variant === "hero") {
@@ -279,6 +323,7 @@ export default function NavigationMobileOverlay({
         pathname={pathname}
         mounted={mounted}
         isSignedIn={isSignedIn}
+        showAdmin={showAdmin}
         onClose={onClose}
       />
     );
@@ -289,6 +334,7 @@ export default function NavigationMobileOverlay({
       pathname={pathname}
       mounted={mounted}
       isSignedIn={isSignedIn}
+      showAdmin={showAdmin}
       onClose={onClose}
     />
   );

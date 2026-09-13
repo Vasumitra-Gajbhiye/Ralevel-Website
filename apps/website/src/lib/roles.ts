@@ -123,6 +123,33 @@ export const FORMS_ACCESS_ROLES = [
   "reddit_dep_head",
 ] as const satisfies readonly Role[];
 
+/** Roles that can open the /admin panel (layout entry gate). */
+export const ADMIN_PANEL_ROLES = [
+  "owner",
+  "admin",
+  "writer_dep_head",
+  "senior_writer",
+  "writer",
+  "mod_dep_head",
+  "helper_dep_head",
+  "graphic_dep_head",
+  "info_dep_head",
+  "reddit_dep_head",
+  "informative_team",
+  "resource_dep_head",
+  "resource_staff",
+] as const satisfies readonly Role[];
+
+const VALID_ROLES = new Set<string>(ROLES);
+
+/** Filter unknown values down to known Role strings (client-safe). */
+export function sanitizeRoles(roles: unknown): Role[] {
+  if (!Array.isArray(roles)) return [];
+  return roles.filter(
+    (role): role is Role => typeof role === "string" && VALID_ROLES.has(role)
+  );
+}
+
 export const REDDIT_FORM_TYPE = "reddit-mod" as const;
 
 export const REDDIT_FORM_MANAGE_ROLES = [
@@ -166,6 +193,10 @@ export function hasAnyRole(
   allowedRoles: readonly Role[] | undefined
 ) {
   return hasRequiredRole(userRoles, allowedRoles);
+}
+
+export function canAccessAdminPanel(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, ADMIN_PANEL_ROLES);
 }
 
 /**

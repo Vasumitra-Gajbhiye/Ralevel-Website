@@ -1,19 +1,10 @@
-import { ROLES, type Role } from "@/lib/roles";
+import { sanitizeRoles, type Role } from "@/lib/roles";
 import { clerkClient } from "@clerk/nextjs/server";
-
-const VALID_ROLES = new Set<string>(ROLES);
 
 export type ClerkUserAuthMetadata = {
   roles: Role[];
   userDataId: string;
 };
-
-function sanitizeRoles(roles: unknown): Role[] {
-  if (!Array.isArray(roles)) return [];
-  return roles.filter(
-    (role): role is Role => typeof role === "string" && VALID_ROLES.has(role)
-  );
-}
 
 export async function syncClerkUserMetadata(
   clerkUserId: string,

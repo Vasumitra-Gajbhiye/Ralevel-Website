@@ -8,7 +8,7 @@
 import { ensureUserData } from "@/lib/ensureUserData";
 import type { Role } from "@/lib/roles";
 import { applySuperAdminRoles } from "@/lib/superAdmin";
-import { sanitizeRoles } from "@/lib/syncClerkUserMetadata";
+import { sanitizeRoles } from "@/lib/roles";
 import type { AuthSession } from "@/types/auth";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { cache } from "react";

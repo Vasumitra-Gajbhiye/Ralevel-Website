@@ -3,7 +3,7 @@ import {
   getAdminSectionRoles,
 } from "@/lib/adminAccess";
 import { getAuthSession } from "@/lib/getAuthSession";
-import { hasAnyRole, hasRequiredRole } from "@/lib/roles";
+import { canAccessAdminPanel, hasRequiredRole } from "@/lib/roles";
 import NoAccess from "@/components/NoAccess";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -17,24 +17,7 @@ export default async function AdminLayout({
 }) {
   const session = await getAuthSession();
 
-  if (
-    !session ||
-    !hasAnyRole(session.userData?.roles, [
-      "owner",
-      "admin",
-      "writer_dep_head",
-      "senior_writer",
-      "writer",
-      "mod_dep_head",
-      "helper_dep_head",
-      "graphic_dep_head",
-      "info_dep_head",
-      "reddit_dep_head",
-      "informative_team",
-      "resource_dep_head",
-      "resource_staff",
-    ])
-  ) {
+  if (!session || !canAccessAdminPanel(session.userData?.roles)) {
     redirect("/"); // or redirect
   }
 
