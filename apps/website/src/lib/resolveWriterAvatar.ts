@@ -1,5 +1,12 @@
-const cloudinaryBase = () =>
-  `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/ralevel`;
+const cloudinaryBase = () => {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  if (!cloudName) {
+    throw new Error(
+      "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is missing or empty. Set it at build time.",
+    );
+  }
+  return `https://res.cloudinary.com/${cloudName}/image/upload/ralevel`;
+};
 
 /** Resolve a writer avatar to a loadable src (full URL, site path, or Cloudinary key). */
 export function resolveWriterAvatar(src: string): string {
@@ -8,12 +15,12 @@ export function resolveWriterAvatar(src: string): string {
     return trimmed;
   }
   if (trimmed.startsWith("/writer_avatars/")) {
-    return `${cloudinaryBase()}${trimmed}`;
+    return `${cloudinaryBase()}/${trimmed.replace(/^\/+|\/+$/g, "")}`;
   }
   if (trimmed.startsWith("/")) {
     return trimmed;
   }
-  return `${cloudinaryBase()}/${trimmed}`;
+  return `${cloudinaryBase()}/${trimmed.replace(/^\/+|\/+$/g, "")}`;
 }
 
 export function isExternalImageUrl(src: string): boolean {

@@ -68,6 +68,11 @@ ENV RESEND_API_KEY=$RESEND_API_KEY
 ENV NODE_ENV=production
 ENV NODE_OPTIONS=--max-old-space-size=3072
 
+RUN if [ -z "$NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME" ]; then \
+      echo "ERROR: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME build arg is missing or empty" >&2; \
+      exit 1; \
+    fi
+
 RUN pnpm --filter @ralevel/website build
 
 # -----------------------------------------------------------------------------
