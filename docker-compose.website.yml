@@ -1,6 +1,7 @@
 services:
   website:
     image: ghcr.io/vasumitra-gajbhiye/ralevel-website/website:latest
+    pull_policy: always
     restart: unless-stopped
     ports:
       - "3000:3000"
