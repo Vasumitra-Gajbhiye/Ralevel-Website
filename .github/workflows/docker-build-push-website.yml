@@ -74,8 +74,6 @@ jobs:
           context: .
           file: ./Dockerfile.website
           push: true
-          # One-time cache bust so NEXT_PUBLIC_* rebuilds with current secrets
-          no-cache: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=website
           cache-to: type=gha,mode=max,scope=website
