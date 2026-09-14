@@ -28,6 +28,27 @@ const getGradient = (title: string) => {
   return "from-gray-100 to-blue-50";
 };
 
+/** Deterministic 0–1 float so SSR and client particle styles match. */
+const seededUnit = (seed: number) => {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+const particleStyle = (memberIndex: number, particleIndex: number) => {
+  const base = memberIndex * 17 + particleIndex * 31;
+  return {
+    width: `${seededUnit(base) * 3 + 2}px`,
+    height: `${seededUnit(base + 1) * 3 + 2}px`,
+    top: `${seededUnit(base + 2) * 90}%`,
+    left: `${seededUnit(base + 3) * 90}%`,
+    filter: "blur(0.5px)" as const,
+    duration: 3 + seededUnit(base + 4) * 3,
+    delay: seededUnit(base + 5) * 2,
+  };
+};
+
 const Profile = ({
   name,
   title,
@@ -66,29 +87,32 @@ const Profile = ({
         }}
       />
 
-      {Array.from({ length: 5 }).map((_, idx) => (
-        <motion.span
-          key={idx}
-          className="absolute bg-white rounded-full opacity-60"
-          style={{
-            width: `${Math.random() * 3 + 2}px`,
-            height: `${Math.random() * 3 + 2}px`,
-            top: `${Math.random() * 90}%`,
-            left: `${Math.random() * 90}%`,
-            filter: "blur(0.5px)",
-          }}
-          animate={{
-            y: [0, -8, 0],
-            opacity: [0.3, 1, 0.3],
-          }}
-          transition={{
-            duration: 3 + Math.random() * 3,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: Math.random() * 2,
-          }}
-        />
-      ))}
+      {Array.from({ length: 5 }).map((_, idx) => {
+        const particle = particleStyle(i, idx);
+        return (
+          <motion.span
+            key={idx}
+            className="absolute bg-white rounded-full opacity-60"
+            style={{
+              width: particle.width,
+              height: particle.height,
+              top: particle.top,
+              left: particle.left,
+              filter: particle.filter,
+            }}
+            animate={{
+              y: [0, -8, 0],
+              opacity: [0.3, 1, 0.3],
+            }}
+            transition={{
+              duration: particle.duration,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: particle.delay,
+            }}
+          />
+        );
+      })}
 
       <div className="relative mb-4 z-10">
         <img

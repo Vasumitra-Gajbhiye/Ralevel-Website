@@ -36,7 +36,7 @@ function sortTeam(members: TeamMember[]): TeamMember[] {
 async function fetchAllTeamMembers(): Promise<TeamMember[]> {
   await connectDB();
   return TeamData.find()
-    .select("name title discordId linkedin imgSrc")
+    .select("name title discordId linkedin imgSrc -_id")
     .lean<TeamMember[]>();
 }
 
