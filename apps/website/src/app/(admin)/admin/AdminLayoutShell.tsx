@@ -26,6 +26,11 @@ function isBlogEditorPath(pathname: string | null): boolean {
   return /^\/admin\/blogs\/v2\/[^/]+\/edit$/.test(pathname);
 }
 
+function isLegalEditorPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return /^\/admin\/legal\/.+/.test(pathname);
+}
+
 function AdminSidebarNav({
   roles,
   onNavigate,
@@ -91,6 +96,11 @@ function AdminSidebarNav({
           Team
         </a>
       )}
+      {hasAnyRole(roles, ["owner", "admin"]) && (
+        <a href="/admin/legal" className={linkClass} onClick={onNavigate}>
+          Legal pages
+        </a>
+      )}
 
       {hasAnyRole(roles, [
         "owner",
@@ -140,6 +150,7 @@ export default function AdminLayoutShell({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const isBlogEditor = isBlogEditorPath(pathname);
+  const isFullBleedEditor = isBlogEditor || isLegalEditorPath(pathname);
 
   const closeSidebar = () => setOpen(false);
 
@@ -171,7 +182,7 @@ export default function AdminLayoutShell({
       <main
         className={cn(
           "flex-1",
-          isBlogEditor ? "overflow-hidden p-0" : "overflow-y-auto p-4 md:p-8",
+          isFullBleedEditor ? "overflow-hidden p-0" : "overflow-y-auto p-4 md:p-8",
         )}
       >
         {children}
