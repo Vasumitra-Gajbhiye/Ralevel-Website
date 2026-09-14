@@ -2,6 +2,8 @@
 
 import type { TeamMember } from "@/lib/data/team";
 import { motion, Variants } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FaDiscord, FaLinkedin } from "react-icons/fa";
 
 const fadeUp: Variants = {
@@ -143,11 +145,24 @@ const Profile = ({
 };
 
 export default function TeamClient({ members }: { members: TeamMember[] }) {
+  const router = useRouter();
+
   return (
-    <div className="my-24 px-10 md:px-16 relative">
-      <h1 className="text-center text-5xl font-bold mb-14 bg-gradient-to-r from-blue-600 to-indigo-400 bg-clip-text text-transparent drop-shadow-sm">
-        Our Team
-      </h1>
+    <div className="my-24 px-6 sm:px-10 md:px-16">
+      <div className="mb-14 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Go back"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-600 shadow-md transition hover:text-gray-800 hover:shadow-lg"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+
+        <h1 className="flex-1 text-center text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-400 bg-clip-text text-transparent drop-shadow-sm pr-10">
+          Our Team
+        </h1>
+      </div>
 
       <div
         className="grid justify-items-center gap-y-12 gap-x-8"
