@@ -206,39 +206,50 @@
 //   );
 // }
 
-// app/apply/page.tsx
+import ApplyFormCard from "@/components/apply/ApplyFormCard";
+import {
+  applyCardHref,
+  isApplyCardStatus,
+  type ApplyFormCardData,
+} from "@/lib/apply-cards";
 import connectDB from "@/lib/mongodb";
 import FormIndex from "@/models/FormIndex";
-import {
-  BookOpen,
-  FileText,
-  LifeBuoy,
-  Palette,
-  PenLine,
-  Shield,
-  type LucideIcon,
-} from "lucide-react";
-import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
-const FORM_ICONS: Record<string, LucideIcon> = {
-  Shield,
-  PenLine,
-  BookOpen,
-  LifeBuoy,
-  Palette,
-  FileText,
+type FormIndexDoc = {
+  slug: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  gradient?: string;
+  icon?: string;
+  logo?: string;
+  steps?: string[];
+  ctaText?: string;
+  activeCycleId?: number;
 };
+
+function toApplyCard(form: FormIndexDoc): ApplyFormCardData {
+  return {
+    title: form.title ?? "",
+    description: form.description ?? "",
+    status: isApplyCardStatus(form.status ?? "") ? form.status : "open",
+    gradient: form.gradient ?? "from-slate-500 to-slate-700",
+    icon: form.icon ?? "FileText",
+    logo: form.logo || undefined,
+    steps: Array.isArray(form.steps) ? form.steps.filter(Boolean) : [],
+    ctaText: form.ctaText ?? "",
+  };
+}
 
 export default async function FormsPage() {
   await connectDB();
 
-  const forms = await FormIndex.find({}).sort({ order: 1 }).lean();
+  const forms = await FormIndex.find({}).sort({ order: 1 }).lean<FormIndexDoc[]>();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20 space-y-12">
-      {/* HEADER */}
+    <div className="mx-auto max-w-6xl space-y-12 px-4 py-20">
       <div className="space-y-3">
         <h1 className="text-4xl font-semibold tracking-tight">
           r/alevel Applications & Submissions
@@ -249,88 +260,14 @@ export default async function FormsPage() {
         </p>
       </div>
 
-      {/* FORM CARDS */}
       <div className="space-y-12">
-        {forms.map((form: any) => {
-          const Icon = FORM_ICONS[form.icon] ?? FileText;
-          let herf;
-          herf =
-            form.slug === "resource"
-              ? `/apply/resource`
-              : `/apply/${form.slug}-intake-${form.activeCycleId}`;
-          return (
-            <div
-              key={form.slug}
-              className={`rounded-2xl bg-gradient-to-r ${form.gradient} p-8 text-white shadow-lg`}
-            >
-              {/* HEADER */}
-              <div className="mb-6 space-y-4">
-                <div className="flex items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-                      {form.logo ? (
-                        <Image
-                          src={form.logo}
-                          alt={`${form.title} logo`}
-                          width={28}
-                          height={28}
-                        />
-                      ) : (
-                        <Icon size={26} />
-                      )}
-                    </div>
-
-                    <h2 className="text-xl font-semibold">{form.title}</h2>
-                  </div>
-
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold
-                      ${
-                        form.status === "open"
-                          ? "bg-white/25"
-                          : "bg-black/20 text-white/80"
-                      }
-                    `}
-                  >
-                    {form.status === "open" ? "Open" : "Coming Soon"}
-                  </span>
-                </div>
-
-                <p className="text-sm text-white/90 max-w-3xl">
-                  {form.description}
-                </p>
-              </div>
-
-              {/* STEPS */}
-              <div className="space-y-3 mb-8">
-                {form.steps.map((step: string, i: number) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/25 text-sm font-semibold">
-                      {i + 1}
-                    </div>
-                    <p className="text-sm text-white/95">{step}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <a href={herf}>
-                <button
-                  disabled={form.status !== "open"}
-                  className={`rounded-lg px-6 py-2.5 text-sm transition
-                    ${
-                      form.status === "open"
-                        ? "bg-white text-black hover:bg-white/90"
-                        : "bg-white/40 text-black/60 cursor-not-allowed"
-                    }
-                  `}
-                >
-                  {form.ctaText}
-                </button>
-              </a>
-            </div>
-          );
-        })}
+        {forms.map((form) => (
+          <ApplyFormCard
+            key={form.slug}
+            card={toApplyCard(form)}
+            href={applyCardHref(form.slug, form.activeCycleId)}
+          />
+        ))}
       </div>
     </div>
   );

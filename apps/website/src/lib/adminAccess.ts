@@ -46,6 +46,11 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     message: "You don't have permission to manage legal pages.",
   },
   {
+    prefix: "/admin/apply",
+    roles: ["owner", "admin"],
+    message: "You don't have permission to manage apply cards.",
+  },
+  {
     prefix: "/admin/forms",
     roles: FORMS_ACCESS_ROLES,
     message: "You don't have permission to access Graphic records.",

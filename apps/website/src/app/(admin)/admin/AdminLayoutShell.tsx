@@ -101,6 +101,11 @@ function AdminSidebarNav({
           Legal pages
         </a>
       )}
+      {hasAnyRole(roles, ["owner", "admin"]) && (
+        <a href="/admin/apply" className={linkClass} onClick={onNavigate}>
+          Apply cards
+        </a>
+      )}
 
       {hasAnyRole(roles, [
         "owner",
