@@ -337,7 +337,7 @@ export default function CertificatesPage() {
               },
             ]}
             actionLink="http://ralevel.com/apply/helper-intake-1"
-            actionText="Apply as Writer"
+            actionText="Apply as Helper"
           />
 
           <CertificateBlock
