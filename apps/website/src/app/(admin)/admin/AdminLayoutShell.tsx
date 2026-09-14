@@ -86,6 +86,11 @@ function AdminSidebarNav({
           Certificates
         </a>
       )}
+      {hasAnyRole(roles, ["owner", "admin"]) && (
+        <a href="/admin/team" className={linkClass} onClick={onNavigate}>
+          Team
+        </a>
+      )}
 
       {hasAnyRole(roles, [
         "owner",

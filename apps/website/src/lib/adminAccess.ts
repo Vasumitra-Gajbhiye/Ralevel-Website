@@ -36,6 +36,11 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     message: "You don't have permission to access Graphic records.",
   },
   {
+    prefix: "/admin/team",
+    roles: ["owner", "admin"],
+    message: "You don't have permission to manage the team page.",
+  },
+  {
     prefix: "/admin/forms",
     roles: FORMS_ACCESS_ROLES,
     message: "You don't have permission to access Graphic records.",

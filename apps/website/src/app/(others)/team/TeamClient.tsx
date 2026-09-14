@@ -1,6 +1,7 @@
 "use client";
 
 import type { TeamMember } from "@/lib/data/team";
+import { resolveTeamImage } from "@/lib/resolveTeamImage";
 import { motion, Variants } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -116,11 +117,7 @@ const Profile = ({
 
       <div className="relative mb-4 z-10">
         <img
-          src={
-            imgSrc
-              ? imgSrc
-              : `https://api.dicebear.com/9.x/avataaars/svg?seed=encodeURIComponent(${name})`
-          }
+          src={resolveTeamImage(imgSrc, name)}
           alt={name}
           className="w-32 h-32 rounded-full border-4 border-white/60 shadow-sm group-hover:scale-105 transition-transform duration-300"
         />
