@@ -24,13 +24,13 @@ type TeamDoc = {
 
 export function serializeTeamMember(doc: {
   _id: Types.ObjectId | string;
-  name?: string;
-  title?: string;
-  discordId?: string;
-  linkedin?: string;
-  imgSrc?: string;
-  sortOrder?: number;
-  showOnHomepage?: boolean;
+  name?: string | null;
+  title?: string | null;
+  discordId?: string | null;
+  linkedin?: string | null;
+  imgSrc?: string | null;
+  sortOrder?: number | null;
+  showOnHomepage?: boolean | null;
 }): AdminTeamMember {
   return {
     _id: String(doc._id),

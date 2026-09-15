@@ -26,12 +26,13 @@ type FormIndexDoc = {
 };
 
 export function serializeApplyCard(doc: FormIndexDoc): AdminApplyCard {
+  const status = doc.status ?? "";
   return {
     _id: String(doc._id),
     slug: doc.slug ?? "",
     title: doc.title ?? "",
     description: doc.description ?? "",
-    status: isApplyCardStatus(doc.status ?? "") ? doc.status : "open",
+    status: isApplyCardStatus(status) ? status : "open",
     gradient: doc.gradient ?? "from-slate-500 to-slate-700",
     icon: doc.icon ?? "FileText",
     logo: doc.logo || undefined,

@@ -231,10 +231,11 @@ type FormIndexDoc = {
 };
 
 function toApplyCard(form: FormIndexDoc): ApplyFormCardData {
+  const status = form.status ?? "";
   return {
     title: form.title ?? "",
     description: form.description ?? "",
-    status: isApplyCardStatus(form.status ?? "") ? form.status : "open",
+    status: isApplyCardStatus(status) ? status : "open",
     gradient: form.gradient ?? "from-slate-500 to-slate-700",
     icon: form.icon ?? "FileText",
     logo: form.logo || undefined,

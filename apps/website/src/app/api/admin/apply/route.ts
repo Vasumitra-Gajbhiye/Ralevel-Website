@@ -123,7 +123,7 @@ export async function PATCH(req: Request) {
       }
       patch.steps = body.steps
         .filter((step: unknown): step is string => typeof step === "string")
-        .map((step) => step.trim())
+        .map((step: string) => step.trim())
         .filter(Boolean);
     }
 
