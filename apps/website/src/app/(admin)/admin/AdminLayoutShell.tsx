@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   BLOG_REVIEW_ROLES,
+  FORMS_ACCESS_ROLES,
   hasAnyRole,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
@@ -69,15 +70,7 @@ function AdminSidebarNav({
           Resource Dept.
         </a>
       )}
-      {hasAnyRole(roles, [
-        "owner",
-        "admin",
-        "mod_dep_head",
-        "helper_dep_head",
-        "graphic_dep_head",
-        "info_dep_head",
-        "reddit_dep_head",
-      ]) && (
+      {hasAnyRole(roles, FORMS_ACCESS_ROLES) && (
         <a href="/admin/forms" className={linkClass} onClick={onNavigate}>
           Form submission
         </a>

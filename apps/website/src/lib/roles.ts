@@ -121,6 +121,8 @@ export const FORMS_ACCESS_ROLES = [
   "graphic_dep_head",
   "info_dep_head",
   "reddit_dep_head",
+  "writer_dep_head",
+  "resource_dep_head",
 ] as const satisfies readonly Role[];
 
 /** Roles that can open the /admin panel (layout entry gate). */
@@ -151,6 +153,16 @@ export function sanitizeRoles(roles: unknown): Role[] {
 }
 
 export const REDDIT_FORM_TYPE = "reddit-mod" as const;
+
+/** FormIndex slug / Form.formType → department-head role that can manage it. */
+export const FORM_TYPE_DEP_HEAD: Record<string, Role> = {
+  "reddit-mod": "reddit_dep_head",
+  "discord-mod": "mod_dep_head",
+  helper: "helper_dep_head",
+  graphic: "graphic_dep_head",
+  writer: "writer_dep_head",
+  resource: "resource_dep_head",
+};
 
 export const REDDIT_FORM_MANAGE_ROLES = [
   "owner",
@@ -256,14 +268,15 @@ export function hasFormsAccess(userRoles?: Role[]) {
   return hasAnyRole(userRoles, FORMS_ACCESS_ROLES);
 }
 
-export function canManageRedditForm(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, REDDIT_FORM_MANAGE_ROLES);
+export function canManageFormType(
+  userRoles: Role[] | undefined,
+  formType: string,
+) {
+  if (isAdmin(userRoles)) return true;
+  const depHead = FORM_TYPE_DEP_HEAD[formType];
+  return Boolean(depHead && hasAnyRole(userRoles, [depHead]));
 }
 
-export function canManageFormType(userRoles: Role[] | undefined, formType: string) {
-  if (isAdmin(userRoles)) return true;
-  if (formType === REDDIT_FORM_TYPE) {
-    return canManageRedditForm(userRoles);
-  }
-  return false;
+export function canManageRedditForm(userRoles?: Role[]) {
+  return canManageFormType(userRoles, REDDIT_FORM_TYPE);
 }
