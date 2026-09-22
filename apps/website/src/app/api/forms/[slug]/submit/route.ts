@@ -29,6 +29,12 @@ export async function POST(
   const { slug } = await params;
   const session = await getAuthSession();
   const sessionEmail = session?.user?.email ?? undefined;
+  if (!sessionEmail) {
+    return NextResponse.json(
+      { error: "Google authentication required" },
+      { status: 401 },
+    );
+  }
   // Basic slug validation
   if (!slug || typeof slug !== "string" || slug.length > 100) {
     return NextResponse.json({ error: "Invalid form slug." }, { status: 400 });
@@ -367,7 +373,7 @@ export async function POST(
       },
     });
     console.log("created");
-    if (submitterEmail) {
+    if (sessionEmail) {
       const emailRl = await enforceRateLimit(req, `email-send:${slug}`, {
         limit: 3,
         windowSec: 10 * 60,
@@ -376,7 +382,7 @@ export async function POST(
       if (!emailRl) {
         await resend.emails.send({
           from: "r/alevel <application@ralevel.com>", // must match verified domain
-          to: submitterEmail,
+          to: sessionEmail,
           subject: `We received your application`,
           html: confirmationEmail({
             name: submitterName,
@@ -439,7 +445,7 @@ export async function POST(
     formSlug: slug,
     cycleId: form.cycleId,
     submitterName,
-    submitterEmail,
+    submitterEmail: submitterEmail ?? sessionEmail,
     submissionId,
     hasFiles: uploadedFiles.length > 0,
     pingUserIds: inchargeMembers.map((member) => member.discordUserId),

@@ -11,6 +11,7 @@ type FormLike = {
 
 type SubmissionLike = {
   submitterEmail?: string | null;
+  sessionEmail?: string | null;
   responses?: Record<string, Record<string, unknown>> | null;
 };
 
@@ -21,13 +22,18 @@ function looksLikeEmail(value: unknown): value is string {
 }
 
 /**
- * Prefer stored submitterEmail; otherwise pull from email-typed form fields
- * (or any email-shaped value) in the submission responses.
+ * Prefer the authenticated sessionEmail; otherwise fall back to stored
+ * submitterEmail, then email-typed form fields (or any email-shaped value)
+ * in the submission responses. The fallbacks exist for submissions made
+ * before sessionEmail was captured.
  */
 export function resolveSubmitterEmail(
   submission: SubmissionLike,
   form?: FormLike | null,
 ): string | null {
+  const session = submission.sessionEmail?.trim();
+  if (session && looksLikeEmail(session)) return session;
+
   const stored = submission.submitterEmail?.trim();
   if (stored && looksLikeEmail(stored)) return stored;
 

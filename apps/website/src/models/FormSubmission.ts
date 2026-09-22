@@ -173,6 +173,11 @@ const FormSubmissionSchema = new mongoose.Schema(
       index: true,
     },
 
+    sessionEmail: {
+      type: String,
+      index: true,
+    },
+
     reminderPings: {
       day3: { type: Date },
       day5: { type: Date },
@@ -184,11 +189,11 @@ const FormSubmissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 FormSubmissionSchema.index(
-  { formType: 1, cycleId: 1, submitterEmail: 1 },
+  { formType: 1, cycleId: 1, sessionEmail: 1 },
   {
     unique: true,
     partialFilterExpression: {
-      submitterEmail: { $exists: true, $type: "string" },
+      sessionEmail: { $exists: true, $type: "string" },
     },
   }
 );

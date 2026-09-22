@@ -82,6 +82,7 @@ export async function POST(req: Request) {
   const recipientEmail = resolveSubmitterEmail(
     {
       submitterEmail: submission.submitterEmail,
+      sessionEmail: submission.sessionEmail,
       responses: submission.responses as Record<
         string,
         Record<string, unknown>

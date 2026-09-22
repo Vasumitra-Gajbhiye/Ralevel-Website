@@ -45,6 +45,7 @@ type Submission = {
   createdAt: string;
   submitterName?: string;
   submitterEmail?: string;
+  sessionEmail?: string;
   cycleId?: number;
   formType?: string;
   votes?: Vote[];
