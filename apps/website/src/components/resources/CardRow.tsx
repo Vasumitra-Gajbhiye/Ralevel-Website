@@ -57,7 +57,7 @@ export default function CardRow({ title, subtitle, children }: CardRowProps) {
             <div className="mt-1 text-sm text-slate-500">{subtitle}</div>
           )}
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className={`shrink-0 gap-2 ${canPrev || canNext ? "flex" : "hidden"}`}>
           <button
             type="button"
             className={arrowClass}

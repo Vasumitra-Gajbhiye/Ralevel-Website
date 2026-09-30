@@ -36,13 +36,13 @@ export default async function Resources() {
   const linkClass = "font-medium text-slate-900 underline underline-offset-2";
 
   return (
-    <div className="flex flex-col items-center min-h-[70lvh] px-5 pb-24">
+    <div className="flex flex-col items-center min-h-[70lvh] px-5 pb-24 sm:px-8 lg:px-12">
       <h1 className="text-6xl max-xs:text-3xl max-sm:text-4xl max-md:text-5xl font-bold mt-32 mb-16 text-center">
         Resource Repository
       </h1>
       <SubjectSearch subjects={subjects} />
 
-      <div className="mt-20 w-full max-w-6xl space-y-14">
+      <div className="mt-20 w-full max-w-5xl space-y-14">
         {yourSubjects.length > 0 ? (
           <CardRow
             title="Your subjects"
