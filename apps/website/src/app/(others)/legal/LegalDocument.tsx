@@ -1,4 +1,6 @@
 import { BlockNoteViewer } from "@/components/blogs-v2";
+import LegalTableOfContents from "@/components/legal/LegalTableOfContents";
+import { extractLegalToc } from "@/lib/legal-pages/toc";
 
 export default function LegalDocument({
   title,
@@ -11,6 +13,8 @@ export default function LegalDocument({
   lastPublishedDateTime: string;
   content: unknown[];
 }) {
+  const toc = extractLegalToc(content);
+
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <div className="mx-auto max-w-4xl px-6 py-20">
@@ -24,7 +28,9 @@ export default function LegalDocument({
           </p>
         </header>
 
-        <section className="rounded-2xl border border-gray-100 bg-white p-8 leading-relaxed shadow-sm">
+        <LegalTableOfContents items={toc} />
+
+        <section className="rounded-2xl border border-gray-100 bg-white p-8 leading-relaxed shadow-sm [&_.bn-block-outer]:scroll-mt-24">
           <div className="bn-notion-editor">
             <BlockNoteViewer initialContent={content} />
           </div>

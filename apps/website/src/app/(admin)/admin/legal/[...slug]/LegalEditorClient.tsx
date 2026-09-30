@@ -1,6 +1,7 @@
 "use client";
 
 import { BlockNoteEditor, BlockNoteViewer } from "@/components/blogs-v2";
+import LegalTableOfContents from "@/components/legal/LegalTableOfContents";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AdminLegalPageEditor } from "@/lib/data/admin/legalPages";
+import { extractLegalToc } from "@/lib/legal-pages/toc";
 import type { BlockNoteEditor as BlockNoteEditorType } from "@blocknote/core";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -45,6 +47,10 @@ export default function LegalEditorClient({
   const [previewContent, setPreviewContent] = useState<unknown>(page.content);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const previewToc = useMemo(
+    () => extractLegalToc(previewContent),
+    [previewContent],
+  );
 
   const handleEditorReady = useCallback(
     (editor: BlockNoteEditorType) => {
@@ -236,6 +242,7 @@ export default function LegalEditorClient({
             <p className="mb-4 rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
               Draft preview — this is not live until you publish.
             </p>
+            <LegalTableOfContents items={previewToc} />
             <div className="bn-notion-editor">
               <BlockNoteViewer
                 key={`preview-${contentVersion}-${title}`}
