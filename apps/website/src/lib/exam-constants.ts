@@ -1,5 +1,5 @@
 /* ---------------------------------- Types ---------------------------------- */
-type BoardKey = "CAIE" | "Edexcel" | "Edexcel_IAL" | "AQA" | "OCR" | "WJEC";
+export type BoardKey = "CAIE" | "Edexcel" | "Edexcel_IAL" | "AQA" | "OCR" | "WJEC";
 
 /* -------------------------------- Constants -------------------------------- */
 export const BOARDS: { key: BoardKey; label: string }[] = [
@@ -322,23 +322,11 @@ export const SUBJECTS_BY_BOARD: Record<
 };
 
 export const SESSIONS_BY_BOARD: Record<BoardKey, string[]> = {
-  CAIE: [
-    "Feb/Mar", // some regions e.g. India for IGCSE/IAL Feb-Mar session  [oai_citation:0‡Scribd](https://www.scribd.com/document/875871431/February-March-2026-Examination-Time-Table?utm_source=chatgpt.com)
-    "May/June",
-    "Oct/Nov",
-  ],
-  Edexcel: [
-    "May/June", // UK A-Level main series  [oai_citation:1‡Save My Exams](https://www.savemyexams.com/learning-hub/exam-dates-timetables/a-level-and-as-level-exam-dates/?utm_source=chatgpt.com)
-    "Jan", // International / early series for IAL and summer entry  [oai_citation:2‡British Council](https://www.britishcouncil.om/en/exam/school-exams/register/dates-deadlines?utm_source=chatgpt.com)
-    "Oct/Nov",
-  ],
-  Edexcel_IAL: [
-    "Jan",
-    "May/June",
-    "Oct/Nov", // Verified International A-Level series months  [oai_citation:3‡British Council](https://www.britishcouncil.om/en/exam/school-exams/register/dates-deadlines?utm_source=chatgpt.com)
-  ],
+  CAIE: ["Feb/Mar", "May/June", "Oct/Nov"],
+  Edexcel: ["May/June", "Jan", "Oct/Nov"],
+  Edexcel_IAL: ["Jan", "May/June", "Oct/Nov"],
   AQA: [
-    "May/June", // UK mainstream A-Level series  [oai_citation:4‡Save My Exams](https://www.savemyexams.com/learning-hub/exam-dates-timetables/a-level-and-as-level-exam-dates/?utm_source=chatgpt.com)
+    "May/June",
     "Oct/Nov", // Some international variants use Oct/Nov (but less standard)
     "Jan", // International sessions
   ],

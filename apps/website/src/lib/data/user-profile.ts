@@ -1,8 +1,6 @@
 import { fetchUserDataByEmail } from "@/lib/data/user-data";
 import { getAuthSession } from "@/lib/getAuthSession";
-import { BOARDS } from "@/lib/exam-constants";
-
-type BoardKey = "CAIE" | "Edexcel" | "Edexcel_IAL" | "AQA" | "OCR" | "WJEC";
+import { BOARDS, type BoardKey } from "@/lib/exam-constants";
 
 export type UserProfile = {
   name: string;

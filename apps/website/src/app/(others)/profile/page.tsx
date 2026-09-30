@@ -1,16 +1,31 @@
-import { getUserProfile } from "@/lib/data/user-profile";
-import { getAuthSession } from "@/lib/getAuthSession";
 import ProfileClient from "@/components/profile/ProfileClient";
+import { getUserProfile, type UserProfile } from "@/lib/data/user-profile";
+import { getAuthSession } from "@/lib/getAuthSession";
+import { redirect } from "next/navigation";
+
+export const metadata = { title: "Profile | r/alevel" };
 
 export default async function ProfilePage() {
   const session = await getAuthSession();
-  const initialProfile = session?.user?.email ? await getUserProfile() : null;
+  if (!session) redirect("/sign-in?redirect_url=/profile");
+
+  const { email, name, image } = session.user;
+  const profile: UserProfile = (await getUserProfile()) ?? {
+    name: "",
+    email,
+    redditUsername: "",
+    discordUsername: "",
+    boards: [],
+    subjectsAS: [],
+    subjectsA2: [],
+    examSession: [],
+    receiveEmails: false,
+  };
 
   return (
     <ProfileClient
-      initialProfile={initialProfile}
-      userImageUrl={session?.user?.image ?? null}
-      userFullName={session?.user?.name ?? null}
+      profile={{ ...profile, email, name: profile.name.trim() || name || "" }}
+      imageUrl={image}
     />
   );
 }

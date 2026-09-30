@@ -1,42 +1,32 @@
+// app/api/user/update/route.js
+import { enforceSameOrigin } from "@/lib/csrf";
+import { BOARDS } from "@/lib/exam-constants";
 import { getAuthSession } from "@/lib/getAuthSession";
-// import { NextRequest, NextResponse } from "next/server";
-// import connectDB from "@/libs/mongodb";
-// import UserData from "@/models/userData";
-
-// export async function POST(req) {
-//   try {
-//     await connectDB();
-//     const data = await req.json();
-//     const { email, subjectsAS, subjectsA2, examSession, receiveEmails } = data;
-
-//     if (!email) {
-//       return NextResponse.json({ success: false, error: "Missing email" }, { status: 400 });
-//     }
-
-//     const updated = await UserData.findOneAndUpdate(
-//       { email },
-//       { subjectsAS, subjectsA2, examSession, receiveEmails },
-//       { new: true }
-//     );
-
-//     if (!updated) {
-//       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-//     }
-
-//     console.log("✅ User updated:", email);
-//     return NextResponse.json({ success: true, updated });
-//   } catch (err) {
-//     console.error("❌ Error updating user:", err);
-//     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
-//   }
-// }
-
-// app/api/user/update/route.js
-// app/api/user/update/route.js
 import connectDB from "@/lib/mongodb";
 import { invalidateUserCache } from "@/lib/redis-cache";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
+
+const NAME_MAX = 50;
+const USERNAME_MAX = 40;
+const LIST_MAX = 40;
+const ITEM_MAX = 120;
+const BOARD_KEYS = new Set(BOARDS.map((b) => b.key));
+
+// Unique, trimmed, non-empty strings of a sane length.
+function cleanList(value) {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .filter((item) => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item && item.length <= ITEM_MAX);
+  return [...new Set(items)].slice(0, LIST_MAX);
+}
+
+function cleanUsername(value) {
+  if (typeof value !== "string") return undefined;
+  return value.trim().slice(0, USERNAME_MAX);
+}
 
 export async function POST(req) {
   try {
@@ -52,62 +42,56 @@ export async function POST(req) {
     }
 
     // 2) Strict same-origin check to reduce CSRF risk for cookie-based auth
-    const origin = req.headers.get("origin");
-    const host = req.headers.get("host");
+    const forbidden = enforceSameOrigin(req);
+    if (forbidden) return forbidden;
 
-    if (!origin || !host) {
-      return NextResponse.json(
-        { success: false, error: "Forbidden" },
-        { status: 403 }
-      );
-    }
+    const body = (await req.json().catch(() => null)) || {};
 
-    try {
-      const originUrl = new URL(origin);
-      if (originUrl.host !== host) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden" },
-          { status: 403 }
-        );
-      }
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Forbidden" },
-        { status: 403 }
-      );
-    }
-
-    await connectDB();
-
-    const body = await req.json();
-    const {
-      name,
-      redditUsername,
-      discordUsername,
-      boards,
-      subjectsAS,
-      subjectsA2,
-      examSession,
-      receiveEmails,
-    } = body || {};
-
-    // Build update object carefully (only keep fields we expect)
+    // 3) Build the update from known fields only
     const update = {};
 
-    if (typeof name === "string") update.name = name;
-    if (typeof redditUsername === "string")
-      update.redditUsername = redditUsername;
-    if (typeof discordUsername === "string")
-      update.discordUsername = discordUsername;
+    if (body.name !== undefined) {
+      const name = typeof body.name === "string" ? body.name.trim() : "";
+      if (!name || name.length > NAME_MAX) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Display name must be 1–${NAME_MAX} characters.`,
+          },
+          { status: 400 }
+        );
+      }
+      update.name = name;
+    }
 
-    if (Array.isArray(boards)) update.boards = boards;
-    if (Array.isArray(subjectsAS)) update.subjectsAS = subjectsAS;
-    if (Array.isArray(subjectsA2)) update.subjectsA2 = subjectsA2;
-    if (Array.isArray(examSession)) update.examSession = examSession;
-    if (typeof receiveEmails === "boolean")
-      update.receiveEmails = receiveEmails;
+    if (typeof body.redditUsername === "string") {
+      update.redditUsername = cleanUsername(
+        body.redditUsername.trim().replace(/^\/?u\//i, "")
+      );
+    }
+    const discordUsername = cleanUsername(body.discordUsername);
+    if (discordUsername !== undefined) update.discordUsername = discordUsername;
 
-    // 3) findOneAndUpdate and return the new document
+    const boards = cleanList(body.boards);
+    if (boards) update.boards = boards.filter((b) => BOARD_KEYS.has(b));
+
+    // A subject is either AS or A Level, never both.
+    const subjectsA2 = cleanList(body.subjectsA2);
+    const subjectsAS = cleanList(body.subjectsAS);
+    if (subjectsA2) update.subjectsA2 = subjectsA2;
+    if (subjectsAS) {
+      const inA2 = new Set(subjectsA2 ?? []);
+      update.subjectsAS = subjectsAS.filter((key) => !inA2.has(key));
+    }
+
+    const examSession = cleanList(body.examSession);
+    if (examSession) update.examSession = examSession;
+
+    if (typeof body.receiveEmails === "boolean")
+      update.receiveEmails = body.receiveEmails;
+
+    // 4) findOneAndUpdate and return the new document
+    await connectDB();
     const updated = await UserData.findOneAndUpdate(
       { email },
       { $set: update },
