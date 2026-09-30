@@ -35,6 +35,10 @@ export const clerkAppearance: Appearance = {
       border: "1px solid #e2e8f0",
       boxShadow:
         "0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -12px rgba(15, 23, 42, 0.12)",
+      // Keyframes live in globals.css. Runs when Clerk mounts the card, which
+      // is after hydration, so it can't share the page's timed stagger.
+      animation: "auth-card-in 600ms cubic-bezier(0.22, 1, 0.36, 1) both",
+      "@media (prefers-reduced-motion: reduce)": { animation: "none" },
     },
     card: { padding: "2rem 2rem 1.75rem" },
     headerTitle: { fontSize: "1.375rem", fontWeight: 600 },
