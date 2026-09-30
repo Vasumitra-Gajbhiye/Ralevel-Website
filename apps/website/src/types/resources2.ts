@@ -76,6 +76,31 @@ export type EditableSection =
 
 export type ThumbnailSection = "books" | "youtubeChannel" | "youtubePlaylist";
 
+/** Sections the thumbnail upload route accepts, including /resources featured cards. */
+export type UploadThumbnailSection = ThumbnailSection | "featured";
+
+export type FeaturedCard = {
+  title: string;
+  href: string;
+  description?: string;
+  image?: string;
+  badge?: string;
+};
+
+export type ResourcesHomepageConfig = {
+  featured: FeaturedCard[];
+  popularSlugs: string[];
+};
+
+export type ResourceSubjectSummary = {
+  subject: string;
+  slug: string;
+  primary?: string;
+  primaryLight?: string;
+  primaryTextStrong?: string;
+  borderLighter?: string;
+};
+
 export type ResourceCMSDraftPayload = {
   syllabus?: SyllabusItem[];
   notes?: NotesItem[];

@@ -1,4 +1,4 @@
-import type { ThumbnailSection } from "@/types/resources2";
+import type { UploadThumbnailSection } from "@/types/resources2";
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
@@ -7,10 +7,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
-const THUMBNAIL_FOLDER_MAP: Record<ThumbnailSection, string> = {
+const THUMBNAIL_FOLDER_MAP: Record<UploadThumbnailSection, string> = {
   books: "books_thumb",
   youtubeChannel: "youtube_thumb",
   youtubePlaylist: "playlist_thumb",
+  featured: "featured_thumb",
 };
 
 function extensionFromMime(mime: string): string {
@@ -26,7 +27,9 @@ function extensionFromMime(mime: string): string {
   }
 }
 
-export function thumbnailFolderForSection(section: ThumbnailSection): string {
+export function thumbnailFolderForSection(
+  section: UploadThumbnailSection,
+): string {
   return THUMBNAIL_FOLDER_MAP[section];
 }
 
@@ -39,7 +42,7 @@ export function publicIdToThumbnailPath(
 }
 
 type UploadImageOptions = {
-  section: ThumbnailSection;
+  section: UploadThumbnailSection;
   slug: string;
   mimeType: string;
   uniqueId: string;

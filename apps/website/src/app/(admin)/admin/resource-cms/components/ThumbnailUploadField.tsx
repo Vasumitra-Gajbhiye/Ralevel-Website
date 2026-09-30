@@ -1,6 +1,7 @@
 "use client";
 
 import { cldImage } from "@/lib/cloudinary";
+import type { UploadThumbnailSection } from "@/types/resources2";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Upload, X } from "lucide-react";
@@ -142,7 +143,7 @@ export default function ThumbnailUploadField({
 
 export async function uploadThumbnail(
   file: File,
-  section: "books" | "youtubeChannel" | "youtubePlaylist",
+  section: UploadThumbnailSection,
   slug: string,
 ): Promise<string> {
   const formData = new FormData();

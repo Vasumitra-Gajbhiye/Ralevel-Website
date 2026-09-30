@@ -23,6 +23,13 @@ export default function ResourceCMSClient({
           >
             View history
           </a>
+          {" · "}
+          <a
+            href="/admin/resource-cms/homepage"
+            className="text-blue-600 hover:underline"
+          >
+            Edit resources page
+          </a>
         </p>
       </div>
 

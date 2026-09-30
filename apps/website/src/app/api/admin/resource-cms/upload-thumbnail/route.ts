@@ -2,7 +2,7 @@ import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { uploadImageToCloudinary } from "@/lib/cloudinaryUpload";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { RESOURCE_CMS_ROLES } from "@/lib/roles";
-import type { ThumbnailSection } from "@/types/resources2";
+import type { UploadThumbnailSection } from "@/types/resources2";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
@@ -10,10 +10,11 @@ const MAX_THUMBNAIL_SIZE_BYTES = 5 * 1024 * 1024;
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const THUMBNAIL_SECTIONS = new Set<ThumbnailSection>([
+const THUMBNAIL_SECTIONS = new Set<UploadThumbnailSection>([
   "books",
   "youtubeChannel",
   "youtubePlaylist",
+  "featured",
 ]);
 
 export async function POST(req: Request) {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!THUMBNAIL_SECTIONS.has(section as ThumbnailSection)) {
+    if (!THUMBNAIL_SECTIONS.has(section as UploadThumbnailSection)) {
       return NextResponse.json({ error: "Invalid section" }, { status: 400 });
     }
 
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(arrayBuffer);
 
     const { path } = await uploadImageToCloudinary(buffer, {
-      section: section as ThumbnailSection,
+      section: section as UploadThumbnailSection,
       slug: String(slug),
       mimeType: file.type,
       uniqueId: randomUUID().slice(0, 8),
