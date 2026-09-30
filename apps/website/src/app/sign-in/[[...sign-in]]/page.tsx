@@ -1,9 +1,12 @@
+import AuthShell from "@/components/auth/AuthShell";
 import { SignIn } from "@clerk/nextjs";
+
+export const metadata = { title: "Sign in | r/alevel" };
 
 export default function SignInPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
+    <AuthShell>
       <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" />
-    </main>
+    </AuthShell>
   );
 }

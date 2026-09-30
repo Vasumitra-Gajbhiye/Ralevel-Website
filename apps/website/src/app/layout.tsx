@@ -1,9 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import { shadcn } from "@clerk/ui/themes";
 import { GoogleAnalytics } from "@next/third-parties/google"; // <-- Official Package
 import { Analytics } from "@vercel/analytics/next";
 import { Poppins } from "next/font/google";
 import { Toaster } from "sonner";
+
+import { clerkAppearance } from "@/lib/clerkAppearance";
 
 import "./globals.css";
 const poppins = Poppins({
@@ -44,7 +45,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.png" />
       </head>
       <body className={poppins.className + " tracking-widest	"}>
-        <ClerkProvider appearance={{ theme: shadcn }}>
+        <ClerkProvider appearance={clerkAppearance}>
           {children}
           <Toaster richColors position="top-right" />
           <Analytics />
