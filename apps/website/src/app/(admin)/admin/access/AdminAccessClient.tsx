@@ -59,6 +59,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   reddit_dep_head: "RD Dep. Head",
   resource_dep_head: "Resource Dep. Head",
   resource_staff: "Resource Staff",
+  scholarship_dep_head: "Scholarship Dep. Head",
+  scholarship_staff: "Scholarship Staff",
 };
 
 const ASSIGNABLE_ACCESS_ROLES = ACCESS_PAGE_ASSIGNABLE_ROLES.map((value) => [
@@ -104,6 +106,14 @@ export const ROLE_META: Record<
   },
   resource_staff: {
     color: "bg-teal-100 text-teal-800 border-teal-200",
+    icon: UserCog,
+  },
+  scholarship_dep_head: {
+    color: "bg-sky-100 text-sky-800 border-sky-200",
+    icon: Shield,
+  },
+  scholarship_staff: {
+    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
     icon: UserCog,
   },
   senior_mod: {

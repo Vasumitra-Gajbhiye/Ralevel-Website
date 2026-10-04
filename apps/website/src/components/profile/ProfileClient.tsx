@@ -26,6 +26,11 @@ import {
   SUBJECTS_BY_BOARD,
   type BoardKey,
 } from "@/lib/exam-constants";
+import {
+  FIELDS_OF_STUDY,
+  FIELD_OF_STUDY_LABELS,
+} from "@/lib/scholarships/constants";
+import { COUNTRIES, countryName } from "@/lib/scholarships/countries";
 import { cn } from "@/lib/utils";
 import { useClerk } from "@clerk/nextjs";
 import { Check, LogOut, X } from "lucide-react";
@@ -84,6 +89,15 @@ export default function ProfileClient({
         .map((s) => ({ value: s.key, label: s.label })),
     }));
   }, [activeBoards, form.examSession]);
+
+  const nationalityGroups = useMemo(
+    () => countryGroups(form.nationalities),
+    [form.nationalities],
+  );
+  const destinationGroups = useMemo(
+    () => countryGroups(form.studyDestinations),
+    [form.studyDestinations],
+  );
 
   function update<K extends keyof ProfileForm>(key: K, value: ProfileForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -352,6 +366,91 @@ export default function ProfileClient({
             </Field>
           </Section>
   
+          <Section
+            title="Study plans"
+            description="Used to find scholarships you're eligible for."
+          >
+            <Field
+              label="Nationality"
+              optional
+              hint="Add a second one if you hold dual citizenship."
+            >
+              <CountryChips
+                codes={form.nationalities}
+                onRemove={(code) =>
+                  update(
+                    "nationalities",
+                    form.nationalities.filter((c) => c !== code),
+                  )
+                }
+              />
+              {form.nationalities.length < 2 && (
+                <AddPicker
+                  label="Add nationality"
+                  searchPlaceholder="Search countries"
+                  emptyText="No countries found."
+                  groups={nationalityGroups}
+                  onSelect={(code) =>
+                    update("nationalities", [...form.nationalities, code])
+                  }
+                />
+              )}
+            </Field>
+
+            <Field label="Where you'd like to study" optional>
+              <CountryChips
+                codes={form.studyDestinations}
+                onRemove={(code) =>
+                  update(
+                    "studyDestinations",
+                    form.studyDestinations.filter((c) => c !== code),
+                  )
+                }
+              />
+              <AddPicker
+                label="Add country"
+                searchPlaceholder="Search countries"
+                emptyText="No countries found."
+                groups={destinationGroups}
+                onSelect={(code) =>
+                  update("studyDestinations", [...form.studyDestinations, code])
+                }
+              />
+            </Field>
+
+            <Field label="Fields of interest" optional>
+              <div className="flex flex-wrap gap-2">
+                {FIELDS_OF_STUDY.map((field) => {
+                  const on = form.intendedFields.includes(field);
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        update(
+                          "intendedFields",
+                          on
+                            ? form.intendedFields.filter((f) => f !== field)
+                            : [...form.intendedFields, field],
+                        )
+                      }
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300",
+                        on
+                          ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+                      )}
+                    >
+                      {on && <Check className="h-3.5 w-3.5" />}
+                      {FIELD_OF_STUDY_LABELS[field]}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </Section>
+
           <Section title="Preferences" description="Choose what we send you.">
             <div className="flex items-start justify-between gap-6">
               <label htmlFor="receiveEmails" className="cursor-pointer">
@@ -467,6 +566,45 @@ function Field({
         hint && <p className="mt-1.5 text-xs text-slate-500">{hint}</p>
       )}
     </div>
+  );
+}
+
+function countryGroups(taken: string[]): PickerGroup[] {
+  const exclude = new Set(taken);
+  return [
+    {
+      heading: "Countries",
+      options: COUNTRIES.filter((c) => !exclude.has(c.code)).map((c) => ({
+        value: c.code,
+        label: c.name,
+      })),
+    },
+  ];
+}
+
+function CountryChips({
+  codes,
+  onRemove,
+}: {
+  codes: string[];
+  onRemove: (code: string) => void;
+}) {
+  if (codes.length === 0) return null;
+  return (
+    <ul className="mb-3 flex flex-wrap gap-2">
+      {codes.map((code) => (
+        <li
+          key={code}
+          className="inline-flex items-center gap-1 rounded-full border border-slate-200 py-1 pl-3 pr-1 text-sm text-slate-700"
+        >
+          {countryName(code)}
+          <RemoveButton
+            label={`Remove ${countryName(code)}`}
+            onClick={() => onRemove(code)}
+          />
+        </li>
+      ))}
+    </ul>
   );
 }
 

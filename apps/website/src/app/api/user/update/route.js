@@ -1,6 +1,8 @@
 // app/api/user/update/route.js
 import { enforceSameOrigin } from "@/lib/csrf";
 import { BOARDS } from "@/lib/exam-constants";
+import { FIELDS_OF_STUDY } from "@/lib/scholarships/constants";
+import { isCountryCode } from "@/lib/scholarships/countries";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { invalidateUserCache } from "@/lib/redis-cache";
@@ -12,6 +14,9 @@ const USERNAME_MAX = 40;
 const LIST_MAX = 40;
 const ITEM_MAX = 120;
 const BOARD_KEYS = new Set(BOARDS.map((b) => b.key));
+const FIELD_KEYS = new Set(FIELDS_OF_STUDY);
+const MAX_NATIONALITIES = 2;
+const MAX_DESTINATIONS = 15;
 
 // Unique, trimmed, non-empty strings of a sane length.
 function cleanList(value) {
@@ -89,6 +94,21 @@ export async function POST(req) {
 
     if (typeof body.receiveEmails === "boolean")
       update.receiveEmails = body.receiveEmails;
+
+    // Study plans (scholarship matching)
+    const nationalities = cleanList(body.nationalities);
+    if (nationalities)
+      update.nationalities = nationalities
+        .filter(isCountryCode)
+        .slice(0, MAX_NATIONALITIES);
+    const studyDestinations = cleanList(body.studyDestinations);
+    if (studyDestinations)
+      update.studyDestinations = studyDestinations
+        .filter(isCountryCode)
+        .slice(0, MAX_DESTINATIONS);
+    const intendedFields = cleanList(body.intendedFields);
+    if (intendedFields)
+      update.intendedFields = intendedFields.filter((f) => FIELD_KEYS.has(f));
 
     // 4) findOneAndUpdate and return the new document
     await connectDB();

@@ -11,7 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { navListItems } from "./navigation-data";
+import { isNavItemActive, navListItems } from "./navigation-data";
 
 const NavigationMobileOverlay = dynamic(
   () => import("./NavigationMobileOverlay"),
@@ -133,7 +133,7 @@ function HeroNavigation({
 
           <div className="hidden lg2:flex items-center gap-8">
             {navListItems.map((item, i) => {
-              const isCurrent = pathname === item.href;
+              const isCurrent = isNavItemActive(pathname, item.href);
               return (
                 <motion.div
                   key={item.title}
@@ -273,7 +273,7 @@ function DefaultNavigation({
 
           <div className="hidden md:flex items-center gap-8">
             {navListItems.map((item) => {
-              const isCurrent = pathname === item.href;
+              const isCurrent = isNavItemActive(pathname, item.href);
               return (
                 <Link
                   key={item.title}

@@ -30,6 +30,11 @@ const userDataSchema = new mongoose.Schema(
 
     examSession: { type: [String], default: [] },
 
+    // Study plans (scholarship matching). ISO country codes / field keys.
+    nationalities: { type: [String], default: [] },
+    studyDestinations: { type: [String], default: [] },
+    intendedFields: { type: [String], default: [] },
+
     receiveEmails: { type: Boolean, default: false },
 
     writerProfile: {

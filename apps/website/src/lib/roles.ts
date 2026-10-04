@@ -10,6 +10,8 @@ export const ROLES = [
   "reddit_dep_head",
   "resource_dep_head",
   "resource_staff",
+  "scholarship_dep_head",
+  "scholarship_staff",
   "senior_mod",
   "junior_mod",
   "trial_mod",
@@ -45,6 +47,26 @@ export const RESOURCE_TEAM_ROLES = [
 
 export type ResourceTeamRole = (typeof RESOURCE_TEAM_ROLES)[number];
 
+export const SCHOLARSHIP_CMS_ROLES = [
+  "owner",
+  "admin",
+  "scholarship_dep_head",
+  "scholarship_staff",
+] as const satisfies readonly Role[];
+
+export const SCHOLARSHIP_ACCESS_MANAGE_ROLES = [
+  "owner",
+  "admin",
+  "scholarship_dep_head",
+] as const satisfies readonly Role[];
+
+export const SCHOLARSHIP_TEAM_ROLES = [
+  "scholarship_dep_head",
+  "scholarship_staff",
+] as const satisfies readonly Role[];
+
+export type ScholarshipTeamRole = (typeof SCHOLARSHIP_TEAM_ROLES)[number];
+
 export const WRITER_CMS_ROLES = [
   "owner",
   "admin",
@@ -73,11 +95,12 @@ export const BLOG_REVIEW_ROLES = [
 
 export type WriterTeamRole = (typeof WRITER_TEAM_ROLES)[number];
 
-/** Roles editable on /admin/access (excludes owner, writer, resource team). */
+/** Roles editable on /admin/access (excludes owner, writer, resource and scholarship teams). */
 export const ACCESS_PAGE_ASSIGNABLE_ROLES = ROLES.filter(
   (role): role is Role =>
     role !== "owner" &&
     !RESOURCE_TEAM_ROLES.includes(role as ResourceTeamRole) &&
+    !SCHOLARSHIP_TEAM_ROLES.includes(role as ScholarshipTeamRole) &&
     !WRITER_TEAM_ROLES.includes(role as WriterTeamRole),
 );
 
@@ -106,7 +129,8 @@ export function mergePreservedStaffRoles(
     (role) =>
       role === "owner" ||
       WRITER_TEAM_ROLES.includes(role as WriterTeamRole) ||
-      RESOURCE_TEAM_ROLES.includes(role as ResourceTeamRole),
+      RESOURCE_TEAM_ROLES.includes(role as ResourceTeamRole) ||
+      SCHOLARSHIP_TEAM_ROLES.includes(role as ScholarshipTeamRole),
   );
   const incomingSet = new Set(incomingRoles);
   const extra = preserved.filter((role) => !incomingSet.has(role));
@@ -140,6 +164,8 @@ export const ADMIN_PANEL_ROLES = [
   "informative_team",
   "resource_dep_head",
   "resource_staff",
+  "scholarship_dep_head",
+  "scholarship_staff",
 ] as const satisfies readonly Role[];
 
 const VALID_ROLES = new Set<string>(ROLES);
@@ -235,6 +261,27 @@ export function mergeResourceTeamRole(
   assignedRole: ResourceTeamRole
 ): Role[] {
   return [...stripResourceTeamRoles(roles), assignedRole];
+}
+
+export function hasScholarshipCmsAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, SCHOLARSHIP_CMS_ROLES);
+}
+
+export function canManageScholarshipAccess(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, SCHOLARSHIP_ACCESS_MANAGE_ROLES);
+}
+
+export function stripScholarshipTeamRoles(roles: Role[]): Role[] {
+  return roles.filter(
+    (r) => !SCHOLARSHIP_TEAM_ROLES.includes(r as ScholarshipTeamRole),
+  );
+}
+
+export function mergeScholarshipTeamRole(
+  roles: Role[],
+  assignedRole: ScholarshipTeamRole,
+): Role[] {
+  return [...stripScholarshipTeamRoles(roles), assignedRole];
 }
 
 export function hasWriterCmsAccess(userRoles?: Role[]) {

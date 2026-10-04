@@ -20,6 +20,9 @@ export default async function ProfilePage() {
     subjectsA2: [],
     examSession: [],
     receiveEmails: false,
+    nationalities: [],
+    studyDestinations: [],
+    intendedFields: [],
   };
 
   return (

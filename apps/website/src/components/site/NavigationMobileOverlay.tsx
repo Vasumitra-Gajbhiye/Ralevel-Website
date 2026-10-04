@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { navListItems } from "./navigation-data";
+import { isNavItemActive, navListItems } from "./navigation-data";
 
 type NavigationMobileOverlayProps = {
   variant: "hero" | "default";
@@ -124,7 +124,7 @@ function HeroMobileOverlay({
                   href={item.href}
                   onClick={onClose}
                   className={`block text-lg font-semibold py-3 rounded-md px-3 transition-colors ${
-                    pathname === item.href
+                    isNavItemActive(pathname, item.href)
                       ? "text-blue-600 bg-blue-50"
                       : "text-gray-800 hover:bg-gray-100"
                   }`}
@@ -260,7 +260,7 @@ function DefaultMobileOverlay({
                   href={item.href}
                   onClick={handleClose}
                   className={`block w-full text-lg font-semibold py-3 rounded-md px-3 transition-colors ${
-                    pathname === item.href
+                    isNavItemActive(pathname, item.href)
                       ? "text-blue-600 bg-blue-50"
                       : "text-gray-800 hover:bg-gray-100"
                   }`}

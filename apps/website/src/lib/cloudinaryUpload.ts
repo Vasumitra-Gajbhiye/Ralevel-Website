@@ -222,3 +222,48 @@ export async function uploadTeamPhotoToCloudinary(
     path: publicIdToThumbnailPath(result.public_id, result.format),
   };
 }
+
+type UploadScholarshipLogoOptions = {
+  key: string;
+  mimeType: string;
+  uniqueId: string;
+};
+
+export async function uploadScholarshipLogoToCloudinary(
+  buffer: Buffer,
+  { key, mimeType, uniqueId }: UploadScholarshipLogoOptions,
+): Promise<{ path: string }> {
+  const extension = extensionFromMime(mimeType);
+  const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, "-") || "logo";
+  const publicId = `ralevel/scholarship_logos/${safeKey}-${uniqueId}`;
+
+  const result = await new Promise<{ public_id: string; format: string }>(
+    (resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          resource_type: "image",
+          overwrite: false,
+          invalidate: true,
+        },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else if (!uploadResult?.public_id) {
+            reject(new Error("Cloudinary upload returned no public_id"));
+          } else {
+            resolve({
+              public_id: uploadResult.public_id,
+              format: uploadResult.format ?? extension,
+            });
+          }
+        },
+      );
+
+      uploadStream.end(buffer);
+    },
+  );
+
+  return {
+    path: publicIdToThumbnailPath(result.public_id, result.format),
+  };
+}

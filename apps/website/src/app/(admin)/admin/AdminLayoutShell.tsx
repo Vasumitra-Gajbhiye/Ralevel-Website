@@ -13,6 +13,7 @@ import {
   hasAnyRole,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
+  SCHOLARSHIP_CMS_ROLES,
   WRITER_ACCESS_MANAGE_ROLES,
   WRITER_CMS_ROLES,
   type Role,
@@ -114,6 +115,11 @@ function AdminSidebarNav({
       {hasAnyRole(roles, ["owner", "admin", "mod_dep_head"]) && (
         <a href="/admin/qotd" className={linkClass} onClick={onNavigate}>
           Discord QOTD
+        </a>
+      )}
+      {hasAnyRole(roles, SCHOLARSHIP_CMS_ROLES) && (
+        <a href="/admin/scholarships" className={linkClass} onClick={onNavigate}>
+          Scholarships
         </a>
       )}
       {hasAnyRole(roles, RESOURCE_CMS_ROLES) && (

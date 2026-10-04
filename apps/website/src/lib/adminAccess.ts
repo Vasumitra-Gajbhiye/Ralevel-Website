@@ -3,6 +3,8 @@ import {
   FORMS_ACCESS_ROLES,
   RESOURCE_ACCESS_MANAGE_ROLES,
   RESOURCE_CMS_ROLES,
+  SCHOLARSHIP_ACCESS_MANAGE_ROLES,
+  SCHOLARSHIP_CMS_ROLES,
   WRITER_ACCESS_MANAGE_ROLES,
   WRITER_CMS_ROLES,
   type Role,
@@ -74,6 +76,16 @@ const ADMIN_SECTION_RULES: AdminSectionRule[] = [
     prefix: "/admin/resource",
     roles: RESOURCE_ACCESS_MANAGE_ROLES,
     message: "You don't have permission to manage Resource access.",
+  },
+  {
+    prefix: "/admin/scholarships/team",
+    roles: SCHOLARSHIP_ACCESS_MANAGE_ROLES,
+    message: "You don't have permission to manage Scholarship access.",
+  },
+  {
+    prefix: "/admin/scholarships",
+    roles: SCHOLARSHIP_CMS_ROLES,
+    message: "You don't have permission to manage scholarships.",
   },
   {
     prefix: "/admin/writers",

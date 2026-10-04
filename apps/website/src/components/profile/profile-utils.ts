@@ -22,6 +22,9 @@ export type ProfileForm = {
   subjects: ProfileSubject[];
   examSession: string[];
   receiveEmails: boolean;
+  nationalities: string[];
+  studyDestinations: string[];
+  intendedFields: string[];
 };
 
 const BOARD_KEYS = new Set<string>(BOARDS.map((b) => b.key));
@@ -125,6 +128,9 @@ export function formFromProfile(profile: UserProfile): ProfileForm {
     subjects,
     examSession: profile.examSession,
     receiveEmails: profile.receiveEmails,
+    nationalities: profile.nationalities,
+    studyDestinations: profile.studyDestinations,
+    intendedFields: profile.intendedFields,
   };
 }
 
@@ -150,5 +156,8 @@ export function toPayload(form: ProfileForm) {
       .map((s) => s.key),
     examSession: form.examSession,
     receiveEmails: form.receiveEmails,
+    nationalities: form.nationalities,
+    studyDestinations: form.studyDestinations,
+    intendedFields: form.intendedFields,
   };
 }

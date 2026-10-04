@@ -1,6 +1,7 @@
 import { fetchUserDataByEmail } from "@/lib/data/user-data";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { BOARDS, type BoardKey } from "@/lib/exam-constants";
+import type { StudyPlans } from "@/types/scholarships";
 
 export type UserProfile = {
   name: string;
@@ -12,6 +13,9 @@ export type UserProfile = {
   subjectsA2: string[];
   examSession: string[];
   receiveEmails: boolean;
+  nationalities: string[];
+  studyDestinations: string[];
+  intendedFields: string[];
 };
 
 function normalizeSubjects(arr?: string[] | null) {
@@ -46,6 +50,9 @@ type UserDataProfileDoc = {
   subjectsA2?: string[];
   examSession?: string[] | string;
   receiveEmails?: boolean;
+  nationalities?: string[];
+  studyDestinations?: string[];
+  intendedFields?: string[];
 };
 
 export async function getUserProfile(): Promise<UserProfile | null> {
@@ -83,5 +90,19 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     examSession,
     receiveEmails:
       typeof user.receiveEmails === "boolean" ? user.receiveEmails : false,
+    nationalities: user.nationalities ?? [],
+    studyDestinations: user.studyDestinations ?? [],
+    intendedFields: user.intendedFields ?? [],
+  };
+}
+
+/** The profile fields used for scholarship matching, or null if signed out. */
+export async function getStudyPlans(): Promise<StudyPlans | null> {
+  const profile = await getUserProfile();
+  if (!profile) return null;
+  return {
+    nationalities: profile.nationalities,
+    studyDestinations: profile.studyDestinations,
+    intendedFields: profile.intendedFields,
   };
 }
