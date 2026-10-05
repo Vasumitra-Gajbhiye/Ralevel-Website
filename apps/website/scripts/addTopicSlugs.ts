@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import connectDB from "@/lib/mongodb";
+import { resolveScriptMongoUri } from "../../../scripts/db/guard";
 import Subject from "@/models/subjectGuide";
 
 function slugify(text: string) {
@@ -14,6 +14,9 @@ function slugify(text: string) {
 }
 
 async function run() {
+  await resolveScriptMongoUri(); // local dev DB only, unless --prod
+  // Imported after the guard: lib/mongodb reads MONGODB_URI at import time.
+  const { default: connectDB } = await import("@/lib/mongodb");
   await connectDB();
 
   const subjects = await Subject.find();

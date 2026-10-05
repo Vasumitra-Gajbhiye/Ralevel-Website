@@ -270,6 +270,7 @@ import fs from "fs";
 import mongoose from "mongoose";
 import OpenAI from "openai";
 import path from "path";
+import { resolveScriptMongoUri } from "../../../scripts/db/guard";
 
 dotenv.config();
 
@@ -279,6 +280,7 @@ const client = new OpenAI({
 
 async function connectDB() {
   if (mongoose.connection.readyState === 1) return;
+  await resolveScriptMongoUri(); // local dev DB only, unless --prod
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGODB_URI not set");
   await mongoose.connect(uri);

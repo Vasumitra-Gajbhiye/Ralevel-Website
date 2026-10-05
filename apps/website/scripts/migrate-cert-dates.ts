@@ -1,10 +1,12 @@
 import CertData from "@/models/certsData";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import { resolveScriptMongoUri } from "../../../scripts/db/guard";
 
 dotenv.config();
 
 async function migrate() {
+  await resolveScriptMongoUri(); // local dev DB only, unless --prod
   await mongoose.connect(process.env.MONGODB_URI!);
   console.log("✅ Connected to DB");
 
