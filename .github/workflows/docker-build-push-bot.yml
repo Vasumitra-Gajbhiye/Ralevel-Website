@@ -18,6 +18,8 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Secrets live in the Production environment, which only main can use.
+    environment: Production
     permissions:
       contents: read
       packages: write
