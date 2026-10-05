@@ -16,9 +16,17 @@
     "start:website": "pnpm --filter @ralevel/website start",
     "start:bot": "pnpm --filter @ralevel/applications-bot start",
     "lint": "turbo run lint",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm -r --if-present typecheck",
+    "db:up": "docker compose -f docker-compose.dev.yml up -d --wait",
+    "db:down": "docker compose -f docker-compose.dev.yml down",
+    "db:restore": "tsx scripts/db/restore.ts",
+    "db:reset": "tsx scripts/db/reset.ts",
+    "db:seed-fake": "pnpm --filter @ralevel/website exec tsx scripts/seedFake.ts",
+    "db:export-seed": "tsx scripts/db/export-seed.ts"
   },
   "devDependencies": {
+    "dotenv": "^17.3.1",
+    "tsx": "^4.19.2",
     "turbo": "^2.3.3"
   },
   "repository": {

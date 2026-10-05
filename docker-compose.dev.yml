@@ -1,0 +1,54 @@
+# Local development databases. Never used in production.
+#
+#   pnpm db:up     start everything (waits until healthy)
+#   pnpm db:down   stop everything (dev data is kept in the mongo-dev-data volume)
+#
+# Ports are bound to 127.0.0.1 only and deliberately avoid the defaults
+# (27017 / 6379) so they don't clash with other projects on the same machine.
+# Keep in sync with scripts/db/config.ts.
+
+name: ralevel-dev
+
+services:
+  # Development database: ralevel_dev. Persists across restarts.
+  mongo-dev:
+    image: mongo:7
+    ports:
+      - "127.0.0.1:27027:27017"
+    volumes:
+      - mongo-dev-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Integration-test database: ralevel_test. In-memory, wiped on every restart.
+  mongo-test:
+    image: mongo:7
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    ports:
+      - "127.0.0.1:27028:27017"
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Optional cache. The app only uses it when REDIS_ENABLED=true.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6389:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mongo-dev-data:

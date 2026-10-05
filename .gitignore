@@ -50,6 +50,12 @@ auth-trial-476713-d80ef4649e10.json
 assets-local/
 json_files/
 scripts/
+# root scripts/ (dev tooling) is tracked; see dev-onboarding/plan.md 0.4.8
+!/scripts/
+
+# local database seed archives (private, never commit)
+seed/
+*.archive.gz
 
 /lib/syllabusJson
 # clerk configuration (can include secrets)
