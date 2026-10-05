@@ -9,6 +9,7 @@
     "start": "next start",
     "start:standalone": "node .next/standalone/apps/website/server.js",
     "lint": "next lint",
+    "typecheck": "next typegen && tsc --noEmit",
     "postbuild": "next-sitemap",
     "register-discord-appeal-commands": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/register-discord-appeal-commands.ts"
   },

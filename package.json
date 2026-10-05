@@ -15,7 +15,8 @@
     "build:bot": "pnpm --filter @ralevel/applications-bot build",
     "start:website": "pnpm --filter @ralevel/website start",
     "start:bot": "pnpm --filter @ralevel/applications-bot start",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
