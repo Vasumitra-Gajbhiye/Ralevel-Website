@@ -1,7 +1,5 @@
 # Junior dev onboarding plan
 
-> ⚠️ **Don't commit this file until Phase 0.2 is done.** The repo is public, and this file describes security gaps (repo secrets readable from any branch, a ruleset that allows self-merge) that are still open.
-
 Goal: move from solo dev pushing to `main` to a team of the owner plus 2 juniors.
 
 - Juniors work only through PRs reviewed by the owner.
@@ -35,6 +33,8 @@ Work through the tasks in order. Each one is written so it can be handed to a fr
 
 ### GitHub
 
+_Before 0.2. See 0.2 for what changed._
+
 - Repo `Vasumitra-Gajbhiye/Ralevel-Website` is **public**. The only branch is `main`. The only collaborator is the owner.
 - Ruleset **"Protect main branch"** (id `14766432`, default branch) already has: block deletion, block force push, require PR. But:
   - `required_approving_review_count: 0`
@@ -44,9 +44,11 @@ Work through the tasks in order. Each one is written so it can be handed to a fr
   - no required status checks
   - Admin bypass (`RepositoryRole` 5) is `always`. **Keep it** (D6).
 - Repo settings: merge, squash and rebase all allowed. `delete_branch_on_merge: false`.
-- Actions secrets are all **repo-level**: `COOLIFY_API_TOKEN`, `COOLIFY_BOT_WEBHOOK_URL`, `COOLIFY_WEBSITE_WEBHOOK_URL`, `MONGODB_URI` (prod), `RESEND_API_KEY` and the `NEXT_PUBLIC_`\* values. Once juniors have Write, they could push a branch whose workflow prints them.
-- Environments **Preview** and **Production** exist but aren't used by the workflows.
-- `docker-build-push-website.yml` / `docker-build-push-bot.yml` run on push to `main` (paths `apps/**`, `packages/**`). They build images, push to GHCR and trigger a Coolify deploy. **Every merge or direct push to main that touches** `apps/`\*\* **or** `packages/`\*\* **deploys to production.**
+- Actions secrets are all **repo-level**: `COOLIFY_API_TOKEN`, `COOLIFY_BOT_WEBHOOK_URL`, `COOLIFY_WEBSITE_WEBHOOK_URL`, `MONGODB_URI` (prod), `RESEND_API_KEY` and the `NEXT_PUBLIC_` values. Once juniors have Write, they could push a branch whose workflow prints them.
+- Environments **Preview** and **Production** exist but aren't used by the workflows. They were created by the **Vercel GitHub app**, which was still connected and deploying every push to `main` (it was disconnected in 0.2).
+- Secret scanning and push protection were **already enabled**. GitGuardian is also installed and runs on PRs.
+- Default `GITHUB_TOKEN` permission is `write`.
+- `docker-build-push-website.yml` / `docker-build-push-bot.yml` run on push to `main` (paths `apps/**`, `packages/**`). They build images, push to GHCR and trigger a Coolify deploy. **Every merge or direct push to main that touches** `apps/` **or** `packages/` **deploys to production.**
 - There's no CI on pull requests.
 
 ### Code / tooling
@@ -136,44 +138,55 @@ Done 2026-10-05 except the owner-only steps at the end. Ports are **27027 / 2702
   - `generate*`, `migrate-cert-dates`, `addSlugToStudyGuide`, `addTopicSlugs`, `seedScholarships`
   - by default they only run against local dev
   - with `--prod` they load `PROD_MONGODB_URI` and ask you to type `r_alevel`
-- [ ] **Owner:** `pnpm db:up`, then `pnpm db:export-seed`. Review any ⚠️ lines, then run `pnpm db:reset`, `pnpm db:seed-fake` and `pnpm dev`, and click through.
-- [ ] **Owner:** share the seed archive privately (D7), e.g. a Google Drive link visible only to the juniors.
-- [ ] `apps/website/scripts/seedFake.ts` (and the untracked `seedScholarships.ts` + `scripts/data/`) need `git add -f` until 0.4.8 fixes `.gitignore`.
+- [x] **Owner:** `pnpm db:up`, then `pnpm db:export-seed`. Review any ⚠️ lines, then run `pnpm db:reset`, `pnpm db:seed-fake` and `pnpm dev`, and click through.
+- [x] **Owner:** share the seed archive privately (D7), e.g. a Google Drive link visible only to the juniors.
+- [x] `apps/website/scripts/seedFake.ts` (and the untracked `seedScholarships.ts` + `scripts/data/`) need `git add -f` until 0.4.8 fixes `.gitignore`.
 
 ### 0.2 Lock down GitHub
 
-Can be done with `gh api`.
+Done 2026-10-05 (PR #11 plus `gh api` settings changes). Verified: a probe workflow on a non-`main` branch saw `MONGODB_URI` and `COOLIFY_API_TOKEN` as empty, and its `environment: Production` job was rejected ("not allowed to deploy to Production").
 
-- [ ] **Edit the ruleset** `14766432`**:**
+- [x] **Ruleset** `14766432`:
   - `required_approving_review_count: 1`
   - `dismiss_stale_reviews_on_push: true`
   - `require_code_owner_review: true`
   - `required_review_thread_resolution: true`
   - `allowed_merge_methods: ["squash"]`
-  - **leave the admin bypass as** `always` (D6), so the owner can push directly and merge without review
-  - do **not** add `required_linear_history` (it would complicate owner direct pushes)
-- [ ] **Repo settings:**
-  - disable merge commits and rebase merge (squash only)
-  - squash commit title = PR title
+  - `require_last_push_approval: true` (already set) is kept
+  - admin bypass stays `always` (D6)
+  - no `required_linear_history`
+- [x] **Repo settings:**
+  - squash only (merge commits and rebase off)
+  - squash commit = PR title + PR body
   - `delete_branch_on_merge: true`
-  - "Always suggest updating PR branches"
-- [ ] **Code security:** enable secret scanning and **push protection** (free for public repos).
-- [ ] **Move all Actions secrets into the** `Production` **environment:**
-  - set deployment branches to `main` only
-  - add `environment: production` to the jobs in both `docker-build-push-*.yml` workflows
-  - delete the repo-level copies
-  - no required reviewers on the environment (D5)
-  - result: a junior's branch or PR workflow can't read prod secrets
-- [ ] Delete the unused `Preview` environment if it's a Vercel leftover.
-- [ ] Add `.github/CODEOWNERS` with `* @Vasumitra-Gajbhiye` (D9).
-- [ ] Add `.github/workflows/ci.yml`:
-  - triggers on `pull_request` to `main`
-  - matrix: `ubuntu-latest` (+ optionally `windows-latest` to catch Windows-only breakage)
-  - pnpm setup, `pnpm install --frozen-lockfile`, `pnpm typecheck`
-  - **no secrets**
-  - give the job the name `typecheck`
-- [ ] After CI has run once on a PR, add `typecheck` as a **required status check** in the ruleset. The owner bypasses it when pushing directly.
-- [ ] Check whether the GHCR packages `ralevel-website/website` and `ralevel-website/bot` are public. This needs a token with `read:packages`, or check the GitHub UI. Prefer private.
+  - "Always suggest updating PR branches" on
+  - default `GITHUB_TOKEN` permission is now **read**; workflows declare what they need
+- [x] **Code security:** secret scanning and push protection were already on.
+- [x] **Vercel** GitHub app disconnected.
+- [x] **Secrets:**
+  - all 15 Actions secrets now live in the `Production` environment, which only allows `main` to deploy
+  - both `docker-build-push-*.yml` jobs use `environment: Production`
+  - repo-level secrets deleted (0 left)
+  - no required reviewers (D5)
+  - the Coolify API token was regenerated during the move
+- [x] `Preview` environment deleted (Vercel leftover).
+- [x] `.github/CODEOWNERS`: `* @Vasumitra-Gajbhiye` (D9).
+- [x] `.github/workflows/ci.yml`:
+  - on `pull_request` to `main`, no secrets, `contents: read`
+  - job `typecheck` (ubuntu) is the required check
+  - job `typecheck (windows)` is informational
+  - both run `pnpm install --frozen-lockfile` + `pnpm typecheck`
+- [x] Root `pnpm typecheck` (`pnpm -r --if-present typecheck`) and website `typecheck` (`next typegen && tsc --noEmit`, because `next-env.d.ts` is gitignored). This covers the typecheck half of 0.4.6.
+- [x] `typecheck` is a **required status check** in the ruleset (GitHub Actions, integration 15368, not strict). The owner bypasses it.
+- [x] GHCR: Coolify pulls `ghcr.io/.../website:latest` with no registry login, so the packages are public. The runner image has no secrets baked in, so this is acceptable for now.
+
+**Follow-ups (not blocking onboarding):**
+
+- [ ] Coolify deploys `:latest` with `pull_policy: always`. Any workflow in the repo can push `:latest` to GHCR with `packages: write`. Deploy by commit SHA instead, or push images with a token only the `Production` environment holds.
+- [ ] Add `-f` to the bot workflow's Coolify `curl` so a rejected deploy fails the job. It currently shows green on a 401.
+- [ ] One secret's value is `/`, so GitHub masks every `/` in Actions logs. Move the non-secret `NEXT_PUBLIC_*` values to `Production` environment **variables** (`vars.`\*).
+- [ ] In Coolify, confirm Preview Deployments are disabled for both apps.
+- [ ] Optional: make the GHCR packages private and give Coolify a `read:packages` token.
 
 ### 0.3 Third-party services: each dev creates their own (D10)
 
@@ -210,30 +223,30 @@ One PR, opened by the owner.
 - use local defaults (`mongodb://127.0.0.1:27027/ralevel_dev`, `http://localhost:3000`, `REDIS_ENABLED=false`, `REDIS_URL=redis://127.0.0.1:6389`, `BOT_INTERNAL_URL=http://localhost:8787`)
 - add `apps/website/.env.test.example` for the test DB
 
-2. [ ] Make optional services degrade instead of crash:
+1. [ ] Make optional services degrade instead of crash:
 
 - Resend is created lazily and guarded in `decision/route.ts` and `[slug]/submit/route.ts`; skip the email with a `console.warn` when the key is missing
 - `posthog.init` only runs when the token is set
 - checkout uses `NEXT_PUBLIC_URL` instead of `NEXTAUTH_URL`
 - quick scan of Cloudinary, R2, Stripe, Drive and AI routes so a missing key returns a clear error instead of crashing the page
 
-3. [ ] **Remove hardcoded per-account values:**
+1. [ ] **Remove hardcoded per-account values:**
 
 - website emails use `RESEND_FROM_EMAIL` (default `r/alevel <application@ralevel.com>`, same as the bot); put it in one shared helper used by all 3 routes
 - move the bot's `ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS` into `DISCORD_APPEAL_REVIEWER_ROLE_IDS` and set it in prod Coolify **before** deploying
 
-4. [ ] Add the `dev-grant-role` script: `pnpm dev:grant-role <email> <role…>`.
+1. [ ] Add the `dev-grant-role` script: `pnpm dev:grant-role <email> <role…>`.
 
 - Upserts the user's `UserData` roles in the local DB and syncs them to Clerk metadata, reusing `syncClerkUserMetadata`.
 - **Refuses to run** unless `CLERK_SECRET_KEY` starts with `sk_test_` **and** the `MONGODB_URI` host is `localhost` / `127.0.0.1`.
 
-5. [ ] Add `.gitattributes` with `* text=auto eol=lf`, plus binary rules for images, PDFs and fonts. Renormalize once (`git add --renormalize .`) in a single commit.
-6. [ ] Add root scripts `typecheck` (website + bot `tsc --noEmit`). Either fix `lint` (ESLint 9 flat config + `eslint-config-next@16`, `"lint": "eslint ."`) or remove it for now so it doesn't confuse anyone.
-7. [ ] Make the `register-discord-appeal-commands` script cross-platform (switch to `tsx`, drop the inline JSON).
-8. [ ] In `.gitignore`, replace the blanket `scripts/` with specific ignores. Clean up `/Json files` and the `auth-trial-…json` entry if they're no longer needed. Seed archives are already ignored (`seed/`, `*.archive.gz`), and root `scripts/` is re-included with `!/scripts/`.
-9. [ ] Fix `apps/website/src/docs/REDIS.md` (pnpm, `pnpm db:up`).
-10. [ ] Add a "Getting started" section to the README that points to `dev-onboarding/README.md`.
-11. [ ] _(Optional, before juniors branch or never)_ Run a one-time `prettier --write` over the repo as a single commit and add it to `.git-blame-ignore-revs`.
+1. [ ] Add `.gitattributes` with `* text=auto eol=lf`, plus binary rules for images, PDFs and fonts. Renormalize once (`git add --renormalize .`) in a single commit.
+2. [ ] ~~Add root scripts~~ `typecheck` (done in 0.2). Either fix `lint` (ESLint 9 flat config + `eslint-config-next@16`, `"lint": "eslint ."`) or remove it for now so it doesn't confuse anyone.
+3. [ ] Make the `register-discord-appeal-commands` script cross-platform (switch to `tsx`, drop the inline JSON).
+4. [ ] In `.gitignore`, replace the blanket `scripts/` with specific ignores. Clean up `/Json files` and the `auth-trial-…json` entry if they're no longer needed. Seed archives are already ignored (`seed/`, `*.archive.gz`), and root `scripts/` is re-included with `!/scripts/`.
+5. [ ] Fix `apps/website/src/docs/REDIS.md` (pnpm, `pnpm db:up`).
+6. [ ] Add a "Getting started" section to the README that points to `dev-onboarding/README.md`.
+7. [ ] _(Optional, before juniors branch or never)_ Run a one-time `prettier --write` over the repo as a single commit and add it to `.git-blame-ignore-revs`.
 
 ### 0.5 Write the `dev-onboarding/` docs
 
@@ -284,10 +297,10 @@ Every page ends with "✅ You should now see …". Steps that differ between Win
 
 ## Phase 1: onboarding day
 
-- [ ] Collect both GitHub usernames and send invites (**Write** role) only after Phase 0.2 is done. Then share the seed archive link.
+- [ ] Collect both GitHub usernames and send invites (**Write** role). Phase 0.2 is done, so this is safe. Then share the seed archive link.
 - [ ] 15-minute architecture tour (based on `09-project-tour.md`).
 - [ ] Juniors complete Tier 1 on their own (one Windows, one macOS) while the owner watches where they get stuck. Expect the Clerk setup to take the longest.
-- [ ] **First PR exercise:** each junior fixes one gap they hit in the docs, opens a PR, gets the owner's review and squash-merges it. Changes under `dev-onboarding/` don't trigger a deploy (the workflows only watch `apps/`** and `packages/**`), so it's a safe first merge.
+- [ ] **First PR exercise:** each junior fixes one gap they hit in the docs, opens a PR, gets the owner's review and squash-merges it. Changes under `dev-onboarding/` don't trigger a deploy (the workflows only watch `apps/`** and `packages/`**), so it's a safe first merge.
 - [ ] Hand out 3–5 issues labelled `good first issue`. Juniors set up Tier 2 services only when an issue needs them.
 
 ---
@@ -322,12 +335,12 @@ Every page ends with "✅ You should now see …". Steps that differ between Win
 - click through your change locally
 - add desktop and mobile screenshots for UI changes
 
-5. **Never merge your own PR without approval.** You need the owner's approval and all review conversations resolved.
-6. Squash merge only. The PR title becomes the commit message, so make it meaningful (`feat: add scholarship filters`).
-7. **Merging to** `main` **deploys to production.** Treat every merge as shipping.
-8. You use only your **local** databases (`ralevel_dev`, `ralevel_test`) and **your own dev/test accounts**. You'll never be given production keys or the production database, so don't ask, and never run scripts against prod.
-9. Never commit `.env` files or paste keys anywhere: code, issues, PRs, chats or screenshots. The repo is public. If you leak something, even your own dev key, rotate it and tell the owner immediately. Nobody gets blamed.
-10. Scripts must work on both Windows and macOS: no bash-only syntax in `package.json`; use `tsx` scripts.
-11. Ask before touching `.github/`, Dockerfiles, auth/roles (`proxy.ts`, `roles.ts`, `superAdmin.ts`) or payments, and before adding or upgrading a dependency.
-12. Work from an assigned issue. Comment on it when you start.
-13. If you're stuck for more than 45 minutes, ask. That's expected, not a failure.
+1. **Never merge your own PR without approval.** You need the owner's approval and all review conversations resolved.
+2. Squash merge only. The PR title becomes the commit message, so make it meaningful (`feat: add scholarship filters`).
+3. **Merging to** `main` **deploys to production.** Treat every merge as shipping.
+4. You use only your **local** databases (`ralevel_dev`, `ralevel_test`) and **your own dev/test accounts**. You'll never be given production keys or the production database, so don't ask, and never run scripts against prod.
+5. Never commit `.env` files or paste keys anywhere: code, issues, PRs, chats or screenshots. The repo is public. If you leak something, even your own dev key, rotate it and tell the owner immediately. Nobody gets blamed.
+6. Scripts must work on both Windows and macOS: no bash-only syntax in `package.json`; use `tsx` scripts.
+7. Ask before touching `.github/`, Dockerfiles, auth/roles (`proxy.ts`, `roles.ts`, `superAdmin.ts`) or payments, and before adding or upgrading a dependency.
+8. Work from an assigned issue. Comment on it when you start.
+9. If you're stuck for more than 45 minutes, ask. That's expected, not a failure.
