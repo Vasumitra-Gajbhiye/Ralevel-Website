@@ -3,6 +3,7 @@ import http from "node:http";
 import { handleApplicationSubmitted, processFormReminders } from "./lib/applications.js";
 import { handleAppealSubmitted } from "./lib/appeals.js";
 import { handleDiscordInteraction } from "./lib/interactions.js";
+import { handleTaskAssigned, processTaskDigest } from "./lib/tasks.js";
 
 const PORT = Number(process.env.PORT ?? process.env.BOT_PORT ?? 8787);
 
@@ -121,6 +122,38 @@ async function handleRequest(
     } catch (err) {
       console.error("[cron/form-reminders]", err);
       json(res, 500, { error: "Failed to process form reminders" });
+    }
+    return;
+  }
+
+  if (method === "GET" && path === "/cron/task-digest") {
+    if (!isCronAuthorized(req)) {
+      json(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    try {
+      const result = await processTaskDigest();
+      json(res, 200, { ok: true, ...result });
+    } catch (err) {
+      console.error("[cron/task-digest]", err);
+      json(res, 500, { error: "Failed to send task digest" });
+    }
+    return;
+  }
+
+  if (method === "POST" && path === "/internal/task-assigned") {
+    if (!isInternalAuthorized(req)) {
+      json(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    try {
+      const raw = await readBody(req);
+      const data = JSON.parse(raw.toString("utf8"));
+      const result = await handleTaskAssigned(data);
+      json(res, 200, result);
+    } catch (err) {
+      console.error("[internal/task-assigned]", err);
+      json(res, 500, { error: "Failed to send task DM" });
     }
     return;
   }

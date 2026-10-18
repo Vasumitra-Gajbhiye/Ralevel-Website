@@ -1,7 +1,7 @@
 "use client";
 
 import { cldImage } from "@/lib/cloudinary";
-import { canAccessAdminPanel, sanitizeRoles } from "@/lib/roles";
+import { canAccessAdminPanel, isStaff, sanitizeRoles } from "@/lib/roles";
 import { applySuperAdminRoles } from "@/lib/superAdmin";
 import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
@@ -81,6 +81,7 @@ function HeroNavigation({
   pathname,
   isSignedIn,
   showAdmin,
+  showTasks,
   user,
   router,
   isActive,
@@ -91,6 +92,7 @@ function HeroNavigation({
   pathname: string;
   isSignedIn: boolean;
   showAdmin: boolean;
+  showTasks: boolean;
   user: ReturnType<typeof useUser>["user"];
   router: ReturnType<typeof useRouter>;
   isActive: boolean;
@@ -167,6 +169,16 @@ function HeroNavigation({
                 </motion.div>
               );
             })}
+            {showTasks && (
+              <Link
+                href="/tasks"
+                className={`relative px-1 py-1 text-sm font-medium transition-all duration-300 ${
+                  scrolled ? "text-black hover:text-blue-600" : "text-white hover:scale-110"
+                }`}
+              >
+                Tasks
+              </Link>
+            )}
             {showAdmin && (
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -227,6 +239,7 @@ function HeroNavigation({
           mounted={mounted}
           isSignedIn={isSignedIn}
           showAdmin={showAdmin}
+          showTasks={showTasks}
           onClose={() => setIsActive(false)}
         />
       )}
@@ -238,6 +251,7 @@ function DefaultNavigation({
   pathname,
   isSignedIn,
   showAdmin,
+  showTasks,
   user,
   router,
   isActive,
@@ -247,6 +261,7 @@ function DefaultNavigation({
   pathname: string;
   isSignedIn: boolean;
   showAdmin: boolean;
+  showTasks: boolean;
   user: ReturnType<typeof useUser>["user"];
   router: ReturnType<typeof useRouter>;
   isActive: boolean;
@@ -293,6 +308,14 @@ function DefaultNavigation({
                 </Link>
               );
             })}
+            {showTasks && (
+              <Link
+                href="/tasks"
+                className="relative px-1 py-1 text-sm font-medium text-gray-700 transition-all duration-300 hover:text-blue-600"
+              >
+                Tasks
+              </Link>
+            )}
             {showAdmin && (
               <Link
                 href="/admin"
@@ -339,6 +362,7 @@ function DefaultNavigation({
           mounted={mounted}
           isSignedIn={isSignedIn}
           showAdmin={showAdmin}
+          showTasks={showTasks}
           onClose={() => setIsActive(false)}
         />
       )}
@@ -360,6 +384,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
     sanitizeRoles(user?.publicMetadata?.roles)
   );
   const showAdmin = !!isSignedIn && canAccessAdminPanel(roles);
+  const showTasks = !!isSignedIn && isStaff(roles);
 
   useEffect(() => setMounted(true), []);
 
@@ -385,6 +410,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
         pathname={pathname}
         isSignedIn={!!isSignedIn}
         showAdmin={showAdmin}
+        showTasks={showTasks}
         user={user}
         router={router}
         isActive={isActive}
@@ -400,6 +426,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
       pathname={pathname}
       isSignedIn={!!isSignedIn}
       showAdmin={showAdmin}
+      showTasks={showTasks}
       user={user}
       router={router}
       isActive={isActive}

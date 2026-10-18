@@ -11,7 +11,8 @@
     "lint": "next lint",
     "typecheck": "next typegen && tsc --noEmit",
     "postbuild": "next-sitemap",
-    "register-discord-appeal-commands": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/register-discord-appeal-commands.ts"
+    "register-discord-appeal-commands": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/register-discord-appeal-commands.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
@@ -49,6 +50,7 @@
     "@tailwindcss/typography": "^0.5.19",
     "@types/mdx": "^2.0.13",
     "@vercel/analytics": "^1.5.0",
+    "chrono-node": "^2.10.3",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.9.0",
     "clsx": "^2.1.1",
@@ -109,6 +111,7 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

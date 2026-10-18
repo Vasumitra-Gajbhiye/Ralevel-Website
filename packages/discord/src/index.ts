@@ -10,7 +10,14 @@ import type {
 export type { FormSubmissionNotification, FormReminderNotification } from "./types";
 export type { DiscordAppealNotification, PendingAppealListItem } from "./formatAppealEmbed";
 export { DiscordApiError } from "./sendMessage";
-export { sendDirectMessage } from "./sendDirectMessage";
+export { sendDirectMessage, type DirectMessage } from "./sendDirectMessage";
+export {
+  formatTaskAssignedEmbed,
+  formatTaskDigestEmbed,
+  type TaskAssignedNotification,
+  type TaskDigestItem,
+  type TaskDigestNotification,
+} from "./formatTaskEmbed";
 export { unbanMember } from "./unbanMember";
 export {
   formatAppealEmbed,

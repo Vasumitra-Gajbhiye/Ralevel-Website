@@ -15,6 +15,7 @@ type NavigationMobileOverlayProps = {
   mounted: boolean;
   isSignedIn: boolean;
   showAdmin: boolean;
+  showTasks: boolean;
   onClose: () => void;
 };
 
@@ -53,12 +54,14 @@ function HeroMobileOverlay({
   mounted,
   isSignedIn,
   showAdmin,
+  showTasks,
   onClose,
 }: {
   pathname: string;
   mounted: boolean;
   isSignedIn: boolean;
   showAdmin: boolean;
+  showTasks: boolean;
   onClose: () => void;
 }) {
   if (!mounted) return null;
@@ -133,6 +136,22 @@ function HeroMobileOverlay({
                 </Link>
               </motion.li>
             ))}
+            {showTasks && (
+              <motion.li
+                variants={{
+                  hidden: { opacity: 0, x: 40 },
+                  visible: { opacity: 1, x: 0 },
+                }}
+              >
+                <Link
+                  href="/tasks"
+                  onClick={onClose}
+                  className="block text-lg font-semibold py-3 rounded-md px-3 transition-colors text-gray-800 hover:bg-gray-100"
+                >
+                  Tasks
+                </Link>
+              </motion.li>
+            )}
             {showAdmin && (
               <motion.li
                 variants={{
@@ -188,12 +207,14 @@ function DefaultMobileOverlay({
   mounted,
   isSignedIn,
   showAdmin,
+  showTasks,
   onClose,
 }: {
   pathname: string;
   mounted: boolean;
   isSignedIn: boolean;
   showAdmin: boolean;
+  showTasks: boolean;
   onClose: () => void;
 }) {
   const [visible, setVisible] = useState(false);
@@ -269,6 +290,17 @@ function DefaultMobileOverlay({
                 </Link>
               </li>
             ))}
+            {showTasks && (
+              <li>
+                <Link
+                  href="/tasks"
+                  onClick={handleClose}
+                  className="block w-full text-lg font-semibold py-3 rounded-md px-3 transition-colors text-gray-800 hover:bg-gray-100"
+                >
+                  Tasks
+                </Link>
+              </li>
+            )}
             {showAdmin && (
               <li>
                 <Link
@@ -315,6 +347,7 @@ export default function NavigationMobileOverlay({
   mounted,
   isSignedIn,
   showAdmin,
+  showTasks,
   onClose,
 }: NavigationMobileOverlayProps) {
   if (variant === "hero") {
@@ -324,6 +357,7 @@ export default function NavigationMobileOverlay({
         mounted={mounted}
         isSignedIn={isSignedIn}
         showAdmin={showAdmin}
+        showTasks={showTasks}
         onClose={onClose}
       />
     );
@@ -335,6 +369,7 @@ export default function NavigationMobileOverlay({
       mounted={mounted}
       isSignedIn={isSignedIn}
       showAdmin={showAdmin}
+      showTasks={showTasks}
       onClose={onClose}
     />
   );
