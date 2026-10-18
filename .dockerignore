@@ -9,11 +9,13 @@ coverage
 .turbo
 .pnpm-store
 
-# Secrets and local environment files
-.env
-.env.*
-!.env.example
-!.env.bot.example
+# Secrets and local environment files, at any depth. Without **/ only root-level
+# files matched, so a local `docker build` copied apps/website/.env.local and
+# .env.production into the image (Next's standalone output keeps .env files).
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
 *.pem
 auth-trial-*.json
 .clerk
@@ -36,6 +38,9 @@ posthog-setup-report.md
 assets-local
 json_files
 scripts
+# Dev scripts import the root scripts/ (DB guard), which isn't in the image;
+# next build would fail type-checking them. Production never runs them.
+apps/*/scripts
 Json files
 
 # Docker meta (not needed inside build context)

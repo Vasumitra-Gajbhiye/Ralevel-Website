@@ -187,6 +187,7 @@ Done 2026-10-05 (PR #11 plus `gh api` settings changes). Verified: a probe workf
 - [ ] One secret's value is `/`, so GitHub masks every `/` in Actions logs. Move the non-secret `NEXT_PUBLIC_*` values to `Production` environment **variables** (`vars.`\*).
 - [ ] In Coolify, confirm Preview Deployments are disabled for both apps.
 - [ ] Optional: make the GHCR packages private and give Coolify a `read:packages` token.
+- [ ] **CI should build the website Docker image on PRs** (build only, no push). The website deploy failed for #12, `6956c38`, #13 and #14 (from 2026-10-05 to 2026-10-18), and CI didn't notice: `pnpm typecheck` runs on the full repo, but the Docker build only has `apps/website`. A PR build check would have caught it on #12. `next build` needs `MONGODB_URI` for static pages, so use a Mongo service container. This overlaps with the Phase 2 "`next build` check".
 
 ### 0.3 Third-party services: each dev creates their own (D10)
 
@@ -217,9 +218,13 @@ There's no shared `dev.env`. Each dev builds their own `apps/website/.env.local`
 
 ### 0.4 Code fixes
 
-One PR, opened by the owner. Code done 2026-10-18 on branch `chore/onboarding-code-fixes` (uncommitted, for the owner to commit). Verified: `pnpm typecheck` passes, website tests pass (53/53), `dev:grant-role` was exercised against the local DB and both of its guards. End-to-end checks are in the 0.6 dry run.
+Merged 2026-10-18 as #14. Verified: `pnpm typecheck` passes, website tests pass (53/53), `dev:grant-role` was exercised against the local DB and both of its guards. End-to-end checks are in the 0.6 dry run. `DISCORD_APPEAL_REVIEWER_ROLE_IDS` was set in the Coolify bot app before merging.
 
-**Before merging:** set `DISCORD_APPEAL_REVIEWER_ROLE_IDS` in the Coolify **bot** app (see item 3). The merge deploys the bot.
+**Website deploys were broken from #12 to #14.** `next build` type-checks `apps/website/scripts/*.ts`, which import the root `scripts/db/guard`, but that isn't in the Docker image ("Cannot find module '../../../scripts/db/guard'"). Production stayed on the `5a606e8` image (2026-10-05), so #13 (Todoist) didn't go live. The bot deployed fine. Fixed in `fix/website-docker-build`:
+
+- `.dockerignore` excludes `apps/*/scripts` (production never runs them)
+- `.dockerignore` env rules now use `**/` (`**/.env`, `**/.env.*`, `!**/.env*.example`). Before, they only matched root-level files, so a **local** `docker build` copied `apps/website/.env.local` / `.env.production` into the image (Next's standalone output keeps `.env` files). CI images were never affected, because a fresh checkout has no env files.
+- verified with a local production `docker build` (local dev DB, test Clerk key), with no env files in the image
 
 1. [x] Rewrite `apps/website/.env.example` and `.env.bot.example`:
    - every var the code reads, grouped by tier, each with a comment: what it's for, what breaks without it, which doc
