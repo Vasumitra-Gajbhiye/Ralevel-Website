@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 
 const isAdminPage = createRouteMatcher(["/admin(.*)"]);
 const isAdminApi = createRouteMatcher(["/api/admin(.*)"]);
+const isTasks = createRouteMatcher(["/tasks(.*)", "/api/tasks(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isAdminPage(req) || isAdminApi(req)) {
+  if (isAdminPage(req) || isAdminApi(req) || isTasks(req)) {
     await auth.protect();
   }
 

@@ -118,6 +118,18 @@ curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
 
 Compatibility: `GET https://ralevel.com/api/cron/form-reminders` still proxies to the bot when `BOT_INTERNAL_URL` is set.
 
+### Task digest cron (9am IST)
+
+Each staff member with a Discord ID gets one DM listing their tasks due today or overdue (from `/tasks`). Safe to rerun: each person gets at most one digest per IST day.
+
+```bash
+# Schedule: 30 3 * * * UTC (= 9:00 AM IST)
+curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
+  "https://applications-bot.ralevel.com/cron/task-digest"
+```
+
+Assignment DMs need no cron: the website calls the bot's `/internal/task-assigned` (needs `BOT_INTERNAL_URL` + `INTERNAL_BOT_SECRET` on the website, `DISCORD_NOTIFICATIONS_ENABLED=true` on the bot).
+
 ## 6. Local development
 
 ```bash

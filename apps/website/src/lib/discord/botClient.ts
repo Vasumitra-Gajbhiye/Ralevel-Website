@@ -75,6 +75,21 @@ export async function notifyBotApplicationSubmitted(
   await postInternal("/internal/application-submitted", data);
 }
 
+export type TaskAssignedPayload = {
+  discordUserId: string;
+  taskTitle: string;
+  listName: string;
+  departmentName: string | null;
+  assignedBy: string;
+  dueLabel: string | null;
+  priority: 1 | 2 | 3 | 4;
+  url: string;
+};
+
+export async function notifyBotTaskAssigned(data: TaskAssignedPayload): Promise<void> {
+  await postInternal("/internal/task-assigned", data);
+}
+
 export async function notifyBotAppealSubmitted(
   data: AppealSubmittedPayload,
 ): Promise<{ messageId: string | null } | null> {

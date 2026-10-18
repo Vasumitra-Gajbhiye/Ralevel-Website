@@ -168,6 +168,15 @@ export const ADMIN_PANEL_ROLES = [
   "scholarship_staff",
 ] as const satisfies readonly Role[];
 
+/** Every current staff role (used by the /tasks workspace). */
+export const STAFF_ROLES = ROLES.filter(
+  (role): role is Role => role !== "former_staff",
+);
+
+export function isStaff(userRoles?: Role[]) {
+  return hasAnyRole(userRoles, STAFF_ROLES);
+}
+
 const VALID_ROLES = new Set<string>(ROLES);
 
 /** Filter unknown values down to known Role strings (client-safe). */

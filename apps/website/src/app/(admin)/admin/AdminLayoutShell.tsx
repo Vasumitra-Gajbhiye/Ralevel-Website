@@ -44,6 +44,9 @@ function AdminSidebarNav({
 
   return (
     <nav className="space-y-2 text-sm">
+      <a href="/tasks" className={linkClass} onClick={onNavigate}>
+        Tasks
+      </a>
       {hasAnyRole(roles, WRITER_CMS_ROLES) && (
         <a href="/admin/blogs/v2" className={linkClass} onClick={onNavigate}>
           Blogs

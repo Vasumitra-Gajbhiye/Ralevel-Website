@@ -1,4 +1,5 @@
 import { DiscordApiError } from "./sendMessage";
+import type { DiscordEmbed } from "./types";
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 
@@ -28,10 +29,12 @@ export async function createDmChannel(
   return data.id;
 }
 
+export type DirectMessage = string | { content?: string; embeds?: DiscordEmbed[] };
+
 export async function sendDirectMessage(
   botToken: string,
   recipientId: string,
-  content: string,
+  message: DirectMessage,
 ): Promise<void> {
   const channelId = await createDmChannel(botToken, recipientId);
 
@@ -43,7 +46,11 @@ export async function sendDirectMessage(
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify(
+        typeof message === "string"
+          ? { content: message }
+          : { ...message, allowed_mentions: { parse: [] } },
+      ),
     },
   );
 

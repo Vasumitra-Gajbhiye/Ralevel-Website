@@ -22,7 +22,9 @@
     "db:restore": "tsx scripts/db/restore.ts",
     "db:reset": "tsx scripts/db/reset.ts",
     "db:seed-fake": "pnpm --filter @ralevel/website exec tsx scripts/seedFake.ts",
-    "db:export-seed": "tsx scripts/db/export-seed.ts"
+    "db:export-seed": "tsx scripts/db/export-seed.ts",
+    "test": "pnpm -r --if-present test",
+    "db:seed-tasks": "pnpm --filter @ralevel/website exec tsx scripts/seedTasks.ts"
   },
   "devDependencies": {
     "dotenv": "^17.3.1",
