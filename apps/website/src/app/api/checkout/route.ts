@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     }
 
     const { amount, tierLabel } = await req.json();
+    const siteUrl = (process.env.NEXT_PUBLIC_URL ?? "").replace(/\/+$/, "");
 
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -29,8 +30,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.NEXTAUTH_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/canceled`,
+      success_url: `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/canceled`,
       metadata: {
         userEmail: session.user.email!,
         tierLabel: tierLabel || "Custom Contribution",

@@ -9,6 +9,7 @@ import {
   type DecisionEmailTemplates,
   type DecisionStatus,
 } from "@/lib/emails/decisionEmail";
+import { sendEmail } from "@/lib/emails/sendEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import type { Role } from "@/lib/roles";
@@ -16,9 +17,6 @@ import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
 import FormSubmission from "@/models/FormSubmission";
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   await connectDB();
@@ -143,23 +141,9 @@ export async function POST(req: Request) {
 
   const html = decisionEmailHtml({ decision, body });
 
-  try {
-    const { error } = await resend.emails.send({
-      from: "r/alevel <application@ralevel.com>",
-      to: recipientEmail,
-      subject,
-      html,
-    });
-
-    if (error) {
-      console.error("Decision email send failed:", error);
-      return NextResponse.json(
-        { error: "Failed to send email" },
-        { status: 502 },
-      );
-    }
-  } catch (err) {
-    console.error("Decision email send failed:", err);
+  const emailResult = await sendEmail({ to: recipientEmail, subject, html });
+  if (emailResult.status === "failed") {
+    console.error("Decision email send failed:", emailResult.error);
     return NextResponse.json(
       { error: "Failed to send email" },
       { status: 502 },

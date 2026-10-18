@@ -116,6 +116,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  if (!process.env.GEMINI_API_KEY) {
+    return NextResponse.json(
+      { error: "Theory evaluation is not configured (GEMINI_API_KEY is not set)." },
+      { status: 503 },
+    );
+  }
+
   const ipRlError = await enforceRateLimit(req, "theory-eval:ip", {
     limit: 15,
     windowSec: 15 * 60,

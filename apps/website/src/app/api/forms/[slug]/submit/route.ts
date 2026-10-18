@@ -1,6 +1,7 @@
 import { notifyFormSubmission } from "@/lib/discord/notifyFormSubmission";
 import { resolveInchargeMembers } from "@/lib/forms/incharge";
 import { confirmationEmail } from "@/lib/emails/confirmationEmail";
+import { sendEmail } from "@/lib/emails/sendEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { getPostHogClient } from "@/lib/posthog-server";
@@ -11,7 +12,6 @@ import FormSubmission from "@/models/FormSubmission";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 
 const MAX_FILES_PER_SUBMISSION = 10;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -352,7 +352,6 @@ export async function POST(
   }
 
   let submission;
-  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     submission = await FormSubmission.create({
       _id: body.__submissionId ? body.__submissionId : undefined,
@@ -380,8 +379,7 @@ export async function POST(
       });
 
       if (!emailRl) {
-        await resend.emails.send({
-          from: "r/alevel <application@ralevel.com>", // must match verified domain
+        const emailResult = await sendEmail({
           to: sessionEmail,
           subject: `We received your application`,
           html: confirmationEmail({
@@ -389,6 +387,9 @@ export async function POST(
             formTitle: form.title.replace(/\s+Intake\s+\d+$/i, ""),
           }),
         });
+        if (emailResult.status === "failed") {
+          console.error("Confirmation email send failed:", emailResult.error);
+        }
       }
     }
   } catch (err: any) {

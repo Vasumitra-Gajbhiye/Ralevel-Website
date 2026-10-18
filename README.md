@@ -4,6 +4,10 @@ Official web platform supporting the r/alevel student learning community.
 
 The website provides tools that help students collaborate, contribute resources, and earn recognition for helping others in the community.  
 
+## Getting started
+
+New to the codebase? Follow [`dev-onboarding/README.md`](dev-onboarding/README.md). It walks you through setting up your machine (Windows or macOS), the local databases, your own Clerk app and the environment variables, then running the site.
+
 ## Features
 
 ### Certificate System
@@ -55,8 +59,9 @@ The system motivates collaboration and builds a stronger academic community.
 
 ```bash
 pnpm install
-pnpm --filter @ralevel/website dev
-pnpm --filter @ralevel/applications-bot dev
+pnpm db:up        # local MongoDB (dev + test) and Redis in Docker
+pnpm dev          # website on http://localhost:3000
+pnpm dev:bot      # applications Discord bot (optional)
 ```
 
 Coolify deploys website and bot as **separate** apps (`Dockerfile.website`, `Dockerfile.bot`). See `apps/website/src/docs/COOLIFY.md`.

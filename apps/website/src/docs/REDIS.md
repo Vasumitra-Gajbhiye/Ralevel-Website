@@ -4,24 +4,28 @@ This app uses Redis for rate limiting and cache-aside data caching (user data, b
 
 ## Local development
 
-1. Start Redis:
+Redis is off by default locally (`REDIS_ENABLED=false` in `.env.example`). Turn it on only to work on caching or rate limiting.
+
+1. Start the local databases. `pnpm db:up` starts Redis too, on port **6389** (not the default 6379, so it doesn't clash with other projects):
 
 ```bash
-docker compose up -d redis
+pnpm db:up
 ```
 
-2. Add to `.env.local`:
+2. In `apps/website/.env.local`, set:
 
 ```env
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://127.0.0.1:6389
 REDIS_ENABLED=true
 ```
 
 3. Run the app:
 
 ```bash
-npm run dev
+pnpm dev
 ```
+
+In the commands under **Verification** below, use `docker compose -f docker-compose.dev.yml` (from the repo root) wherever it says `docker compose`.
 
 ## Coolify (production VPS)
 

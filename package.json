@@ -24,7 +24,8 @@
     "db:seed-fake": "pnpm --filter @ralevel/website exec tsx scripts/seedFake.ts",
     "db:export-seed": "tsx scripts/db/export-seed.ts",
     "test": "pnpm -r --if-present test",
-    "db:seed-tasks": "pnpm --filter @ralevel/website exec tsx scripts/seedTasks.ts"
+    "db:seed-tasks": "pnpm --filter @ralevel/website exec tsx scripts/seedTasks.ts",
+    "dev:grant-role": "pnpm --filter @ralevel/website exec tsx scripts/devGrantRole.ts"
   },
   "devDependencies": {
     "dotenv": "^17.3.1",
