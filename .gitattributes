@@ -1,0 +1,22 @@
+# Store text with LF line endings, whatever the OS. Windows checkouts still get
+# LF, so diffs don't fill up with CRLF noise.
+* text=auto eol=lf
+
+# Binary files: never touch line endings, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.mp4 binary
+*.webm binary
+*.zip binary
+*.gz binary

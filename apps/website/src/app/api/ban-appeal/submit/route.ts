@@ -1,4 +1,5 @@
 import { banAppealConfirmationEmail } from "@/lib/emails/banAppealEmail";
+import { sendEmail } from "@/lib/emails/sendEmail";
 import { postDiscordAppealReview } from "@/lib/discord/notifyDiscordAppeal";
 import { getDiscordAppealSession } from "@/lib/discord-appeal/oauth";
 import { getAuthSession } from "@/lib/getAuthSession";
@@ -6,7 +7,6 @@ import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import DiscordAppealSubmission from "@/models/DiscordAppealSubmission";
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 
 const MIN_RESPONSE_LENGTH = 100;
 const MAX_RESPONSE_LENGTH = 1024;
@@ -140,18 +140,16 @@ export async function POST(req: Request) {
     console.error("[ban-appeal] Failed to notify applications bot:", err);
   }
 
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
-        from: "r/alevel <application@ralevel.com>",
-        to: submitterEmail,
-        subject: "We received your ban appeal",
-        html: banAppealConfirmationEmail({ name: submitterName }),
-      });
-    } catch (err) {
-      console.error("[ban-appeal] Failed to send confirmation email:", err);
-    }
+  const emailResult = await sendEmail({
+    to: submitterEmail,
+    subject: "We received your ban appeal",
+    html: banAppealConfirmationEmail({ name: submitterName }),
+  });
+  if (emailResult.status === "failed") {
+    console.error(
+      "[ban-appeal] Failed to send confirmation email:",
+      emailResult.error,
+    );
   }
 
   return NextResponse.json({ success: true, submissionId });

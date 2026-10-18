@@ -63,11 +63,7 @@ export type DiscordAppealBotConfig = {
   reviewerRoleIds: string[];
 };
 
-const ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS = [
-  "1516144911961948252",
-  "1474372339000152250",
-];
-
+/** DISCORD_APPEAL_REVIEWER_ROLE_IDS (comma-separated), else the jr + sr admin roles. */
 function parseReviewerRoleIds(): string[] {
   const explicit = process.env.DISCORD_APPEAL_REVIEWER_ROLE_IDS?.trim();
   const baseIds = explicit
@@ -82,7 +78,7 @@ function parseReviewerRoleIds(): string[] {
         .map((id) => id?.trim())
         .filter((id): id is string => Boolean(id));
 
-  return [...new Set([...baseIds, ...ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS])];
+  return [...new Set(baseIds)];
 }
 
 export function getDiscordPublicKey(): string | null {

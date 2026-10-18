@@ -43,15 +43,12 @@ public/sitemap.xml
 public/sitemap-0.xml
 public/robots.txt
 
-/Json files
+# Google service-account key files (never commit)
+auth-trial-*.json
 
-auth-trial-476713-d80ef4649e10.json
-
+# local-only data and assets
 assets-local/
 json_files/
-scripts/
-# root scripts/ (dev tooling) is tracked; see dev-onboarding/plan.md 0.4.8
-!/scripts/
 
 # local database seed archives (private, never commit)
 seed/
@@ -71,3 +68,6 @@ packages/*/node_modules
 apps/*/public/sitemap.xml
 apps/*/public/sitemap-0.xml
 apps/*/public/robots.txt
+
+# Added by ggshield
+.cache_ggshield

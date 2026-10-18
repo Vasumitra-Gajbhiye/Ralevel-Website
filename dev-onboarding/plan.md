@@ -56,7 +56,7 @@ _Before 0.2. See 0.2 for what changed._
 - pnpm monorepo: `apps/website` (Next 16, Clerk, Mongoose, Tailwind), `apps/bot` (Discord bot), `packages/*`. Node `22.23.1` (`.nvmrc`), pnpm `9.15.0`.
 - `tsc --noEmit -p apps/website` passes with 0 errors, so it can be a required check right away.
 - `pnpm lint` is broken: `next lint` was removed in Next 16, and the repo still has `eslint@8` with `eslint-config-next@14.2.3`.
-- **There's no test runner and there are no tests.**
+- **There's no test runner and there are no tests.** _(Update 2026-10-18: the Todoist merge, #13, added Vitest to `apps/website` (`pnpm test`, unit tests only). Phase 2 still adds integration tests against `ralevel_test`.)_
 - There's no local dev infrastructure: no compose file with Mongo or Redis, and no seed or restore script. `docker-compose.website.yml` / `docker-compose.bot.yml` are for production.
 - `apps/website/.env.example` only covers about half the vars the code reads. Missing: Clerk (`NEXT_PUBLIC_CLERK_*`, `CLERK_SECRET_KEY`), Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`), R2 (`R2_*`), `NEXT_PUBLIC_POSTHOG_*`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `DRIVE_ROOT_FOLDER_ID`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `QOTD_*`.
 - Admin access:
@@ -217,39 +217,36 @@ There's no shared `dev.env`. Each dev builds their own `apps/website/.env.local`
 
 ### 0.4 Code fixes
 
-One PR, opened by the owner.
+One PR, opened by the owner. Code done 2026-10-18 on branch `chore/onboarding-code-fixes` (uncommitted, for the owner to commit). Verified: `pnpm typecheck` passes, website tests pass (53/53), `dev:grant-role` was exercised against the local DB and both of its guards. End-to-end checks are in the 0.6 dry run.
 
-1. [ ] Rewrite `apps/website/.env.example` and `.env.bot.example`:
+**Before merging:** set `DISCORD_APPEAL_REVIEWER_ROLE_IDS` in the Coolify **bot** app (see item 3). The merge deploys the bot.
 
-- list every var the code reads, grouped by **tier** (above)
-- add a one-line comment on each saying what it's for, what breaks without it, and which doc explains how to get it
-- use local defaults (`mongodb://127.0.0.1:27027/ralevel_dev`, `http://localhost:3000`, `REDIS_ENABLED=false`, `REDIS_URL=redis://127.0.0.1:6389`, `BOT_INTERNAL_URL=http://localhost:8787`)
-- add `apps/website/.env.test.example` for the test DB
-
-1. [ ] Make optional services degrade instead of crash:
-
-- Resend is created lazily and guarded in `decision/route.ts` and `[slug]/submit/route.ts`; skip the email with a `console.warn` when the key is missing
-- `posthog.init` only runs when the token is set
-- checkout uses `NEXT_PUBLIC_URL` instead of `NEXTAUTH_URL`
-- quick scan of Cloudinary, R2, Stripe, Drive and AI routes so a missing key returns a clear error instead of crashing the page
-
-1. [ ] **Remove hardcoded per-account values:**
-
-- website emails use `RESEND_FROM_EMAIL` (default `r/alevel <application@ralevel.com>`, same as the bot); put it in one shared helper used by all 3 routes
-- move the bot's `ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS` into `DISCORD_APPEAL_REVIEWER_ROLE_IDS` and set it in prod Coolify **before** deploying
-
-1. [ ] Add the `dev-grant-role` script: `pnpm dev:grant-role <email> <role…>`.
-
-- Upserts the user's `UserData` roles in the local DB and syncs them to Clerk metadata, reusing `syncClerkUserMetadata`.
-- **Refuses to run** unless `CLERK_SECRET_KEY` starts with `sk_test_` **and** the `MONGODB_URI` host is `localhost` / `127.0.0.1`.
-
-1. [ ] Add `.gitattributes` with `* text=auto eol=lf`, plus binary rules for images, PDFs and fonts. Renormalize once (`git add --renormalize .`) in a single commit.
-2. [ ] ~~Add root scripts~~ `typecheck` (done in 0.2). Either fix `lint` (ESLint 9 flat config + `eslint-config-next@16`, `"lint": "eslint ."`) or remove it for now so it doesn't confuse anyone.
-3. [ ] Make the `register-discord-appeal-commands` script cross-platform (switch to `tsx`, drop the inline JSON).
-4. [ ] In `.gitignore`, replace the blanket `scripts/` with specific ignores. Clean up `/Json files` and the `auth-trial-…json` entry if they're no longer needed. Seed archives are already ignored (`seed/`, `*.archive.gz`), and root `scripts/` is re-included with `!/scripts/`.
-5. [ ] Fix `apps/website/src/docs/REDIS.md` (pnpm, `pnpm db:up`).
-6. [ ] Add a "Getting started" section to the README that points to `dev-onboarding/README.md`.
-7. [ ] _(Optional, before juniors branch or never)_ Run a one-time `prettier --write` over the repo as a single commit and add it to `.git-blame-ignore-revs`.
+1. [x] Rewrite `apps/website/.env.example` and `.env.bot.example`:
+   - every var the code reads, grouped by tier, each with a comment: what it's for, what breaks without it, which doc
+   - local defaults: the local dev DB, `http://localhost:3000`, Redis off (port 6389), and Resend's test sender for `RESEND_FROM_EMAIL`
+   - `BOT_INTERNAL_URL=http://localhost:8787` is **commented out**: when it's set and the bot isn't running, every form submit tries to reach the bot and logs an error, while unset just skips it
+   - **`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=doqsecks2` is Tier 1.** `src/lib/cloudinary.ts` throws at import when it's empty (17 importers), and seeded images are built from it. It's production's public cloud name (it's in every image URL on ralevel.com), not a secret.
+   - left out: `OPENAI_API_KEY` (only in commented-out code; theory-eval uses Gemini), `NEXT_PUBLIC_GETSINGLECERT` (dead), `NEXTAUTH_URL` (removed), `CLERK_WEBHOOK_SIGNING_SECRET` (prod only, mentioned in a comment)
+   - added `apps/website/.env.test.example` for the test DB
+2. [x] Make optional services degrade instead of crash:
+   - new `src/lib/emails/sendEmail.ts`, used by all 3 email routes. With no `RESEND_API_KEY` outside production it logs and skips; in production a missing key still counts as a failure (the decision route still returns 502).
+   - `posthog.init` only runs when the token is set. The server client (`posthog-node`) already disables itself without a token.
+   - checkout uses `NEXT_PUBLIC_URL` (it's a prod build arg already, so the value is baked in at build time)
+   - scan results: R2 is now created lazily and throws "R2 is not configured" (before, it failed with a DNS error on `undefined.r2…`). Gemini returns 503 without a key. `stripe-client` returns `null` without a publishable key (the funding page called `loadStripe(undefined)` on load). Cloudinary uploads fail with the SDK's own "Must supply api_key", which is clear enough, so no change there. `getStripeServer` already throws clearly. QOTD already catches errors and shows an empty list. `driveUpload.ts` does `JSON.parse` at import time but nothing imports it (dead code).
+3. [x] **Remove hardcoded per-account values:**
+   - website emails use `RESEND_FROM_EMAIL` through `sendEmail` (default `r/alevel <application@ralevel.com>`, the same as the bot)
+   - the bot's `ADDITIONAL_APPEAL_REVIEWER_ROLE_IDS` was removed. Reviewer roles are now just `DISCORD_APPEAL_REVIEWER_ROLE_IDS`, or jr + sr admin when it's empty. **Owner, in Coolify (bot app), before merging:** set `DISCORD_APPEAL_REVIEWER_ROLE_IDS` to the current list plus `1516144911961948252,1474372339000152250`. If it's unset there today, the current list is `DISCORD_JR_ADMIN_ROLE_ID,DISCORD_SR_ADMIN_ROLE_ID`.
+4. [x] `pnpm dev:grant-role <email> <role…>` / `--clear` (`apps/website/scripts/devGrantRole.ts`):
+   - adds the roles to the local `UserData` (creating it if needed), then syncs them to Clerk with `syncClerkUserMetadata` if the Clerk user exists. Otherwise the roles apply on first sign-in through `ensureUserData`.
+   - checks roles against `ROLES`
+   - refuses unless `MONGODB_URI` passes `resolveLocalMongoUri()` (local dev DB only) and `CLERK_SECRET_KEY` starts with `sk_test_`
+5. [x] `.gitattributes`: `* text=auto eol=lf` plus binary rules. **No renormalize commit needed:** `git ls-files --eol` shows 0 CRLF files.
+6. [x] Lint: ESLint 8 and the existing `.eslintrc.json` (`next/core-web-vitals`) still work, only `next lint` was gone. `lint` is now `eslint . --ext …` with `ignorePatterns`, and there's no dependency change. It runs and reports **11 errors** that were already there: 5× `rules-of-hooks` in `admin/certificates/certificateClient.tsx` (likely a real bug) and 6× `no-unescaped-entities`. There are also 27 warnings. Moving to ESLint 9 and making lint required stays in Phase 2.
+7. [x] `register-discord-appeal-commands` now runs with `tsx` (no inline JSON). Not run during the change because the owner's `.env.local` holds a real bot token. `ts-node` is now unused, but it was left in devDependencies to avoid a lockfile change.
+8. [x] `.gitignore`: removed the blanket `scripts/` and `/Json files`, and replaced the specific `auth-trial-…json` with `auth-trial-*.json`. This makes **`apps/website/scripts/seedTasks.ts` visible. It was never committed, even though `pnpm db:seed-tasks` (added in #13) runs it.** Commit it (it's guarded and uses fake data only).
+9. [x] `REDIS.md`: `pnpm db:up`, port 6389, `pnpm dev`.
+10. [x] README: a "Getting started" section pointing to `dev-onboarding/README.md` (written in 0.5), and the Monorepo commands now use `pnpm db:up` / `pnpm dev` / `pnpm dev:bot`.
+11. [ ] _(Optional, before juniors branch or never)_ Run a one-time `prettier --write` over the repo as a single commit and add it to `.git-blame-ignore-revs`.
 
 ### 0.5 Write the `dev-onboarding/` docs
 
