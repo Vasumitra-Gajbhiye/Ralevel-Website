@@ -30,14 +30,16 @@ RUN NODE_ENV=development pnpm install --frozen-lockfile --filter @ralevel/websit
 
 # -----------------------------------------------------------------------------
 # Stage 3: builder
-# NEXT_PUBLIC_* and MONGODB_URI must be available here (Coolify build variables).
+# NEXT_PUBLIC_* come in as build args (they end up in the client bundle anyway).
+# MONGODB_URI (static pages read the database) comes in as a BuildKit secret,
+# so it never lands in the image config, history or build cache. Runtime
+# secrets (Resend, Stripe, Clerk secret key, …) are Coolify runtime env vars.
 # -----------------------------------------------------------------------------
 FROM base AS builder
 
 COPY --from=deps /app ./
 COPY apps/website ./apps/website
 
-ARG MONGODB_URI
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -48,10 +50,8 @@ ARG NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ARG NEXT_PUBLIC_POSTHOG_HOST
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_URL
-ARG RESEND_API_KEY
 
 
-ENV MONGODB_URI=$MONGODB_URI
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
@@ -62,7 +62,6 @@ ENV NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=$NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
-ENV RESEND_API_KEY=$RESEND_API_KEY
 
 
 ENV NODE_ENV=production
@@ -73,7 +72,8 @@ RUN if [ -z "$NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME" ]; then \
       exit 1; \
     fi
 
-RUN pnpm --filter @ralevel/website build
+RUN --mount=type=secret,id=MONGODB_URI,env=MONGODB_URI,required=true \
+    pnpm --filter @ralevel/website build
 
 # -----------------------------------------------------------------------------
 # Stage 4: runner

@@ -182,13 +182,16 @@ Done 2026-10-05 (PR #11 plus `gh api` settings changes). Verified: a probe workf
 
 **Follow-ups (not blocking onboarding):**
 
-- [ ] Add `Dockerfile.website` + `.dockerignore` to the website deploy workflow's `paths` (and `Dockerfile.bot` + `.dockerignore` to the bot's). #15 changed only `.dockerignore`, so it didn't deploy, and the website had to be deployed by hand with `workflow_dispatch`.
-- [ ] Coolify deploys `:latest` with `pull_policy: always`. Any workflow in the repo can push `:latest` to GHCR with `packages: write`. Deploy by commit SHA instead, or push images with a token only the `Production` environment holds.
-- [ ] Add `-f` to the bot workflow's Coolify `curl` so a rejected deploy fails the job. It currently shows green on a 401.
-- [ ] One secret's value is `/`, so GitHub masks every `/` in Actions logs. Move the non-secret `NEXT_PUBLIC_*` values to `Production` environment **variables** (`vars.`\*).
+Pre-invite hardening, done 2026-10-19 on branch `chore/pre-invite-hardening`:
+
+- [x] Deploy workflow `paths` now also cover `Dockerfile.*`, `docker-compose.*.yml`, `.dockerignore`, `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`. #15 changed only `.dockerignore`, so it didn't deploy, and the website had to be deployed by hand with `workflow_dispatch`.
+- [x] **GHCR `:latest`:** Coolify deploys `:latest` with `pull_policy: always`, and any workflow on any branch could push it with `packages: write`. Both deploy workflows now push with **`GHCR_PUSH_TOKEN`**, a classic PAT with `write:packages` that only exists in the `Production` environment (so only `main` can use it), and they no longer request `packages: write`. **Owner, after the first green deploy:** set the repo's role to **Read** under each GHCR package's **Manage Actions access**, so branch workflows can't push even if they ask. (Deploying by digest through the Coolify API would be stronger still. That's optional, for later.)
+- [x] `-f -sS` on the bot workflow's Coolify `curl`.
+- [x] Log masking: the four constant Clerk URL build args (`/sign-in`, `/sign-up`, `/`, `/`) are now literal values in the workflow, not secrets. One of them was `/`, which masked every `/` in the logs. **Owner:** delete those 4 secrets from `Production` once this is merged.
+- [x] `MONGODB_URI` reaches the website build as a **BuildKit secret** (`RUN --mount=type=secret,…,env=MONGODB_URI`) instead of `ARG`/`ENV`, so it isn't stored in the builder stage's image config or the GHA build cache. `RESEND_API_KEY` was removed from the build entirely: since #14 nothing creates the Resend client at build time, and the runtime value comes from Coolify.
+- [x] **CI builds the website image on every PR** (`website image` job in `ci.yml`): the same Dockerfile and context, no push, no secrets, an empty `mongo:7` service and a dummy Clerk key. The website deploy failed for #12, `6956c38`, #13 and #14 without CI noticing. **Owner:** after it's been green on a couple of PRs, make `website image` a required check.
 - [ ] In Coolify, confirm Preview Deployments are disabled for both apps.
 - [ ] Optional: make the GHCR packages private and give Coolify a `read:packages` token.
-- [ ] **CI should build the website Docker image on PRs** (build only, no push). The website deploy failed for #12, `6956c38`, #13 and #14 (from 2026-10-05 to 2026-10-18), and CI didn't notice: `pnpm typecheck` runs on the full repo, but the Docker build only has `apps/website`. A PR build check would have caught it on #12. `next build` needs `MONGODB_URI` for static pages, so use a Mongo service container. This overlaps with the Phase 2 "`next build` check".
 
 ### 0.3 Third-party services: each dev creates their own (D10)
 

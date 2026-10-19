@@ -1,4 +1,10 @@
-# Save as: .github/workflows/docker-build-push-bot.yml
+# Builds the bot image, pushes it to GHCR and triggers the Coolify deploy.
+#
+# Requires these secrets in the Production environment (main only):
+#   GHCR_PUSH_TOKEN          classic PAT with write:packages (see the website
+#                            workflow for why GITHUB_TOKEN isn't used to push)
+#   COOLIFY_BOT_WEBHOOK_URL
+#   COOLIFY_API_TOKEN
 
 name: Build and Push Bot Image
 
@@ -8,6 +14,12 @@ on:
     paths:
       - "apps/bot/**"
       - "packages/discord/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Dockerfile.bot"
+      - "docker-compose.bot.yml"
+      - ".dockerignore"
       - ".github/workflows/docker-build-push-bot.yml"
   workflow_dispatch: {}
 
@@ -22,7 +34,6 @@ jobs:
     environment: Production
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout
@@ -35,8 +46,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -59,5 +70,5 @@ jobs:
 
       - name: Trigger Coolify deploy
         run: |
-          curl -X GET "${{ secrets.COOLIFY_BOT_WEBHOOK_URL }}" \
+          curl -f -sS -X GET "${{ secrets.COOLIFY_BOT_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
