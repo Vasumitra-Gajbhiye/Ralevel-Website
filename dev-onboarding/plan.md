@@ -182,6 +182,7 @@ Done 2026-10-05 (PR #11 plus `gh api` settings changes). Verified: a probe workf
 
 **Follow-ups (not blocking onboarding):**
 
+- [ ] Add `Dockerfile.website` + `.dockerignore` to the website deploy workflow's `paths` (and `Dockerfile.bot` + `.dockerignore` to the bot's). #15 changed only `.dockerignore`, so it didn't deploy, and the website had to be deployed by hand with `workflow_dispatch`.
 - [ ] Coolify deploys `:latest` with `pull_policy: always`. Any workflow in the repo can push `:latest` to GHCR with `packages: write`. Deploy by commit SHA instead, or push images with a token only the `Production` environment holds.
 - [ ] Add `-f` to the bot workflow's Coolify `curl` so a rejected deploy fails the job. It currently shows green on a 401.
 - [ ] One secret's value is `/`, so GitHub masks every `/` in Actions logs. Move the non-secret `NEXT_PUBLIC_*` values to `Production` environment **variables** (`vars.`\*).
@@ -257,8 +258,16 @@ Merged 2026-10-18 as #14. Verified: `pnpm typecheck` passes, website tests pass 
 
 Every page ends with "✅ You should now see …". Steps that differ between Windows and macOS each get a **Windows** / **macOS** sub-section. Use no real secret values anywhere, because the repo is public.
 
-- [ ] `README.md`: who this is for, the order to follow, a time estimate, who to ask. Tier 1 is required on day one; Tier 2 services are set up when a task needs them.
-- [ ] `01-prerequisites.md`:
+Drafted 2026-10-18 on branch `docs/dev-onboarding`. Nothing has been followed end to end yet; that's 0.6. Notes:
+
+- `08-optional-services/` also has a `README.md` index. **There's no `openai.md`:** `OPENAI_API_KEY` only appears in commented-out code (theory-eval uses Gemini), so the Tier 3 OpenAI row in 0.3 doesn't apply.
+- `cloudinary.md` explains a catch: uploads store a key path and are shown via `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` (`doqsecks2`), so a dev's own uploads only show after temporarily switching that var to their own cloud.
+- `discord-bot.md` uses a `cloudflared` quick tunnel for the interactions endpoint, plus the OAuth redirect `http://localhost:3000/api/discord-appeal/callback`.
+- `11-troubleshooting.md` starts with the issues already known. Add whatever 0.6 turns up.
+- No screenshots yet.
+
+- [x] `README.md`: who this is for, the order to follow, a time estimate, who to ask. Tier 1 is required on day one; Tier 2 services are set up when a task needs them.
+- [x] `01-prerequisites.md`:
   - GitHub account + 2FA, then send your username to the owner
   - Git
     - Windows: Git for Windows, `git config --global core.autocrlf false`, `git config --global core.longpaths true`, enable Windows long paths
@@ -266,23 +275,23 @@ Every page ends with "✅ You should now see …". Steps that differ between Win
   - `corepack enable` (Windows: in an admin PowerShell), which gives pnpm 9.15.0
   - Docker (macOS: OrbStack or Docker Desktop; Windows: Docker Desktop + WSL2)
   - VS Code + extensions: ESLint, Prettier, Tailwind CSS IntelliSense, MDX
-- [ ] `02-clone-and-install.md`: clone (Windows: near the drive root, e.g. `C:\code\`), `pnpm install`, common errors (wrong Node version, `sharp`, long paths)
-- [ ] `03-local-databases.md`:
+- [x] `02-clone-and-install.md`: clone (Windows: near the drive root, e.g. `C:\code\`), `pnpm install`, common errors (wrong Node version, `sharp`, long paths)
+- [x] `03-local-databases.md`:
   - the three databases (dev / test / prod) and why you never touch prod
   - `pnpm db:up`, getting the seed archive, `pnpm db:restore`, `pnpm db:reset`, `pnpm db:seed-fake`
   - optionally connect MongoDB Compass to `mongodb://127.0.0.1:27027` (dev) and `:27028` (test)
-- [ ] `04-environment-variables.md`:
+- [x] `04-environment-variables.md`:
   - copy `.env.example` → `apps/website/.env.local`
   - a table of every var: tier, what it does, what breaks without it, link to its service doc
   - the secret rules (never commit, never paste in chats/issues/screenshots, report leaks immediately; you'll never be given prod keys, so don't ask)
 - [x] `05-clerk-setup.md` (Tier 1): create your own Clerk app, sign-in methods, redirect URLs, copying the keys into `.env.local`. Drafted 2026-10-18 with no screenshots. Checked in 0.6.
-- [ ] `06-run-the-website.md`:
+- [x] `06-run-the-website.md`:
   - `pnpm dev`, then open [http://localhost:3000](http://localhost:3000)
   - sign up in your own Clerk app (test emails `yourname+clerk_test@example.com` with code `424242` skip real email)
   - a list of pages to click through to confirm everything works
-- [ ] `07-admin-access.md`: `pnpm dev:grant-role`, the roles from `src/lib/roles.ts` and what each unlocks
-- [ ] `08-optional-services/` (Tier 2/3, one short file each): `cloudinary.md`, `stripe.md` (+ `stripe listen`), `resend.md`, `posthog.md`, `discord-bot.md` (own test server, bot app, channel/role IDs, running `apps/bot`), `gemini.md`, `r2.md`, `openai.md`, `google-drive.md`
-- [ ] `09-project-tour.md`:
+- [x] `07-admin-access.md`: `pnpm dev:grant-role`, the roles from `src/lib/roles.ts` and what each unlocks
+- [x] `08-optional-services/` (Tier 2/3, one short file each): `cloudinary.md`, `stripe.md` (+ `stripe listen`), `resend.md`, `posthog.md`, `discord-bot.md` (own test server, bot app, channel/role IDs, running `apps/bot`), `gemini.md`, `r2.md`, `openai.md`, `google-drive.md`
+- [x] `09-project-tour.md`:
   - monorepo layout
   - route groups `(home)`, `(others)`, `(admin)`
   - `src/lib`, `src/models`, `src/app/api`
@@ -290,8 +299,8 @@ Every page ends with "✅ You should now see …". Steps that differ between Win
   - Clerk auth + roles, Mongo/Mongoose, Redis cache, Cloudinary/R2
   - the bot
   - the UI convention: minimal UI, reuse `components/ui/*`
-- [ ] `10-team-rules.md`: the rules below
-- [ ] `11-troubleshooting.md`: fill it from whatever breaks in the 0.6 dry run (Windows and macOS)
+- [x] `10-team-rules.md`: the rules below
+- [x] `11-troubleshooting.md`: fill it from whatever breaks in the 0.6 dry run (Windows and macOS)
 
 ### 0.6 Dry run
 
