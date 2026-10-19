@@ -2,6 +2,8 @@
 # `typecheck` (ubuntu) is a required status check in the main ruleset.
 # `typecheck (windows)` is informational: it catches Windows-only install or
 # path-length breakage but does not block merging.
+# `website image` builds the production Docker image (without pushing), so a
+# change that breaks the deploy fails here instead of after merging.
 
 name: CI
 
@@ -63,3 +65,43 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+  website-image:
+    name: website image
+    runs-on: ubuntu-latest
+    # Same Dockerfile and build context as the production deploy, but no push
+    # and no secrets: an empty MongoDB stands in for the database that static
+    # pages read, and the Clerk publishable key is a dummy.
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The plain docker driver lets build steps use the runner's network
+      # (network: host below), so `next build` can reach the mongo service.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Build website image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.website
+          push: false
+          network: host
+          secrets: |
+            MONGODB_URI=mongodb://127.0.0.1:27017/ralevel_ci
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
+            NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+            NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+            NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
+            NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
+            NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=doqsecks2
+            NEXT_PUBLIC_URL=http://localhost:3000

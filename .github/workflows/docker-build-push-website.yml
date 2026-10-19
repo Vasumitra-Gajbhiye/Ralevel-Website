@@ -1,14 +1,14 @@
-# Save as: .github/workflows/docker-build-push-website.yml
+# Builds the website image, pushes it to GHCR and triggers the Coolify deploy.
 #
 # Requires these secrets in the Production environment (Settings -> Environments
 # -> Production). The environment only allows the main branch, so branch and PR
 # workflows can't read them.
-#   MONGODB_URI
+#   GHCR_PUSH_TOKEN      classic PAT with write:packages. GHCR pushes use this,
+#                        not GITHUB_TOKEN, so that only main can publish the
+#                        images Coolify deploys (the repo's own Actions access
+#                        to the package is read-only).
+#   MONGODB_URI          passed as a BuildKit secret (static pages read the DB)
 #   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-#   NEXT_PUBLIC_CLERK_SIGN_IN_URL
-#   NEXT_PUBLIC_CLERK_SIGN_UP_URL
-#   NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL
-#   NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL
 #   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 #   NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 #   NEXT_PUBLIC_POSTHOG_HOST
@@ -16,15 +16,10 @@
 #   NEXT_PUBLIC_URL
 #   COOLIFY_WEBSITE_WEBHOOK_URL
 #   COOLIFY_API_TOKEN
-#   RESEND_API_KEY
 #
-# Note: everything prefixed NEXT_PUBLIC_ ends up embedded in the client bundle
-# and is visible to anyone who views your site's source - that's normal for
-# Next.js public env vars, not a leak. MONGODB_URI is NOT public - it's only
-# used at build time here (per your Dockerfile) and should never be a
-# NEXT_PUBLIC_ var. Confirm build time is genuinely the only place it's needed;
-# if it's also used at runtime, it needs to be injected into the running
-# container via Coolify's runtime env vars instead, not baked into the image.
+# NEXT_PUBLIC_ values end up in the client bundle (public by design). Runtime
+# secrets (Clerk secret key, Resend, Stripe, R2, …) are Coolify runtime env
+# vars and are never baked into the image.
 
 name: Build and Push Website Image
 
@@ -34,6 +29,12 @@ on:
     paths:
       - "apps/website/**"
       - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "Dockerfile.website"
+      - "docker-compose.website.yml"
+      - ".dockerignore"
       - ".github/workflows/docker-build-push-website.yml"
   workflow_dispatch: {}
 
@@ -48,7 +49,6 @@ jobs:
     environment: Production
     permissions:
       contents: read
-      packages: write
 
     steps:
       - name: Checkout
@@ -61,8 +61,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
 
       - name: Extract metadata
         id: meta
@@ -82,19 +82,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=website
           cache-to: type=gha,mode=max,scope=website
-          build-args: |
+          secrets: |
             MONGODB_URI=${{ secrets.MONGODB_URI }}
+          build-args: |
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-            NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
-            NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
-            NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL }}
-            NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL }}
+            NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+            NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+            NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/
+            NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/
             NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
             NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=${{ secrets.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
             NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_URL }}
-            RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
 
       - name: Trigger Coolify deploy
         run: |
