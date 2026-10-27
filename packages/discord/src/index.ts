@@ -14,9 +14,11 @@ export { sendDirectMessage, type DirectMessage } from "./sendDirectMessage";
 export {
   formatTaskAssignedEmbed,
   formatTaskDigestEmbed,
+  formatTaskEventEmbed,
   type TaskAssignedNotification,
   type TaskDigestItem,
   type TaskDigestNotification,
+  type TaskEventNotification,
 } from "./formatTaskEmbed";
 export { unbanMember } from "./unbanMember";
 export {

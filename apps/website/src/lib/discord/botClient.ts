@@ -90,6 +90,54 @@ export async function notifyBotTaskAssigned(data: TaskAssignedPayload): Promise<
   await postInternal("/internal/task-assigned", data);
 }
 
+/** Review and reward DMs; mirrors TaskEventNotification in @ralevel/discord. */
+export type TaskEventPayload = {
+  discordUserIds: string[];
+  event:
+    | {
+        kind: "review_requested";
+        taskTitle: string;
+        where: string;
+        submittedBy: string;
+        stars: number;
+        note: string;
+        link: string | null;
+        url: string;
+      }
+    | {
+        kind: "approved";
+        taskTitle: string;
+        where: string;
+        reviewedBy: string;
+        stars: number;
+        totalStars: number;
+        towardNext: number;
+        perCertificate: number;
+        earnedCertificate: boolean;
+        url: string;
+      }
+    | {
+        kind: "changes_requested";
+        taskTitle: string;
+        where: string;
+        reviewedBy: string;
+        comment: string;
+        url: string;
+      }
+    | {
+        kind: "certificate_due";
+        personName: string;
+        departmentName: string;
+        totalStars: number;
+        url: string;
+      };
+};
+
+export async function notifyBotTaskEvent(data: TaskEventPayload): Promise<void> {
+  if (!data.discordUserIds.length) return;
+  await postInternal("/internal/task-event", data);
+}
+
 export async function notifyBotAppealSubmitted(
   data: AppealSubmittedPayload,
 ): Promise<{ messageId: string | null } | null> {
