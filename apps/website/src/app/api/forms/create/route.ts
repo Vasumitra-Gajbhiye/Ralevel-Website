@@ -1,6 +1,7 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import { canManageFormType, type Role } from "@/lib/roles";
+import { canManageForm } from "@/lib/forms/access";
+import type { Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
 import { revalidatePath } from "next/cache";
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!canManageFormType(roles, body.formType)) {
+  if (!(await canManageForm(roles, body.formType))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

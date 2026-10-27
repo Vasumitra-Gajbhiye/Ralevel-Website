@@ -1,6 +1,7 @@
 import "server-only";
 
 import connectDB from "@/lib/mongodb";
+import { canAccessSection } from "@/lib/admin-access/server";
 import { canVoteOnFormType } from "@/lib/forms/access";
 import { isAdmin } from "@/lib/roles";
 import type { Role } from "@/lib/roles";
@@ -59,10 +60,13 @@ export async function canVoteOnForm(input: {
   email?: string | null;
   form: FormInchargeConfig & { formType?: string };
 }): Promise<boolean> {
-  if (isAdmin(input.roles)) return true;
-  if (input.form.formType && canVoteOnFormType(input.roles, input.form.formType)) {
-    return true;
-  }
+  // Admins and the form's department head vote through Forms page access;
+  // in-charge members of this form can vote without it.
+  const byRole =
+    isAdmin(input.roles) ||
+    (!!input.form.formType &&
+      canVoteOnFormType(input.roles, input.form.formType));
+  if (byRole && (await canAccessSection(input.roles, "forms"))) return true;
   if (!input.email) return false;
 
   const members = await resolveInchargeMembers(input.form.inchargeNicknames);

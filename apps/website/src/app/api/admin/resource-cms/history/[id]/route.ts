@@ -1,6 +1,5 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { getResourceCMSRevision } from "@/lib/data/admin/resource-cms-revisions";
-import { RESOURCE_CMS_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -8,7 +7,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...RESOURCE_CMS_ROLES],
+    section: "resource-cms",
   });
   if (auth instanceof Response) return auth;
 

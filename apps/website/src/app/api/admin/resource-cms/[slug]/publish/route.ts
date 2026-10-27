@@ -7,7 +7,6 @@ import {
   resolveCMSDraft,
 } from "@/lib/data/admin/resource-cms";
 import connectDB from "@/lib/mongodb";
-import { RESOURCE_CMS_ROLES } from "@/lib/roles";
 import type { ResourceDraft } from "@/types/resources2";
 import { NextResponse } from "next/server";
 
@@ -16,7 +15,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...RESOURCE_CMS_ROLES],
+    section: "resource-cms",
   });
   if (auth instanceof Response) return auth;
 

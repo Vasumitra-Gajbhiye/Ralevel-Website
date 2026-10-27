@@ -1,4 +1,3 @@
-export const LEGAL_ADMIN_ROLES = ["owner", "admin"] as const;
 
 export const LEGAL_PAGE_CATALOG = [
   {

@@ -2,6 +2,8 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+export const SRC_DIR = fileURLToPath(new URL("../../../", import.meta.url));
+
 export const ADMIN_APP_DIR = fileURLToPath(
   new URL("../../../app/(admin)/admin", import.meta.url),
 );

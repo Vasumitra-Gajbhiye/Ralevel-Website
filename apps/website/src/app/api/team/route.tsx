@@ -99,7 +99,7 @@ import { revalidateDataTags } from "@/lib/data-cache";
 import { getPaginatedTeamList } from "@/lib/data/team";
 import mongoDBConnect from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
-import { requireRoles } from "@/lib/requireRoles";
+import { requireSection } from "@/lib/admin-access/server";
 import TeamData from "@/models/teamData";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
   const session = await getAuthSession();
 
   try {
-    requireRoles(session, ["owner", "admin"]);
+    await requireSection(session, "team");
 
     const body = await req.json();
     const { name, title, discordId } = body;
@@ -175,7 +175,7 @@ export async function DELETE(req: NextRequest) {
   const session = await getAuthSession();
 
   try {
-    requireRoles(session, ["owner", "admin"]);
+    await requireSection(session, "team");
 
     const id = req.nextUrl.searchParams.get("id");
 

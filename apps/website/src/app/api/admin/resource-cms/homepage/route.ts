@@ -7,7 +7,6 @@ import {
   RESOURCES_HOMEPAGE_TAG,
 } from "@/lib/data/resources-homepage";
 import connectDB from "@/lib/mongodb";
-import { RESOURCE_CMS_ROLES } from "@/lib/roles";
 import ResourcesHomepage from "@/models/resourcesHomepage";
 import type { FeaturedCard } from "@/types/resources2";
 import { revalidatePath } from "next/cache";
@@ -103,7 +102,7 @@ async function parsePopularSlugs(raw: unknown): Promise<string[]> {
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...RESOURCE_CMS_ROLES],
+    section: "resource-cms",
     rateLimit: { routeKey: "admin-resource-cms-homepage" },
   });
   if (auth instanceof Response) return auth;
@@ -113,7 +112,7 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...RESOURCE_CMS_ROLES],
+    section: "resource-cms",
   });
   if (auth instanceof Response) return auth;
 

@@ -4,13 +4,12 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
-const TEAM_ADMIN_ROLES = ["owner", "admin"] as const;
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...TEAM_ADMIN_ROLES],
+    section: "team",
   });
   if (auth instanceof Response) return auth;
 

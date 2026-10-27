@@ -24,7 +24,7 @@ import { NextResponse } from "next/server";
 /* ================= GET ================= */
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "access",
     rateLimit: { routeKey: "admin-access-list" },
   });
   if (auth instanceof Response) return auth;
@@ -41,7 +41,7 @@ export async function GET(req: Request) {
 /* ================= POST / PATCH ================= */
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "access",
   });
   if (auth instanceof Response) return auth;
 
@@ -137,7 +137,7 @@ export async function PATCH(req: Request) {
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "access",
   });
   if (auth instanceof Response) return auth;
 

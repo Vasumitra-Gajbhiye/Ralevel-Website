@@ -17,7 +17,7 @@ function escapeRegex(value: string): string {
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "resource-submissions",
     rateLimit: { routeKey: "admin-resource-submissions-list" },
   });
   if (auth instanceof Response) return auth;

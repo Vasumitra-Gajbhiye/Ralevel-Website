@@ -1,3 +1,4 @@
+import type { AdminSectionKey } from "@/lib/admin-access/sections";
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { getTeamAccessList } from "@/lib/data/admin/team-access";
@@ -17,7 +18,8 @@ export type TeamAccessConfig<R extends Role> = {
   key: string;
   teamRoles: readonly R[];
   depHeadRole: R;
-  manageRoles: readonly Role[];
+  /** The admin page whose access lets someone manage this team. */
+  section: AdminSectionKey;
   depHeadLabel: string;
   mergeRole: (roles: Role[], role: R) => Role[];
   stripRoles: (roles: Role[]) => Role[];
@@ -44,7 +46,7 @@ export function createTeamAccessHandlers<R extends Role>(config: TeamAccessConfi
 
   async function GET(req: Request) {
     const auth = await authorizeAdminApi(req, {
-      roles: [...config.manageRoles],
+      section: config.section,
       rateLimit: { routeKey: `admin-${config.key}-access-list` },
     });
     if (auth instanceof Response) return auth;
@@ -54,7 +56,7 @@ export function createTeamAccessHandlers<R extends Role>(config: TeamAccessConfi
   }
 
   async function POST(req: Request) {
-    const auth = await authorizeAdminApi(req, { roles: [...config.manageRoles] });
+    const auth = await authorizeAdminApi(req, { section: config.section });
     if (auth instanceof Response) return auth;
 
     const csrfError = enforceSameOrigin(req);
@@ -90,7 +92,7 @@ export function createTeamAccessHandlers<R extends Role>(config: TeamAccessConfi
   }
 
   async function DELETE(req: Request) {
-    const auth = await authorizeAdminApi(req, { roles: [...config.manageRoles] });
+    const auth = await authorizeAdminApi(req, { section: config.section });
     if (auth instanceof Response) return auth;
 
     const csrfError = enforceSameOrigin(req);
@@ -127,7 +129,7 @@ export function createTeamAccessHandlers<R extends Role>(config: TeamAccessConfi
 
   async function SEARCH(req: Request) {
     const auth = await authorizeAdminApi(req, {
-      roles: [...config.manageRoles],
+      section: config.section,
       rateLimit: { routeKey: `admin-${config.key}-access-search` },
     });
     if (auth instanceof Response) return auth;

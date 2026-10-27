@@ -143,15 +143,27 @@ export async function canEnterAdminPanel(
 }
 
 /**
+ * Page-access version of requireRoles: returns the session's roles or throws
+ * "FORBIDDEN" unless it can open one of the sections.
+ */
+export async function requireSection(
+  session: AuthSession | null,
+  keys: AdminSectionKey | readonly AdminSectionKey[],
+): Promise<Role[]> {
+  if (!session || !(await canAccessSection(session.userData?.roles, keys))) {
+    throw new Error("FORBIDDEN");
+  }
+  return session.userData.roles;
+}
+
+/**
  * For server actions, which are public POST endpoints: returns the session or
- * throws "FORBIDDEN" (the same error requireRoles throws).
+ * throws "FORBIDDEN".
  */
 export async function requireSectionAction(
   keys: AdminSectionKey | readonly AdminSectionKey[],
 ): Promise<AuthSession> {
   const session = await getAuthSession();
-  if (!session || !(await canAccessSection(session.userData?.roles, keys))) {
-    throw new Error("FORBIDDEN");
-  }
-  return session;
+  await requireSection(session, keys);
+  return session!;
 }

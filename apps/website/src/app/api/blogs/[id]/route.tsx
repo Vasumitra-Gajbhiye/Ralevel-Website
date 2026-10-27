@@ -4,8 +4,7 @@ import { getCachedBlogBySlug } from "@/lib/data/blogs";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import { enforceRateLimit } from "@/lib/rateLimit";
-import { requireRoles } from "@/lib/requireRoles";
-import { WRITER_CMS_ROLES } from "@/lib/roles";
+import { requireSection } from "@/lib/admin-access/server";
 import BlogsData from "@/models/blogsData";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -45,7 +44,7 @@ export async function PUT(
 ) {
   const session = await getAuthSession();
   try {
-    requireRoles(session, [...WRITER_CMS_ROLES]);
+    await requireSection(session, "blogs");
   } catch {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }

@@ -39,7 +39,9 @@ async function checkSessionAccess(
     .lean<{ ownerId?: mongoose.Types.ObjectId }>();
 
   const isOwner = doc?.ownerId?.toString() === userId;
-  const isReviewer = canReviewBlogs(roles as Parameters<typeof canReviewBlogs>[0]);
+  const isReviewer = await canReviewBlogs(
+    roles as Parameters<typeof canReviewBlogs>[0],
+  );
   const isWriterWithAccess =
     hasWriterTeamRole(roles as Parameters<typeof hasWriterTeamRole>[0]) &&
     (isAdminLike(roles as Parameters<typeof isAdminLike>[0]) || isOwner);

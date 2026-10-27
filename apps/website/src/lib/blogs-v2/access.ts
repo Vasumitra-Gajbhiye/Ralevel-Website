@@ -1,5 +1,5 @@
+import { canAccessSection } from "@/lib/admin-access/server";
 import type { Role } from "@/lib/roles";
-import { BLOG_REVIEW_ROLES } from "@/lib/roles";
 import BlogV2 from "@/models/blogV2";
 import mongoose from "mongoose";
 
@@ -7,22 +7,21 @@ export function isAdminLike(roles: Role[]): boolean {
   return roles.some((r) => r === "admin" || r === "owner");
 }
 
-export function canReviewBlogs(roles: Role[]): boolean {
-  return roles.some((r) =>
-    (BLOG_REVIEW_ROLES as readonly Role[]).includes(r),
-  );
+/** Owners, admins and anyone who can open All Blogs can read every post. */
+export async function canReviewBlogs(roles: Role[]): Promise<boolean> {
+  return isAdminLike(roles) || (await canAccessSection(roles, "all-blogs"));
 }
 
 export function buildBlogAccessQuery(
   blogId: string,
   userId: string,
-  roles: Role[],
+  canReadAll: boolean,
 ): { _id: mongoose.Types.ObjectId } | null {
   if (!mongoose.Types.ObjectId.isValid(blogId)) return null;
 
   const id = new mongoose.Types.ObjectId(blogId);
 
-  if (isAdminLike(roles) || canReviewBlogs(roles)) {
+  if (canReadAll) {
     return { _id: id };
   }
 
@@ -37,7 +36,11 @@ export async function findBlogForAccess(
   userId: string,
   roles: Role[],
 ) {
-  const query = buildBlogAccessQuery(blogId, userId, roles);
+  const query = buildBlogAccessQuery(
+    blogId,
+    userId,
+    await canReviewBlogs(roles),
+  );
   if (!query) return null;
   return BlogV2.findOne(query);
 }

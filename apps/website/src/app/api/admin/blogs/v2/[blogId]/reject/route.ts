@@ -3,7 +3,6 @@ import { findBlogForAccess } from "@/lib/blogs-v2/access";
 import { rejectBlogV2Review } from "@/lib/blogs-v2/mutations";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
-import { BLOG_REVIEW_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -11,7 +10,7 @@ export async function POST(
   context: { params: Promise<{ blogId: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...BLOG_REVIEW_ROLES],
+    section: "all-blogs",
   });
   if (auth instanceof Response) return auth;
 

@@ -78,6 +78,7 @@ const SECTION_LIST = [
     nav: [{ label: "All Blogs", href: "/admin/all-blogs" }],
     defaultRoles: BLOG_REVIEW_ROLES,
     risk: "can approve and publish any writer's post",
+    inPageRules: ["Deleting a post also needs a writer-team role."],
   },
   {
     key: "writers",

@@ -1,12 +1,11 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import connectDB from "@/lib/mongodb";
-import { WRITER_ACCESS_MANAGE_ROLES } from "@/lib/roles";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_ACCESS_MANAGE_ROLES],
+    section: "writers",
     rateLimit: { routeKey: "admin-writer-access-search" },
   });
   if (auth instanceof Response) return auth;

@@ -1,7 +1,8 @@
 import { getAuthSession } from "@/lib/getAuthSession";
 import { buildCreateFormFromCycle, type SourceFormForCopy } from "@/lib/forms/buildCreateFormFromCycle";
 import connectDB from "@/lib/mongodb";
-import { canManageFormType, type Role } from "@/lib/roles";
+import { canManageForm } from "@/lib/forms/access";
+import type { Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import FormIndex from "@/models/FormIndex";
 import { NextResponse } from "next/server";
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid cycleId" }, { status: 400 });
   }
 
-  if (!canManageFormType(roles, formType)) {
+  if (!(await canManageForm(roles, formType))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

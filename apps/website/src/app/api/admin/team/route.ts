@@ -12,8 +12,6 @@ import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-const TEAM_ADMIN_ROLES = ["owner", "admin"] as const;
-
 function revalidateTeamSurfaces() {
   revalidateDataTags("team");
   revalidatePath("/team");
@@ -37,7 +35,7 @@ function asOptionalString(value: unknown): string | undefined {
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...TEAM_ADMIN_ROLES],
+    section: "team",
     rateLimit: { routeKey: "admin-team-list" },
   });
   if (auth instanceof Response) return auth;
@@ -48,7 +46,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...TEAM_ADMIN_ROLES],
+    section: "team",
   });
   if (auth instanceof Response) return auth;
 
@@ -94,7 +92,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...TEAM_ADMIN_ROLES],
+    section: "team",
   });
   if (auth instanceof Response) return auth;
 
@@ -185,7 +183,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...TEAM_ADMIN_ROLES],
+    section: "team",
   });
   if (auth instanceof Response) return auth;
 

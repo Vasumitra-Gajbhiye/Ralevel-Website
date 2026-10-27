@@ -2,7 +2,6 @@ import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { revalidateDataTags } from "@/lib/data-cache";
 import { SCHOLARSHIPS_TAG, UNIVERSITIES_TAG } from "@/lib/data/scholarships";
-import { SCHOLARSHIP_CMS_ROLES } from "@/lib/roles";
 import { slugify } from "@/lib/slugify";
 import type { AuthSession } from "@/types/auth";
 import type { Model } from "mongoose";
@@ -16,7 +15,7 @@ export async function authorizeScholarshipAdmin(
   { write = false, routeKey }: { write?: boolean; routeKey?: string } = {},
 ): Promise<AuthSession | Response> {
   const auth = await authorizeAdminApi(req, {
-    roles: [...SCHOLARSHIP_CMS_ROLES],
+    section: "scholarships",
     ...(routeKey ? { rateLimit: { routeKey } } : {}),
   });
   if (auth instanceof Response) return auth;
