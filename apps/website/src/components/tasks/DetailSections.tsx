@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { tasksApi } from "@/lib/tasks/client";
 import { formatDue, istDayKey } from "@/lib/tasks/dates";
+import { starLabel } from "@/lib/tasks/stars";
 import type { ActivityDTO, CommentDTO, SubtaskDTO } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
@@ -285,7 +286,7 @@ function describe(a: ActivityDTO, todayKey: string): string {
     case "completed":
       return "completed it";
     case "uncompleted":
-      return "reopened it";
+      return d.starsRevoked ? `reopened it and took back ${starLabel(Number(d.starsRevoked))}` : "reopened it";
     case "occurrence_completed":
       return `completed the ${day(d.from)} occurrence, next ${day(d.to)}`;
     case "renamed":
@@ -304,6 +305,20 @@ function describe(a: ActivityDTO, todayKey: string): string {
       return `moved it from ${d.fromList} to ${d.toList}`;
     case "recurrence_changed":
       return d.on ? "changed how it repeats" : "stopped it repeating";
+    case "claimed":
+      return "claimed it";
+    case "unclaimed":
+      return "handed it back";
+    case "submitted":
+      return "submitted it for review";
+    case "changes_requested":
+      return "asked for changes";
+    case "approved":
+      return d.stars ? `approved it: +${starLabel(Number(d.stars))} for ${d.toName ?? "the assignee"}` : "approved it";
+    case "stars_changed":
+      return d.to ? `set the reward to ${starLabel(Number(d.to))}` : "removed the reward";
+    case "claimable_changed":
+      return d.on ? "opened it for claiming" : "closed it for claiming";
     default:
       return a.type.replace(/_/g, " ");
   }
