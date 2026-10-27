@@ -39,7 +39,8 @@ describe("registry defaults match the old hardcoded access", () => {
 
   it("opens the same pages for every role", () => {
     const differences: string[] = [];
-    for (const path of pages) {
+    // New page, so there's nothing to compare against.
+    for (const path of pages.filter((p) => p !== "/admin/permissions")) {
       for (const role of ROLES) {
         const before = legacyCanOpen([role], path);
         const after = canOpenAdminPath(DEFAULT_ACCESS_MAP, [role], path);
@@ -62,6 +63,13 @@ describe("registry defaults match the old hardcoded access", () => {
       .filter((path) => RESOURCE_SUBMISSIONS_PAGE.test(path))
       .flatMap((path) => losers.map((role) => `${path} ${role} true→false`));
     expect(differences.sort()).toEqual(expected.sort());
+  });
+
+  it("opens the new Page access page to owners and admins only", () => {
+    const allowed = ROLES.filter((role) =>
+      canOpenAdminPath(DEFAULT_ACCESS_MAP, [role], "/admin/permissions"),
+    );
+    expect(allowed).toEqual(["owner", "admin"]);
   });
 
   it("lets the same roles into /admin", () => {
