@@ -121,6 +121,24 @@ export function hasDisallowedRoleGrant(
   );
 }
 
+/**
+ * True when the actor may change the target user's roles or identity.
+ * Owners and admins keep today's reach; anyone else can only touch users
+ * whose highest role ranks strictly below their own.
+ */
+export function canModifyTargetUser(
+  actorRoles: Role[],
+  targetRoles: Role[],
+): boolean {
+  if (isAdmin(actorRoles)) return true;
+  if (targetRoles.length === 0) return true;
+  if (actorRoles.length === 0) return false;
+  return (
+    roleRank(highestAuthorityRole(targetRoles)) >
+    roleRank(highestAuthorityRole(actorRoles))
+  );
+}
+
 export function mergePreservedStaffRoles(
   currentRoles: Role[],
   incomingRoles: Role[],

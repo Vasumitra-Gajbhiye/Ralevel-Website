@@ -1,8 +1,20 @@
 "use server";
 
+import { getAdminSectionRoles } from "@/lib/adminAccess";
 import { revalidateDataTags } from "@/lib/data-cache";
+import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
+import { hasRequiredRole } from "@/lib/roles";
 import CertData from "@/models/certsData";
+
+/** Server actions are public POST endpoints, so check the Certificates page roles here. */
+async function requireCertificateAccess() {
+  const session = await getAuthSession();
+  const allowed = getAdminSectionRoles("/admin/certificates") ?? undefined;
+  if (!hasRequiredRole(session?.userData?.roles, allowed)) {
+    throw new Error("FORBIDDEN");
+  }
+}
 
 export async function createCertificate(data: {
   certId: string;
@@ -17,10 +29,20 @@ export async function createCertificate(data: {
   owner: string;
   handler: string | null | undefined;
 }) {
+  await requireCertificateAccess();
   await connectDB();
   try {
     const cert = await CertData.create({
-      ...data,
+      certId: data.certId,
+      name: data.name,
+      email: data.email,
+      certType: data.certType,
+      applicationID: data.applicationID,
+      discordUserId: data.discordUserId,
+      hasCustomMessage: data.hasCustomMessage,
+      admin: data.admin,
+      owner: data.owner,
+      handler: data.handler,
       issueDate: null,
       customMessage: data.message,
       certificateDesigned: false,
@@ -51,6 +73,7 @@ export async function updateCertificate(data: {
   certificateDelivered?: boolean;
   issueDate?: Date | null;
 }) {
+  await requireCertificateAccess();
   await connectDB();
 
   const existing = (await CertData.findById(data._id).lean()) as {
@@ -85,6 +108,7 @@ export async function updateCertificate(data: {
 }
 
 export async function deleteCertificate(id: string) {
+  await requireCertificateAccess();
   await connectDB();
 
   const deleted = (await CertData.findByIdAndDelete(id).lean()) as {

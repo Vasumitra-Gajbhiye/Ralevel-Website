@@ -7,6 +7,7 @@ import { parsePaginationParams } from "@/lib/pagination";
 import { invalidateUserCache } from "@/lib/redis-cache";
 import {
   Role,
+  canModifyTargetUser,
   hasDisallowedRoleGrant,
   highestAuthorityRole,
   mergePreservedStaffRoles,
@@ -87,6 +88,13 @@ export async function POST(req: Request) {
 
   const currentRoles = (target.roles ?? []) as Role[];
 
+  if (!actorIsSuperAdmin && !canModifyTargetUser(actorRoles, currentRoles)) {
+    return new Response(
+      "You cannot modify someone with a role equal to or higher than your own",
+      { status: 403 },
+    );
+  }
+
   if (
     !actorIsSuperAdmin &&
     hasDisallowedRoleGrant(actorHighest, currentRoles, sanitizedRoles)
@@ -140,6 +148,10 @@ export async function DELETE(req: Request) {
 
   const actorEmail = auth.user?.email;
   const actorIsSuperAdmin = isSuperAdminEmail(actorEmail);
+  const actorRoles = applySuperAdminRoles(
+    actorEmail ?? "",
+    auth.userData.roles as Role[],
+  );
 
   const { email } = (await req.json()) as { email?: string };
 
@@ -163,6 +175,14 @@ export async function DELETE(req: Request) {
   }
 
   const currentRoles = (target.roles ?? []) as Role[];
+
+  if (!actorIsSuperAdmin && !canModifyTargetUser(actorRoles, currentRoles)) {
+    return new Response(
+      "You cannot remove someone with a role equal to or higher than your own",
+      { status: 403 },
+    );
+  }
+
   const isFormerStaffOnly =
     currentRoles.length === 1 && currentRoles[0] === "former_staff";
 

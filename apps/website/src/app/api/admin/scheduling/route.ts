@@ -3,6 +3,11 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { getAdminSchedulingList } from "@/lib/data/admin/scheduling";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
+import {
+  scheduleItemDeleteSchema,
+  scheduleItemPatchSchema,
+} from "@/lib/validation/scheduling";
+import { firstIssue } from "@/lib/validation/scholarships";
 import ScheduleItem from "@/models/scheduleItem";
 import { NextResponse } from "next/server";
 
@@ -56,10 +61,20 @@ export async function PATCH(req: Request) {
   const csrfError = enforceSameOrigin(req);
   if (csrfError) return csrfError;
 
+  const parsed = scheduleItemPatchSchema.safeParse(
+    await req.json().catch(() => null),
+  );
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: firstIssue(parsed.error) },
+      { status: 400 },
+    );
+  }
+
   await connectDB();
 
-  const { id, patch } = await req.json();
-  await ScheduleItem.findByIdAndUpdate(id, patch);
+  const { id, patch } = parsed.data;
+  await ScheduleItem.findByIdAndUpdate(id, { $set: patch });
 
   return NextResponse.json({ success: true });
 }
@@ -74,10 +89,19 @@ export async function DELETE(req: Request) {
   const csrfError = enforceSameOrigin(req);
   if (csrfError) return csrfError;
 
+  const parsed = scheduleItemDeleteSchema.safeParse(
+    await req.json().catch(() => null),
+  );
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: firstIssue(parsed.error) },
+      { status: 400 },
+    );
+  }
+
   await connectDB();
 
-  const { id } = await req.json();
-  await ScheduleItem.findByIdAndDelete(id);
+  await ScheduleItem.findByIdAndDelete(parsed.data.id);
 
   return NextResponse.json({ success: true });
 }

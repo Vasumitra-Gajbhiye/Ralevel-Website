@@ -3,6 +3,7 @@ import { applyStaffIdentity } from "@/lib/admin/staffIdentity";
 import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import { invalidateUserCache } from "@/lib/redis-cache";
+import { canModifyTargetUser, type Role } from "@/lib/roles";
 import UserData from "@/models/userData";
 import { NextResponse } from "next/server";
 
@@ -42,6 +43,19 @@ export async function PATCH(req: Request) {
   if (target.roles?.includes("owner") && email !== auth.user?.email) {
     return NextResponse.json(
       { error: "Owner identity cannot be modified by others" },
+      { status: 403 },
+    );
+  }
+
+  if (
+    email !== auth.user?.email &&
+    !canModifyTargetUser(auth.userData.roles, (target.roles ?? []) as Role[])
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "You cannot edit someone with a role equal to or higher than your own",
+      },
       { status: 403 },
     );
   }
