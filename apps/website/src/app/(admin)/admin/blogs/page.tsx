@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { getAdminBlogsList } from "@/lib/data/admin/blogs";
 import { parsePaginationParams } from "@/lib/pagination";
@@ -8,6 +9,9 @@ export default async function AdminBlogsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("blogs");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const params = await searchParams;
   const { page, limit, skip } = parsePaginationParams(

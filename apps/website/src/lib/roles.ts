@@ -167,7 +167,11 @@ export const FORMS_ACCESS_ROLES = [
   "resource_dep_head",
 ] as const satisfies readonly Role[];
 
-/** Roles that can open the /admin panel (layout entry gate). */
+/**
+ * Roles that can open /admin with the default page access. Page access is
+ * editable at /admin/permissions, so gate on `canEnterAdminPanel` from
+ * lib/admin-access/server instead; this is only a client-side first guess.
+ */
 export const ADMIN_PANEL_ROLES = [
   "owner",
   "admin",
@@ -260,6 +264,7 @@ export function hasAnyRole(
   return hasRequiredRole(userRoles, allowedRoles);
 }
 
+/** Default-access guess only; see ADMIN_PANEL_ROLES. */
 export function canAccessAdminPanel(userRoles?: Role[]) {
   return hasAnyRole(userRoles, ADMIN_PANEL_ROLES);
 }

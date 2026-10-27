@@ -1,9 +1,7 @@
-import {
-  getAdminSectionMessage,
-  getAdminSectionRoles,
-} from "@/lib/adminAccess";
+import { canEnterAdmin, canOpenAdminPath, sectionsForRoles } from "@/lib/admin-access/resolve";
+import { getAdminSection, matchAdminSection } from "@/lib/admin-access/sections";
+import { getAdminAccessMap } from "@/lib/admin-access/server";
 import { getAuthSession } from "@/lib/getAuthSession";
-import { canAccessAdminPanel, hasRequiredRole } from "@/lib/roles";
 import NoAccess from "@/components/NoAccess";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -16,38 +14,35 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getAuthSession();
+  const roles = session?.userData?.roles ?? [];
+  const accessMap = await getAdminAccessMap();
 
-  if (!session || !canAccessAdminPanel(session.userData?.roles)) {
-    redirect("/"); // or redirect
+  if (!session || !canEnterAdmin(accessMap, roles)) {
+    redirect("/");
   }
-
-  const roles = session.userData?.roles;
 
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "";
-  const sectionRoles = getAdminSectionRoles(pathname);
-  const sectionDenied = sectionRoles && !hasRequiredRole(roles, sectionRoles);
+  // Without a pathname, leave the decision to the page's own guardSection.
+  const allowed = !pathname || canOpenAdminPath(accessMap, roles, pathname);
+  const section = matchAdminSection(pathname);
 
-  // ❌ Logged in but NO ROLES
-  if (!roles || roles.length === 0) {
-    return (
-      <AdminLayoutShell roles={[]}>
-        <NoAccess message="You don’t have access to the admin panel." />
-      </AdminLayoutShell>
-    );
-  }
+  const nav = sectionsForRoles(accessMap, roles).flatMap(
+    (key) => getAdminSection(key).nav,
+  );
 
   return (
-    <AdminLayoutShell roles={roles}>
-      {sectionDenied ? (
+    <AdminLayoutShell nav={nav}>
+      {allowed ? (
+        children
+      ) : (
         <NoAccess
           message={
-            getAdminSectionMessage(pathname) ??
-            "You don't have permission to access this page."
+            section
+              ? `You don't have access to ${section.label}.`
+              : "You don't have permission to access this page."
           }
         />
-      ) : (
-        children
       )}
     </AdminLayoutShell>
   );

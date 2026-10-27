@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import {
   resolveDecisionEmailTemplates,
   type DecisionEmailTemplates,
@@ -20,6 +21,9 @@ export default async function AdminFormPage({
   params: Promise<{ formType: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("forms");
+  if (denied) return denied;
+
   const { formType } = await params;
   const queryParams = await searchParams;
   const session = await getAuthSession();

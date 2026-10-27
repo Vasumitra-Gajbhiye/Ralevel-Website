@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getWriterAccessList } from "@/lib/data/admin/writer-access";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { parsePaginationParams } from "@/lib/pagination";
@@ -8,6 +9,9 @@ export default async function WritersPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("writers");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const params = await searchParams;
   const { page, limit, skip } = parsePaginationParams(

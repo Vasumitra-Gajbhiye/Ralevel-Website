@@ -1,3 +1,4 @@
+import { canEnterAdminPanel } from "@/lib/admin-access/server";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { NextResponse } from "next/server";
 
@@ -11,5 +12,6 @@ export async function GET() {
   return NextResponse.json({
     user: session.user,
     userData: session.userData,
+    canAccessAdmin: await canEnterAdminPanel(session.userData.roles),
   });
 }

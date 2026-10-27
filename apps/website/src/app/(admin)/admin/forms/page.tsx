@@ -81,6 +81,7 @@
 //     </div>
 //   );
 // }
+import { guardSection } from "@/lib/admin-access/page-guard";
 import connectDB from "@/lib/mongodb";
 import {
   buildPaginatedResponse,
@@ -97,6 +98,9 @@ export default async function AdminFormsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("forms");
+  if (denied) return denied;
+
   await connectDB();
 
   const params = await searchParams;

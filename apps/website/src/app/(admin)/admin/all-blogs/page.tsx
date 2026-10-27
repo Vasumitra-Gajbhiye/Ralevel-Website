@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { getGlobalBlogReviewHistory } from "@/lib/blogs-v2/history";
 import { getPendingBlogReviews } from "@/lib/data/admin/blogsV2";
@@ -25,6 +26,9 @@ export default async function AllBlogsPage({
 }: {
   searchParams: Promise<{ page?: string; ownerId?: string; tab?: string }>;
 }) {
+  const denied = await guardSection("all-blogs");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const params = await searchParams;
   const page = parsePage(params.page);

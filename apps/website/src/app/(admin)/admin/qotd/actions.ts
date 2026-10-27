@@ -1,10 +1,9 @@
 "use server";
 
 import { ObjectId } from "mongodb";
-import { getAdminSectionRoles } from "@/lib/adminAccess";
+import { canAccessSection } from "@/lib/admin-access/server";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { getNativeMongoClient } from "@/lib/mongodb";
-import { hasRequiredRole } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -19,13 +18,10 @@ const modOrderSchema = z
   )
   .max(200);
 
-/** Server actions are public POST endpoints, so check the QOTD page roles here. */
+/** Server actions are public POST endpoints, so check QOTD page access here. */
 async function canManageQotd() {
   const session = await getAuthSession();
-  return hasRequiredRole(
-    session?.userData?.roles,
-    getAdminSectionRoles("/admin/qotd") ?? undefined,
-  );
+  return canAccessSection(session?.userData?.roles, "qotd");
 }
 
 async function getQotdCollection() {

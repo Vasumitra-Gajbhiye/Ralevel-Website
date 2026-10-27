@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminResourceSubjectsList } from "@/lib/data/admin/resource-cms";
 import {
   listResourceCMSRevisionActors,
@@ -22,6 +23,9 @@ export default async function ResourceCMSHistoryPage({
     to?: string;
   }>;
 }) {
+  const denied = await guardSection("resource-cms");
+  if (denied) return denied;
+
   const params = await searchParams;
   const urlParams = new URLSearchParams();
 

@@ -1,20 +1,12 @@
 "use server";
 
-import { getAdminSectionRoles } from "@/lib/adminAccess";
+import { requireSectionAction } from "@/lib/admin-access/server";
 import { revalidateDataTags } from "@/lib/data-cache";
-import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import { hasRequiredRole } from "@/lib/roles";
 import CertData from "@/models/certsData";
 
-/** Server actions are public POST endpoints, so check the Certificates page roles here. */
-async function requireCertificateAccess() {
-  const session = await getAuthSession();
-  const allowed = getAdminSectionRoles("/admin/certificates") ?? undefined;
-  if (!hasRequiredRole(session?.userData?.roles, allowed)) {
-    throw new Error("FORBIDDEN");
-  }
-}
+/** Server actions are public POST endpoints, so check Certificates access here. */
+const requireCertificateAccess = () => requireSectionAction("certificates");
 
 export async function createCertificate(data: {
   certId: string;

@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getTeamAccessList } from "@/lib/data/admin/team-access";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { parsePaginationParams } from "@/lib/pagination";
@@ -9,6 +10,9 @@ export default async function ScholarshipTeamPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("scholarship-team");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const params = await searchParams;
   const pagination = parsePaginationParams(new URLSearchParams({ page: params.page ?? "1" }));

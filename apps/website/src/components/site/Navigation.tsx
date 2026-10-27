@@ -1,7 +1,8 @@
 "use client";
 
+import { useAdminEntry } from "@/hooks/useAdminEntry";
 import { cldImage } from "@/lib/cloudinary";
-import { canAccessAdminPanel, isStaff, sanitizeRoles } from "@/lib/roles";
+import { isStaff, sanitizeRoles } from "@/lib/roles";
 import { applySuperAdminRoles } from "@/lib/superAdmin";
 import { useUser } from "@clerk/nextjs";
 import { motion } from "framer-motion";
@@ -383,7 +384,7 @@ export default function Navigation({ variant = "default" }: NavigationProps) {
     email ?? "",
     sanitizeRoles(user?.publicMetadata?.roles)
   );
-  const showAdmin = !!isSignedIn && canAccessAdminPanel(roles);
+  const showAdmin = useAdminEntry(isSignedIn ? user?.id : undefined, roles);
   const showTasks = !!isSignedIn && isStaff(roles);
 
   useEffect(() => setMounted(true), []);

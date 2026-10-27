@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminUniversities, parseAdminView } from "@/lib/data/admin/scholarships";
 import UniversitiesAdminClient from "../_components/UniversitiesAdminClient";
 
@@ -8,6 +9,9 @@ export default async function AdminUniversitiesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const denied = await guardSection("scholarships");
+  if (denied) return denied;
+
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const view = parseAdminView(params.view);

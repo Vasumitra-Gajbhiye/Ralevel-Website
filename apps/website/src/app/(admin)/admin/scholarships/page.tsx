@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import {
   getAdminScholarships,
   getAttentionCounts,
@@ -12,6 +13,9 @@ export default async function AdminScholarshipsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const denied = await guardSection("scholarships");
+  if (denied) return denied;
+
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
   const view = parseAdminView(params.view);

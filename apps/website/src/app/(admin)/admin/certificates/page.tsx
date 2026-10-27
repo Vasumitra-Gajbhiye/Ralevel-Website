@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
 import {
@@ -32,6 +33,9 @@ export default async function Certificates({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("certificates");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   await connectDB();
 
