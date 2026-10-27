@@ -1,5 +1,6 @@
 "use client";
 
+import { ROLE_META } from "@/components/admin/roleMeta";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -9,6 +10,7 @@ import {
 import { ListPagination } from "@/components/ui/list-pagination";
 import type { AdminAccessUser } from "@/lib/data/admin/access";
 import type { PaginationMeta } from "@/lib/pagination";
+import { ROLE_LABELS } from "@/lib/role-labels";
 import type { Role } from "@/lib/roles";
 import {
   ACCESS_PAGE_ASSIGNABLE_ROLES,
@@ -19,148 +21,15 @@ import type { AuthSession } from "@/types/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  Archive,
-  BadgeInfo,
-  Bot,
-  Brush,
-  Crown,
-  HelpingHand,
-  PenLine,
-  Shield,
-  Star,
-  User,
-  UserCog,
-} from "lucide-react";
-
 function getPrimaryRole(roles: Role[]) {
   if (!roles.length) return "former_staff"; // safe fallback
   return [...roles].sort((a, b) => roleRank(a) - roleRank(b))[0];
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  senior_mod: "Senior Moderator",
-  junior_mod: "Junior Moderator",
-  trial_mod: "Trial Moderator",
-  graphic_designer: "Graphic Designer",
-  writer_dep_head: "Writer Dep. Head",
-  senior_writer: "Senior Writer",
-  writer: "Writer",
-  bot_dev: "Bot Developer",
-  former_staff: "Former Staff",
-  informative_team: "Community Team",
-  helper: "Helper",
-  mod_dep_head: "MOD Dep. Head",
-  helper_dep_head: "HLP Dep. Head",
-  graphic_dep_head: "GFX Dep. Head",
-  info_dep_head: "COMM Dep. Head",
-  reddit_dep_head: "RD Dep. Head",
-  resource_dep_head: "Resource Dep. Head",
-  resource_staff: "Resource Staff",
-  scholarship_dep_head: "Scholarship Dep. Head",
-  scholarship_staff: "Scholarship Staff",
-};
-
 const ASSIGNABLE_ACCESS_ROLES = ACCESS_PAGE_ASSIGNABLE_ROLES.map((value) => [
   value,
   ROLE_LABELS[value],
 ] as const);
-
-export const ROLE_META: Record<
-  Role | "owner",
-  { color: string; icon: React.ElementType }
-> = {
-  owner: {
-    color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Crown,
-  },
-  admin: {
-    color: "bg-red-100 text-red-800 border-red-200",
-    icon: Shield,
-  },
-  mod_dep_head: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: Shield,
-  },
-  helper_dep_head: {
-    color: "bg-green-100 text-green-800 border-green-200",
-    icon: Shield,
-  },
-  graphic_dep_head: {
-    color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Shield,
-  },
-  info_dep_head: {
-    color: "bg-neutral-100 text-neutral-800 border-neutral-200",
-    icon: Shield,
-  },
-  reddit_dep_head: {
-    color: "bg-orange-100 text-orange-800 border-orange-200",
-    icon: Shield,
-  },
-  resource_dep_head: {
-    color: "bg-amber-100 text-amber-800 border-amber-200",
-    icon: Shield,
-  },
-  resource_staff: {
-    color: "bg-teal-100 text-teal-800 border-teal-200",
-    icon: UserCog,
-  },
-  scholarship_dep_head: {
-    color: "bg-sky-100 text-sky-800 border-sky-200",
-    icon: Shield,
-  },
-  scholarship_staff: {
-    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    icon: UserCog,
-  },
-  senior_mod: {
-    color: "bg-orange-100 text-orange-800 border-orange-200",
-    icon: UserCog,
-  },
-  junior_mod: {
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    icon: User,
-  },
-  trial_mod: {
-    color: "bg-slate-100 text-slate-700 border-slate-200",
-    icon: User,
-  },
-  graphic_designer: {
-    color: "bg-pink-100 text-pink-800 border-pink-200",
-    icon: Brush,
-  },
-  writer_dep_head: {
-    color: "bg-amber-100 text-amber-800 border-amber-200",
-    icon: Shield,
-  },
-  senior_writer: {
-    color: "bg-violet-100 text-violet-800 border-violet-200",
-    icon: Star,
-  },
-  writer: {
-    color: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: PenLine,
-  },
-  bot_dev: {
-    color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    icon: Bot,
-  },
-  former_staff: {
-    color: "bg-zinc-100 text-zinc-600 border-zinc-200",
-    icon: Archive,
-  },
-  informative_team: {
-    color: "bg-violet-100 text-violet-600 border-violet-200",
-    icon: BadgeInfo,
-  },
-  helper: {
-    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    icon: HelpingHand,
-  },
-};
 
 type AccessUser = {
   email: string;
