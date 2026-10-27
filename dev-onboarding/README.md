@@ -14,7 +14,7 @@ You'll run everything against **your own** local databases and **your own** free
 | 04 | [Environment variables](04-environment-variables.md): create your `.env.local` | 5 min |
 | 05 | [Clerk](05-clerk-setup.md): your own sign-in app | 15 min |
 | 06 | [Run the website](06-run-the-website.md) | 10 min |
-| 07 | [Admin access](07-admin-access.md): give yourself roles locally | 5 min |
+| 07 | [Admin access](07-admin-access.md): give yourself roles locally, and how page access works | 10 min |
 
 Then read these two before you start your first task:
 

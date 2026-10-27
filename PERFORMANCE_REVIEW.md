@@ -63,7 +63,7 @@ These patterns are worth replicating elsewhere:
 |---------|----------|
 | Mongoose global connection cache with `bufferCommands: false` + `getNativeMongoClient` | `lib/mongodb.tsx` |
 | Middleware `auth.protect()` on `/admin` + `/api/admin` | `proxy.ts` |
-| Centralized admin section role rules | `lib/adminAccess.ts`, `app/(admin)/admin/layout.tsx` |
+| Centralized admin page access (section registry + editable overrides) | `lib/admin-access/`, `app/(admin)/admin/layout.tsx` |
 | Shared `requireRoles` helper for API authorization | `lib/requireRoles.ts` |
 | `authorizeAdminApi` — auth before `connectDB()` + per-user rate limits on admin list GETs | `lib/adminApiAuth.ts`, `app/api/admin/**` |
 | Parallel R2 uploads via `Promise.all` | `app/api/forms/[slug]/submit/route.ts`, `app/api/resources/submit/route.ts` |
