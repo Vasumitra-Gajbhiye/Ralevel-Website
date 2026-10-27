@@ -1,9 +1,11 @@
 /** Sidebar and the cross-list views (Today, Upcoming, My Tasks). Server-only. */
 import connectDB from "@/lib/mongodb";
+import { personStandings } from "@/lib/tasks/awards";
 import { addDays, istTodayKey } from "@/lib/tasks/dates";
 import { departmentsForRoles, isHeadOf } from "@/lib/tasks/departments";
 import type { TasksActor } from "@/lib/tasks/permissions";
 import type { TaskDoc, TaskListDoc } from "@/lib/tasks/serialize";
+import { starsTowardNext } from "@/lib/tasks/stars";
 import type { SidebarData, TaskDTO } from "@/lib/tasks/types";
 import Task from "@/models/task";
 import TaskList from "@/models/taskList";
@@ -95,8 +97,21 @@ export async function getUpcomingView(actor: TasksActor) {
   return { todayKey, overdue: tasks.filter((t) => t.dueOn! < todayKey), days };
 }
 
-export async function getMyTasksView(actor: TasksActor): Promise<{ todayKey: string; tasks: TaskDTO[] }> {
+export type MyStarsRow = { key: string; name: string; stars: number; towardNext: number; due: number };
+
+export async function getMyTasksView(
+  actor: TasksActor,
+): Promise<{ todayKey: string; tasks: TaskDTO[]; stars: MyStarsRow[] }> {
   await connectDB();
-  const docs = await Task.find({ assigneeId: actor.id, ...openTopLevel }).limit(1000).lean<TaskDoc[]>();
-  return { todayKey: istTodayKey(), tasks: await serializeCrossListTasks(actor, docs) };
+  const [docs, standings] = await Promise.all([
+    Task.find({ assigneeId: actor.id, ...openTopLevel }).limit(1000).lean<TaskDoc[]>(),
+    personStandings(actor.id),
+  ]);
+  const stars = departmentsForRoles(actor.roles)
+    .filter((d) => standings.has(d.key))
+    .map((d) => {
+      const standing = standings.get(d.key)!;
+      return { key: d.key, name: d.name, stars: standing.stars, towardNext: starsTowardNext(standing.stars), due: standing.due };
+    });
+  return { todayKey: istTodayKey(), tasks: await serializeCrossListTasks(actor, docs), stars };
 }

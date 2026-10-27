@@ -4,13 +4,20 @@ import { departmentsForRoles, isHeadOf, isMemberRoleSet } from "../departments";
 import {
   canActOnTask,
   canAssign,
+  canClaim,
   canComment,
+  canCompleteTask,
   canEditSubtask,
   canEditTask,
   canManageList,
   canModerateComment,
+  canReview,
+  canSubmitForReview,
+  canUnclaim,
   canViewList,
   canViewTask,
+  needsReview,
+  permissionsFor,
   type ListScope,
   type TaskScope,
   type TasksActor,
@@ -29,7 +36,12 @@ const redditHead = actor("reddit", "reddit_dep_head");
 const former = actor("former", "former_staff");
 const nobody = actor("nobody");
 
+const resourceHead = actor("maeve", "resource_dep_head");
+const resourceStaff = actor("rstaff", "resource_staff");
+const resourceStaff2 = actor("rstaff2", "resource_staff");
+
 const moderation: ListScope = { kind: "department", departmentKey: "moderation", ownerId: null };
+const resources: ListScope = { kind: "department", departmentKey: "resources", ownerId: null };
 const general: ListScope = { kind: "department", departmentKey: "general", ownerId: null };
 const botdevList: ListScope = { kind: "department", departmentKey: "botdev", ownerId: null };
 const inboxOf = (id: string): ListScope => ({ kind: "inbox", departmentKey: null, ownerId: id });
@@ -179,5 +191,92 @@ describe("assignment", () => {
     expect(canAssign(writer, inboxOf("writer"), ["writer"])).toBe(false);
     expect(canAssign(juniorMod, moderation, ["junior_mod"])).toBe(false);
     expect(canAssign(redditHead, moderation, ["junior_mod"])).toBe(false);
+  });
+});
+
+describe("claiming", () => {
+  const open = task(resources, { claimable: true });
+
+  it("any member can claim an open task; outsiders and former staff can't", () => {
+    expect(canClaim(resourceStaff, open)).toBe(true);
+    expect(canClaim(resourceHead, open)).toBe(true);
+    expect(canClaim(admin, open)).toBe(true);
+    expect(canClaim(writer, open)).toBe(false);
+    expect(canClaim(former, open)).toBe(false);
+  });
+
+  it("only while it's claimable, unassigned, top-level and open", () => {
+    expect(canClaim(resourceStaff, task(resources))).toBe(false);
+    expect(canClaim(resourceStaff, { ...open, assigneeId: "rstaff2" })).toBe(false);
+    expect(canClaim(resourceStaff, { ...open, isSubtask: true })).toBe(false);
+    expect(canClaim(resourceStaff, { ...open, completed: true })).toBe(false);
+    expect(canClaim(writer, task(inboxOf("writer"), { claimable: true }))).toBe(false);
+  });
+
+  it("the claimer can hand it back until it's submitted", () => {
+    const claimed = { ...open, assigneeId: "rstaff" };
+    expect(canUnclaim(resourceStaff, claimed)).toBe(true);
+    expect(canUnclaim(resourceStaff2, claimed)).toBe(false);
+    expect(canUnclaim(resourceStaff, { ...claimed, submissionState: "submitted" })).toBe(false);
+    expect(canUnclaim(resourceStaff, { ...claimed, submissionState: "changes_requested" })).toBe(true);
+    expect(canUnclaim(resourceStaff, { ...claimed, claimable: false })).toBe(false);
+  });
+
+  it("serializes claim rights for the UI", () => {
+    expect(permissionsFor(resourceStaff, open).canClaim).toBe(true);
+    expect(permissionsFor(writer, open).canClaim).toBe(false);
+  });
+});
+
+describe("review", () => {
+  const rewarded = task(resources, { stars: 2, assigneeId: "rstaff", claimable: true });
+
+  it("a reward means review, except on subtasks and inbox tasks", () => {
+    expect(needsReview(rewarded)).toBe(true);
+    expect(needsReview(task(resources))).toBe(false);
+    expect(needsReview({ ...rewarded, isSubtask: true })).toBe(false);
+    expect(needsReview(task(inboxOf("writer"), { stars: 1 }))).toBe(false);
+  });
+
+  it("the assignee submits instead of completing", () => {
+    expect(canSubmitForReview(resourceStaff, rewarded)).toBe(true);
+    expect(canCompleteTask(resourceStaff, rewarded)).toBe(false);
+    expect(canSubmitForReview(resourceStaff2, rewarded)).toBe(false);
+    expect(canSubmitForReview(resourceStaff, { ...rewarded, submissionState: "submitted" })).toBe(false);
+    expect(canSubmitForReview(resourceStaff, { ...rewarded, submissionState: "changes_requested" })).toBe(true);
+    expect(canSubmitForReview(resourceStaff, { ...rewarded, stars: 0 })).toBe(false);
+  });
+
+  it("the assignee can still add and tick subtasks on a rewarded task", () => {
+    expect(canActOnTask(resourceStaff, rewarded)).toBe(true);
+    const sub = task(resources, { isSubtask: true, parentAssigneeId: "rstaff", stars: 0 });
+    expect(canCompleteTask(resourceStaff, sub)).toBe(true);
+  });
+
+  it("heads approve, but never their own work; admins can", () => {
+    expect(canReview(resourceHead, rewarded)).toBe(true);
+    expect(canCompleteTask(resourceHead, rewarded)).toBe(true);
+    expect(canReview(resourceStaff, rewarded)).toBe(false);
+    expect(canReview(modHead, rewarded)).toBe(false);
+
+    const headsOwn = { ...rewarded, assigneeId: "maeve" };
+    expect(canReview(resourceHead, headsOwn)).toBe(false);
+    expect(canCompleteTask(resourceHead, headsOwn)).toBe(false);
+    expect(canSubmitForReview(resourceHead, headsOwn)).toBe(true);
+    expect(canReview(admin, { ...rewarded, assigneeId: "admin" })).toBe(true);
+  });
+
+  it("only heads reopen an approved task", () => {
+    const approved = { ...rewarded, completed: true, submissionState: "approved" as const };
+    expect(canReview(resourceHead, approved)).toBe(false);
+    expect(canCompleteTask(resourceHead, approved)).toBe(true);
+    expect(canCompleteTask(resourceStaff, approved)).toBe(false);
+  });
+
+  it("tasks without a reward keep the old rules", () => {
+    const plain = task(resources, { assigneeId: "rstaff" });
+    expect(canCompleteTask(resourceStaff, plain)).toBe(true);
+    expect(canReview(resourceHead, plain)).toBe(false);
+    expect(canSubmitForReview(resourceStaff, plain)).toBe(false);
   });
 });

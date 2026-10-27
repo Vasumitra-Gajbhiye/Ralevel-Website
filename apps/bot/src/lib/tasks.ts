@@ -1,13 +1,16 @@
 /**
- * /tasks notifications: a DM when someone is assigned a task, and a daily
- * digest of tasks due today or overdue (run by cron at 09:00 IST).
+ * /tasks notifications: a DM when someone is assigned a task, review and
+ * reward DMs for tasks with stars, and a daily digest of tasks due today or
+ * overdue (run by cron at 09:00 IST).
  */
 import {
   formatTaskAssignedEmbed,
   formatTaskDigestEmbed,
+  formatTaskEventEmbed,
   sendDirectMessage,
   type TaskAssignedNotification,
   type TaskDigestItem,
+  type TaskEventNotification,
 } from "@ralevel/discord";
 import mongoose from "mongoose";
 import { isDiscordNotificationsEnabled, normalizeSiteUrl } from "../config.js";
@@ -46,6 +49,33 @@ export async function handleTaskAssigned(
   const { discordUserId, ...notification } = data;
   await sendDirectMessage(token, discordUserId, { embeds: [formatTaskAssignedEmbed(notification)] });
   return { ok: true };
+}
+
+export type TaskEventPayload = { discordUserIds: string[]; event: TaskEventNotification };
+
+const EVENT_DM_DELAY_MS = 300;
+const EVENT_MAX_RECIPIENTS = 10;
+
+/** One review/reward DM to each recipient; a failed DM doesn't stop the rest. */
+export async function handleTaskEvent(
+  data: TaskEventPayload,
+): Promise<{ ok: true; sent: number; skipped?: boolean }> {
+  const token = botToken();
+  const recipients = [...new Set(data.discordUserIds ?? [])].filter(Boolean).slice(0, EVENT_MAX_RECIPIENTS);
+  if (!token || !recipients.length || !data.event) return { ok: true, sent: 0, skipped: true };
+
+  const embed = formatTaskEventEmbed(data.event);
+  let sent = 0;
+  for (const [i, discordUserId] of recipients.entries()) {
+    if (i > 0) await sleep(EVENT_DM_DELAY_MS);
+    try {
+      await sendDirectMessage(token, discordUserId, { embeds: [embed] });
+      sent += 1;
+    } catch (err) {
+      console.error(`[tasks] ${data.event.kind} DM failed for ${discordUserId}:`, err);
+    }
+  }
+  return { ok: true, sent };
 }
 
 function istTodayKey(): string {

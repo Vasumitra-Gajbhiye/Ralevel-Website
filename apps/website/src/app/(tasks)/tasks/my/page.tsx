@@ -7,5 +7,5 @@ export const metadata = { title: "My tasks · Tasks" };
 export default async function MyTasksPage() {
   const { actor } = await requireTasksActor();
   const data = await getMyTasksView(actor);
-  return <MyTasksView tasks={data.tasks} />;
+  return <MyTasksView tasks={data.tasks} stars={data.stars} />;
 }

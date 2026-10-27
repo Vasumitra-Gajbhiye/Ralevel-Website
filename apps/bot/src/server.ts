@@ -3,7 +3,7 @@ import http from "node:http";
 import { handleApplicationSubmitted, processFormReminders } from "./lib/applications.js";
 import { handleAppealSubmitted } from "./lib/appeals.js";
 import { handleDiscordInteraction } from "./lib/interactions.js";
-import { handleTaskAssigned, processTaskDigest } from "./lib/tasks.js";
+import { handleTaskAssigned, handleTaskEvent, processTaskDigest } from "./lib/tasks.js";
 
 const PORT = Number(process.env.PORT ?? process.env.BOT_PORT ?? 8787);
 
@@ -153,6 +153,23 @@ async function handleRequest(
       json(res, 200, result);
     } catch (err) {
       console.error("[internal/task-assigned]", err);
+      json(res, 500, { error: "Failed to send task DM" });
+    }
+    return;
+  }
+
+  if (method === "POST" && path === "/internal/task-event") {
+    if (!isInternalAuthorized(req)) {
+      json(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    try {
+      const raw = await readBody(req);
+      const data = JSON.parse(raw.toString("utf8"));
+      const result = await handleTaskEvent(data);
+      json(res, 200, result);
+    } catch (err) {
+      console.error("[internal/task-event]", err);
       json(res, 500, { error: "Failed to send task DM" });
     }
     return;

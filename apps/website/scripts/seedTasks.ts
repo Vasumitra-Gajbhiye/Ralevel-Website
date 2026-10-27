@@ -23,6 +23,8 @@ const DEMO_USERS = [
   { name: "Tom Becker", nickname: "tomb", roles: ["bot_dev"] },
   { name: "Zara Ahmed", nickname: "zaraa", roles: ["informative_team"] },
   { name: "Leo Park", nickname: "leop", roles: ["former_staff"] },
+  { name: "Nadia Hussain", nickname: "nadiah", roles: ["resource_dep_head"] },
+  { name: "Sam Okafor", nickname: "samo", roles: ["resource_staff"] },
 ].map((u) => ({ ...u, email: `${u.nickname}.tasks-demo@example.com` }));
 
 type Seed = {
@@ -39,6 +41,10 @@ type Seed = {
   subtasks?: [string, boolean][];
   comments?: [number, string][];
   done?: boolean;
+  /** Star reward; done + assignee also writes the award. */
+  stars?: 1 | 2 | 3;
+  claimable?: boolean;
+  submission?: { state: "submitted" | "changes_requested"; link?: string; note?: string };
 };
 
 type ListSeed = { name: string; color: string; view?: "list" | "board"; sections: string[]; tasks: Seed[] };
@@ -106,6 +112,29 @@ const LISTS: Record<string, ListSeed[]> = {
       tasks: [
         { title: "Upload P3 integration notes", due: 3, assignee: 1, section: 0 },
         { title: "Fix broken Biology PDF links", due: -3, priority: 1, assignee: 1, section: 1 },
+        { title: "Write 9709 P1 topical notes", due: 12, priority: 2, section: 0, stars: 2, claimable: true, description: "One PDF per topic, with worked examples." },
+        { title: "Make an IGCSE Chemistry flashcard set", section: 1, stars: 1, claimable: true },
+        { title: "Summarise organic reaction mechanisms", due: 6, section: 1, stars: 3, claimable: true },
+        {
+          title: "Check 9702 past paper links",
+          due: 1,
+          section: 1,
+          stars: 1,
+          claimable: true,
+          assignee: 1,
+          submission: { state: "submitted", link: "https://drive.google.com/drive/folders/demo", note: "All links checked; 3 replaced." },
+        },
+        {
+          title: "Statistics S1 cheat sheet",
+          due: 4,
+          section: 0,
+          stars: 2,
+          assignee: 2,
+          submission: { state: "changes_requested", link: "https://docs.google.com/document/d/demo" },
+          comments: [[0, "Nice start! Please add the normal distribution table."]],
+        },
+        { title: "Upload Further Maths FP1 notes", section: 0, stars: 2, claimable: true, assignee: 1, done: true },
+        { title: "Tidy the Physics resources page", section: 1, stars: 1, assignee: 1, done: true },
       ],
     },
   ],
@@ -161,6 +190,8 @@ async function main() {
   const Task = (await import("../src/models/task")).default;
   const TaskComment = (await import("../src/models/taskComment")).default;
   const TaskActivity = (await import("../src/models/taskActivity")).default;
+  const TaskStarAward = (await import("../src/models/taskStarAward")).default;
+  const TaskStarCertificate = (await import("../src/models/taskStarCertificate")).default;
 
   await connectDB();
   console.log(`Seeding /tasks demo data into ${mongoose.connection.name}...`);
@@ -173,7 +204,9 @@ async function main() {
     );
   }
 
-  for (const model of [Task, TaskList, TaskSection, TaskComment, TaskActivity]) await model.deleteMany({});
+  for (const model of [Task, TaskList, TaskSection, TaskComment, TaskActivity, TaskStarAward, TaskStarCertificate]) {
+    await model.deleteMany({});
+  }
 
   const today = istTodayKey();
   const meEmail = argValue("--me")?.toLowerCase();
@@ -181,7 +214,7 @@ async function main() {
   if (meEmail && !me) console.warn(`  --me: no local user with email ${meEmail} (sign in once first). Skipping.`);
 
   type Person = { _id: unknown; roles: string[] };
-  const counts = { lists: 0, sections: 0, tasks: 0, comments: 0 };
+  const counts = { lists: 0, sections: 0, tasks: 0, comments: 0, awards: 0 };
 
   const createTask = async (
     seed: Seed,
@@ -209,8 +242,26 @@ async function main() {
       completedBy: seed.done ? assignee?._id ?? creator : null,
       commentCount: seed.comments?.length ?? 0,
       createdBy: creator,
+      claimable: seed.claimable ?? false,
+      stars: seed.stars ?? 0,
+      submission: seed.submission
+        ? { state: seed.submission.state, at: new Date(), link: seed.submission.link ?? null, note: seed.submission.note ?? "" }
+        : seed.done && seed.stars && assignee
+          ? { state: "approved", at: new Date(), link: null, note: "" }
+          : null,
     });
     counts.tasks++;
+    if (seed.done && seed.stars && assignee && base.departmentKey) {
+      await TaskStarAward.create({
+        userId: assignee._id,
+        departmentKey: base.departmentKey,
+        taskId: task._id,
+        taskTitle: seed.title,
+        stars: seed.stars,
+        awardedBy: creator,
+      });
+      counts.awards++;
+    }
     await TaskActivity.create({ taskId: task._id, listId: base.listId, actorId: creator, type: "created", data: { title: seed.title } });
 
     for (const [i, [title, done]] of (seed.subtasks ?? []).entries()) {
@@ -280,7 +331,7 @@ async function main() {
   }
 
   console.log(
-    `  ${counts.lists} lists, ${counts.sections} sections, ${counts.tasks} tasks, ${counts.comments} comments, ${staffUsers.length} inboxes`,
+    `  ${counts.lists} lists, ${counts.sections} sections, ${counts.tasks} tasks, ${counts.comments} comments, ${counts.awards} star awards, ${staffUsers.length} inboxes`,
   );
   console.log(`  Demo users: ${DEMO_USERS.map((u) => `${u.name} (${u.roles[0]})`).join(", ")}`);
   await mongoose.disconnect();

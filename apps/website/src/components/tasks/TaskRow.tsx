@@ -8,6 +8,7 @@ import { ListChecks, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ColorDot, DueLabel, TaskCheckbox, UserAvatar } from "./bits";
+import { ClaimButton, ReviewStateChip, reviewStateOf, StarsChip, SubmitDialog } from "./Review";
 import { useTasksUI } from "./TasksContext";
 
 /** Completes/uncompletes with an Undo toast; repeating tasks report their next date. */
@@ -54,8 +55,12 @@ export function TaskRow({
   const { openTask, todayKey } = useTasksUI();
   const complete = useCompleteTask();
   const [checked, setChecked] = useState(Boolean(task.completedAt));
+  const [submitting, setSubmitting] = useState(false);
+  // On a task with a reward, the assignee's checkbox hands it in instead.
+  const submitsInstead = !task.perms.canComplete && task.perms.canSubmit;
 
   const onToggle = async (next: boolean) => {
+    if (submitsInstead) return setSubmitting(true);
     setChecked(next);
     const saved = await complete(task, next);
     if (!saved) setChecked(!next); // roll back
@@ -63,7 +68,13 @@ export function TaskRow({
   };
 
   const hasMeta =
-    task.dueOn || task.subtaskCount > 0 || task.commentCount > 0 || (showList && task.list) || task.description;
+    task.dueOn ||
+    task.subtaskCount > 0 ||
+    task.commentCount > 0 ||
+    (showList && task.list) ||
+    task.description ||
+    task.stars > 0 ||
+    reviewStateOf(task);
 
   return (
     <div
@@ -82,7 +93,7 @@ export function TaskRow({
       <TaskCheckbox
         priority={task.priority}
         checked={checked}
-        disabled={!task.perms.canAct}
+        disabled={!task.perms.canComplete && !submitsInstead}
         onChange={onToggle}
         label={task.title}
       />
@@ -110,6 +121,8 @@ export function TaskRow({
                 {task.commentCount}
               </span>
             )}
+            <StarsChip stars={task.stars} />
+            <ReviewStateChip task={task} />
             {showList && task.list && (
               <span className="ml-auto inline-flex min-w-0 items-center gap-1.5 text-gray-500">
                 <span className="truncate">{task.list.kind === "inbox" ? "Inbox" : task.list.name}</span>
@@ -119,7 +132,17 @@ export function TaskRow({
           </div>
         )}
       </div>
-      {task.assignee && <UserAvatar user={task.assignee} size={22} className="mt-0.5" />}
+      {task.perms.canClaim ? (
+        <ClaimButton task={task} className="-my-0.5 shrink-0" />
+      ) : (
+        task.assignee && <UserAvatar user={task.assignee} size={22} className="mt-0.5" />
+      )}
+      {submitting && (
+        // React events bubble out of the dialog's portal; keep them from opening the row.
+        <span className="contents" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <SubmitDialog task={task} open={submitting} onOpenChange={setSubmitting} />
+        </span>
+      )}
     </div>
   );
 }

@@ -4,8 +4,9 @@ import { resolveWriterAvatar } from "@/lib/resolveWriterAvatar";
 import UserData from "@/models/userData";
 import type { Types } from "mongoose";
 import { istTimeOf } from "./dates";
-import { permissionsFor, type TaskScope, type TasksActor } from "./permissions";
+import { permissionsFor, type SubmissionState, type TaskScope, type TasksActor } from "./permissions";
 import type { Recurrence } from "./recurrence";
+import type { StarCount } from "./stars";
 import type { ListKind, ListView, SectionDTO, TaskDTO, TaskListDTO, TaskListRef, UserLite } from "./types";
 
 type Id = Types.ObjectId | string;
@@ -29,6 +30,10 @@ export type TaskDoc = {
   completedBy?: Types.ObjectId | null;
   commentCount?: number;
   createdBy?: Types.ObjectId | null;
+  claimable?: boolean;
+  stars?: number;
+  submission?: { state: SubmissionState; at: Date; link?: string | null; note?: string } | null;
+  discordPost?: { channelId: string; messageId: string } | null;
 };
 
 export type TaskListDoc = {
@@ -60,6 +65,11 @@ export function taskScopeOf(task: TaskDoc, parentAssigneeId?: string | null): Ta
     assigneeId: idOf(task.assigneeId),
     createdBy: idOf(task.createdBy),
     parentAssigneeId: parentAssigneeId ?? null,
+    isSubtask: Boolean(task.parentId),
+    completed: Boolean(task.completedAt),
+    claimable: Boolean(task.claimable),
+    stars: task.stars ?? 0,
+    submissionState: task.submission?.state ?? null,
   };
 }
 
@@ -151,6 +161,16 @@ export function toTaskDTO(task: TaskDoc, ctx: TaskSerializeContext): TaskDTO {
     subtaskCount: stats?.total ?? 0,
     subtaskDone: stats?.done ?? 0,
     createdById: idOf(task.createdBy),
+    claimable: Boolean(task.claimable),
+    stars: (task.stars ?? 0) as StarCount,
+    submission: task.submission
+      ? {
+          state: task.submission.state,
+          at: new Date(task.submission.at).toISOString(),
+          link: task.submission.link ?? null,
+          note: task.submission.note ?? "",
+        }
+      : null,
     perms: permissionsFor(ctx.actor, taskScopeOf(task, ctx.parentAssigneeId)),
     ...(ctx.lists?.get(String(task.listId)) ? { list: ctx.lists.get(String(task.listId)) } : {}),
   };

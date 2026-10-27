@@ -5,27 +5,49 @@
  */
 import connectDB from "@/lib/mongodb";
 import { isAdmin, sanitizeRoles } from "@/lib/roles";
-import type { ListCreateInput, ListPatchInput, TaskCreateInput, TaskPatchInput } from "@/lib/validation/tasks";
+import type {
+  CertificateMarkInput,
+  ListCreateInput,
+  ListPatchInput,
+  ReviewInput,
+  SubmitInput,
+  TaskCreateInput,
+  TaskPatchInput,
+} from "@/lib/validation/tasks";
 import Task from "@/models/task";
 import TaskComment from "@/models/taskComment";
 import TaskList from "@/models/taskList";
 import TaskSection from "@/models/taskSection";
+import TaskStarCertificate from "@/models/taskStarCertificate";
 import UserData from "@/models/userData";
 import { isValidObjectId, type Model, type Types } from "mongoose";
 import { logActivity, type ActivityEntry } from "./activity";
 import { fail, ok, type MutationResult } from "./api";
+import { awardStars, departmentStandings, revokeStars } from "./awards";
 import { instantFromIst, istTimeOf, istTodayKey } from "./dates";
-import { notifyTaskAssigned } from "./notify";
+import {
+  notifyApproved,
+  notifyCertificateDue,
+  notifyChangesRequested,
+  notifyReviewRequested,
+  notifyTaskAssigned,
+} from "./notify";
 import {
   canActOnTask,
   canAssign,
+  canClaim,
   canComment,
+  canCompleteTask,
   canEditSubtask,
   canEditTask,
   canManageList,
   canModerateComment,
+  canReview,
+  canSubmitForReview,
+  canUnclaim,
   canViewList,
   canViewTask,
+  needsReview,
   type ListScope,
   type TasksActor,
 } from "./permissions";
@@ -35,7 +57,8 @@ import {
   normalizeRecurrence,
   type Recurrence,
 } from "./recurrence";
-import { idOf, listScopeOf, stripRecurrence, taskScopeOf, type TaskDoc, type TaskListDoc } from "./serialize";
+import { idOf, listScopeOf, resolveUsers, stripRecurrence, taskScopeOf, type TaskDoc, type TaskListDoc } from "./serialize";
+import { crossedMilestone } from "./stars";
 
 type IdResult = MutationResult<{ id: string }>;
 
@@ -220,6 +243,19 @@ function resolveDue(
   };
 }
 
+/** Star rewards and claiming only make sense on one-off department tasks. */
+function rewardError(input: {
+  kind: ListScope["kind"];
+  recurrence: Recurrence | null;
+  stars: number;
+  claimable: boolean;
+}): string | null {
+  if (!input.stars && !input.claimable) return null;
+  if (input.kind === "inbox") return "Inbox tasks can't have a reward or be open for claiming";
+  if (input.recurrence) return "Repeating tasks can't have a reward or be open for claiming";
+  return null;
+}
+
 export async function createTask(actor: TasksActor, input: TaskCreateInput): Promise<IdResult> {
   await connectDB();
   const list = await loadList(input.listId);
@@ -267,6 +303,11 @@ export async function createTask(actor: TasksActor, input: TaskCreateInput): Pro
   const due = resolveDue(input.dueOn ?? null, input.dueTime ?? null, input.recurrence ?? null);
   if ("error" in due) return fail(due.error);
 
+  const stars = input.stars ?? 0;
+  const claimable = input.claimable ?? false;
+  const rewardProblem = rewardError({ kind: list.kind, recurrence: due.recurrence, stars, claimable });
+  if (rewardProblem) return fail(rewardProblem);
+
   const created = await Task.create({
     listId: list._id,
     sectionId,
@@ -278,6 +319,8 @@ export async function createTask(actor: TasksActor, input: TaskCreateInput): Pro
     assigneeId,
     ...due,
     priority: input.priority ?? 4,
+    claimable,
+    stars,
     order: await nextOrder(Task as Model<unknown>, { listId: list._id, sectionId, parentId: null }),
     createdBy: actor.id,
     updatedBy: actor.id,
@@ -374,6 +417,8 @@ export async function updateTask(actor: TasksActor, taskId: string, patch: TaskP
     set.assigneeId = null;
     entries.push({ type: "unassigned", data: { from: currentAssignee } });
   }
+  // A hand-in belongs to whoever made it.
+  if (set.assigneeId !== undefined && task.submission && !task.completedAt) set.submission = null;
 
   // Due date, time and repeat
   if (patch.dueOn !== undefined || patch.dueTime !== undefined || patch.recurrence !== undefined) {
@@ -399,6 +444,25 @@ export async function updateTask(actor: TasksActor, taskId: string, patch: TaskP
       entries.push({ type: "recurrence_changed", data: { on: Boolean(due.recurrence) } });
     }
     Object.assign(set, due);
+  }
+
+  // Reward and claiming
+  const stars = patch.stars ?? task.stars ?? 0;
+  const claimable = patch.claimable ?? Boolean(task.claimable);
+  const recurrence = set.recurrence !== undefined ? (set.recurrence as Recurrence | null) : (task.recurrence ?? null);
+  if (stars !== (task.stars ?? 0) || claimable !== Boolean(task.claimable) || set.recurrence !== undefined) {
+    const rewardProblem = rewardError({ kind: target.kind, recurrence, stars, claimable });
+    if (rewardProblem) return fail(rewardProblem);
+  }
+  if (stars !== (task.stars ?? 0)) {
+    if (task.completedAt) return fail("Reopen the task to change its reward");
+    set.stars = stars;
+    entries.push({ type: "stars_changed", data: { from: task.stars ?? 0, to: stars } });
+    if (!stars && task.submission && !task.completedAt) set.submission = null;
+  }
+  if (claimable !== Boolean(task.claimable)) {
+    set.claimable = claimable;
+    entries.push({ type: "claimable_changed", data: { on: claimable } });
   }
 
   if (!Object.keys(set).length) return ok({ id: taskId });
@@ -449,9 +513,12 @@ export async function setTaskCompleted(actor: TasksActor, taskId: string, comple
   if (task.parentId && !parent) return fail(NOT_FOUND, 404);
   const scope = taskScopeOf(task, parent ? idOf(parent.assigneeId) : null);
   if (!canViewTask(actor, scope)) return fail(NOT_FOUND, 404);
-  if (!canActOnTask(actor, scope)) return fail("Only the assignee or a department head can complete this task", 403);
-
+  if (!canCompleteTask(actor, scope)) return fail(completeDeniedReason(actor, scope), 403);
   if (completed === Boolean(task.completedAt)) return ok({ id: taskId, completed });
+
+  // Reviewed tasks close through approval, which pays the assignee's stars.
+  if (needsReview(scope)) return completed ? approveTask(actor, task) : reopenReviewedTask(actor, task);
+
   const now = new Date();
 
   if (completed && !task.parentId && task.recurrence && task.dueOn) {
@@ -476,6 +543,202 @@ export async function setTaskCompleted(actor: TasksActor, taskId: string, comple
     await logActivity(task, actor.id, [{ type: completed ? "completed" : "uncompleted" }]);
   }
   return ok({ id: taskId, completed });
+}
+
+function completeDeniedReason(actor: TasksActor, scope: ReturnType<typeof taskScopeOf>): string {
+  if (!needsReview(scope)) return "Only the assignee or a department head can complete this task";
+  if (scope.completed) return "Only department heads can reopen this task";
+  if (scope.assigneeId === actor.id) {
+    return canEditTask(actor, scope)
+      ? "Someone else has to approve your own task"
+      : "Submit this task for review instead";
+  }
+  return "Only department heads can approve this task";
+}
+
+/** Completes a reviewed task and pays its stars to the assignee, if it has one. */
+async function approveTask(actor: TasksActor, task: TaskDoc): Promise<CompleteResult> {
+  const now = new Date();
+  const set: Record<string, unknown> = { completedAt: now, completedBy: actor.id, updatedBy: actor.id };
+  if (task.submission) set["submission.state"] = "approved";
+  const closed = await Task.updateOne({ _id: task._id, completedAt: null }, { $set: set });
+  if (!closed.modifiedCount) return ok({ id: String(task._id), completed: true });
+  await Task.updateMany({ parentId: task._id, completedAt: null }, { $set: { completedAt: now, completedBy: actor.id } });
+
+  const assigneeId = idOf(task.assigneeId);
+  const stars = task.stars ?? 0;
+  const paid =
+    assigneeId && task.departmentKey
+      ? await awardStars({
+          taskId: task._id,
+          taskTitle: task.title,
+          departmentKey: task.departmentKey,
+          userId: assigneeId,
+          stars,
+          awardedBy: actor.id,
+        })
+      : null;
+  await logActivity(task, actor.id, [{ type: "approved", data: { stars: paid ? stars : 0, to: assigneeId } }]);
+
+  if (paid && assigneeId && task.departmentKey) {
+    const list = await loadList(String(task.listId));
+    if (list) {
+      fireAndForget(
+        notifyApproved({ task, list, assigneeId, reviewerId: actor.id, stars, before: paid.before, after: paid.after }),
+      );
+    }
+    if (crossedMilestone(paid.before, paid.after)) {
+      fireAndForget(
+        notifyCertificateDue({ personId: assigneeId, departmentKey: task.departmentKey, totalStars: paid.after }),
+      );
+    }
+  }
+  return ok({ id: String(task._id), completed: true });
+}
+
+/** Un-completes a reviewed task: its stars are taken back and any hand-in goes back to the queue. */
+async function reopenReviewedTask(actor: TasksActor, task: TaskDoc): Promise<CompleteResult> {
+  const set: Record<string, unknown> = { completedAt: null, completedBy: null, updatedBy: actor.id };
+  if (task.submission) set["submission.state"] = "submitted";
+  await Task.updateOne({ _id: task._id }, { $set: set });
+  const revoked = await revokeStars(task._id);
+  await logActivity(task, actor.id, [{ type: "uncompleted", data: revoked ? { starsRevoked: revoked } : {} }]);
+  return ok({ id: String(task._id), completed: false });
+}
+
+/* --------------------------- Claiming and review -------------------------- */
+
+async function topLevelTask(actor: TasksActor, taskId: string): Promise<TaskDoc | Failure> {
+  const task = await loadTask(taskId);
+  if (!task || task.parentId || !canViewTask(actor, taskScopeOf(task))) return fail(NOT_FOUND, 404);
+  return task;
+}
+
+async function claimedByMessage(taskId: Types.ObjectId): Promise<string> {
+  const fresh = await Task.findById(taskId).select("assigneeId").lean<{ assigneeId?: Types.ObjectId | null }>();
+  const assigneeId = idOf(fresh?.assigneeId);
+  if (!assigneeId) return "This task isn't open for claiming any more";
+  const name = (await resolveUsers([assigneeId])).get(assigneeId)?.name;
+  return name ? `Already claimed by ${name}` : "Someone already claimed this task";
+}
+
+export async function claimTask(actor: TasksActor, taskId: string): Promise<IdResult> {
+  await connectDB();
+  const task = await topLevelTask(actor, taskId);
+  if (isFailure(task)) return task;
+  const scope = taskScopeOf(task);
+  if (!canClaim(actor, scope)) {
+    if (!task.claimable) return fail("This task isn't open for claiming");
+    if (task.completedAt) return fail("This task is already done");
+    if (task.assigneeId) return fail(await claimedByMessage(task._id), 409);
+    return fail("Only members of this department can claim it", 403);
+  }
+
+  const claimed = await Task.updateOne(
+    { _id: task._id, claimable: true, assigneeId: null, completedAt: null, parentId: null },
+    { $set: { assigneeId: actor.id, submission: null, updatedBy: actor.id } },
+  );
+  if (!claimed.modifiedCount) return fail(await claimedByMessage(task._id), 409);
+  await logActivity(task, actor.id, [{ type: "claimed", data: { to: actor.id } }]);
+  return ok({ id: taskId });
+}
+
+export async function unclaimTask(actor: TasksActor, taskId: string): Promise<IdResult> {
+  await connectDB();
+  const task = await topLevelTask(actor, taskId);
+  if (isFailure(task)) return task;
+  if (!canUnclaim(actor, taskScopeOf(task))) {
+    return fail(
+      task.submission?.state === "submitted" ? "It's waiting for review, so it can't be handed back" : "You haven't claimed this task",
+      403,
+    );
+  }
+
+  const released = await Task.updateOne(
+    { _id: task._id, assigneeId: actor.id, completedAt: null, "submission.state": { $ne: "submitted" } },
+    { $set: { assigneeId: null, submission: null, updatedBy: actor.id } },
+  );
+  if (!released.modifiedCount) return fail("This task changed. Refresh and try again", 409);
+  await logActivity(task, actor.id, [{ type: "unclaimed", data: { from: actor.id } }]);
+  return ok({ id: taskId });
+}
+
+export async function submitForReview(actor: TasksActor, taskId: string, input: SubmitInput): Promise<IdResult> {
+  await connectDB();
+  const task = await topLevelTask(actor, taskId);
+  if (isFailure(task)) return task;
+  const scope = taskScopeOf(task);
+  if (!canSubmitForReview(actor, scope)) {
+    if (!needsReview(scope)) return fail("This task doesn't need a review. Just complete it");
+    if (task.submission?.state === "submitted") return fail("It's already waiting for review");
+    return fail("Only the person doing this task can submit it", 403);
+  }
+
+  const link = input.link?.trim() || null;
+  const note = input.note?.trim() ?? "";
+  const submitted = await Task.updateOne(
+    { _id: task._id, assigneeId: actor.id, completedAt: null, "submission.state": { $ne: "submitted" } },
+    { $set: { submission: { state: "submitted", at: new Date(), link, note }, updatedBy: actor.id } },
+  );
+  if (!submitted.modifiedCount) return fail("This task changed. Refresh and try again", 409);
+  await logActivity(task, actor.id, [{ type: "submitted", data: link ? { link } : {} }]);
+
+  const list = await loadList(String(task.listId));
+  if (list) fireAndForget(notifyReviewRequested({ task, list, submitterId: actor.id, note, link }));
+  return ok({ id: taskId });
+}
+
+export async function reviewTask(actor: TasksActor, taskId: string, input: ReviewInput): Promise<IdResult> {
+  await connectDB();
+  const task = await topLevelTask(actor, taskId);
+  if (isFailure(task)) return task;
+  const scope = taskScopeOf(task);
+  if (!canReview(actor, scope)) {
+    if (!needsReview(scope)) return fail("This task doesn't have a reward to review");
+    if (task.completedAt) return fail("This task is already approved");
+    return fail(completeDeniedReason(actor, scope), 403);
+  }
+
+  if (input.decision === "approve") {
+    if (!task.assigneeId) return fail("Assign this task to someone before approving it");
+    const result = await approveTask(actor, task);
+    return result.ok ? ok({ id: taskId }) : result;
+  }
+
+  if (task.submission?.state !== "submitted") return fail("Nothing has been submitted for review yet");
+  const returned = await Task.updateOne(
+    { _id: task._id, completedAt: null, "submission.state": "submitted" },
+    { $set: { "submission.state": "changes_requested", updatedBy: actor.id } },
+  );
+  if (!returned.modifiedCount) return fail("This task changed. Refresh and try again", 409);
+  await TaskComment.create({ taskId: task._id, authorId: actor.id, body: input.comment });
+  await Task.updateOne({ _id: task._id }, { $inc: { commentCount: 1 } });
+  await logActivity(task, actor.id, [{ type: "changes_requested" }]);
+
+  const assigneeId = idOf(task.assigneeId);
+  const list = await loadList(String(task.listId));
+  if (assigneeId && list) {
+    fireAndForget(notifyChangesRequested({ task, list, assigneeId, reviewerId: actor.id, comment: input.comment }));
+  }
+  return ok({ id: taskId });
+}
+
+/** Records that an admin issued a certificate for someone's stars. */
+export async function markCertificateIssued(actor: TasksActor, input: CertificateMarkInput): Promise<IdResult> {
+  await connectDB();
+  if (!isAdmin(actor.roles)) return fail("Only owners and admins can issue certificates", 403);
+  // Not a membership check: people who have left can still be owed a certificate.
+  if (!(await UserData.exists({ _id: input.userId }))) return fail("That person wasn't found", 404);
+  const standing = (await departmentStandings(input.departmentKey)).get(input.userId);
+  if (!standing?.due) return fail("No certificate is due for this person");
+
+  const created = await TaskStarCertificate.create({
+    userId: input.userId,
+    departmentKey: input.departmentKey,
+    markedBy: actor.id,
+    certId: input.certId?.trim() || null,
+  });
+  return ok({ id: String(created._id) });
 }
 
 /** Reorders (and re-sections) top-level tasks: `orderedIds` is the destination's full order. */

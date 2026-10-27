@@ -1,18 +1,127 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { DepartmentPageData } from "@/lib/data/tasks/lists";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import type { DepartmentPageData, DepartmentPersonRow } from "@/lib/data/tasks/lists";
 import { tasksApi } from "@/lib/tasks/client";
-import { ChevronRight, Plus } from "lucide-react";
+import { STARS_PER_CERTIFICATE, starsTowardNext } from "@/lib/tasks/stars";
+import type { TaskDTO } from "@/lib/tasks/types";
+import { ChevronRight, Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ColorDot, EmptyState, UserAvatar } from "./bits";
 import { ListFormDialog } from "./ListFormDialog";
+import { TaskRow } from "./TaskRow";
+
+function SectionHeading({ title, count }: { title: string; count?: number }) {
+  return (
+    <h2 className="mb-1 flex items-center gap-2 border-b border-gray-200 pb-1.5 text-sm font-semibold text-gray-800">
+      {title}
+      {count !== undefined && count > 0 && <span className="text-xs font-normal text-gray-400">{count}</span>}
+    </h2>
+  );
+}
+
+function TaskSection({ title, tasks, hint }: { title: string; tasks: TaskDTO[]; hint?: string }) {
+  return (
+    <section className="mb-10">
+      <SectionHeading title={title} count={tasks.length} />
+      {hint && <p className="py-1 text-xs text-gray-500">{hint}</p>}
+      {tasks.map((t) => (
+        <TaskRow key={t.id} task={t} showList />
+      ))}
+    </section>
+  );
+}
+
+/** "★ 7 · 3 more to your next certificate", or a nudge when one is due. */
+function MyStars({ standing }: { standing: NonNullable<DepartmentPageData["myStanding"]> }) {
+  const left = STARS_PER_CERTIFICATE - starsTowardNext(standing.stars);
+  return (
+    <p className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-600">
+      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+      <span className="font-medium text-gray-900">{standing.stars}</span>
+      {standing.due > 0 ? (
+        <span>· you&apos;ve earned a certificate, and an admin will issue it soon</span>
+      ) : (
+        <span>
+          · {left} more to your {standing.issued ? "next " : ""}certificate
+        </span>
+      )}
+    </p>
+  );
+}
+
+function MarkIssuedButton({ person, departmentKey }: { person: DepartmentPersonRow; departmentKey: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [certId, setCertId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await tasksApi.markCertificateIssued({
+        userId: person.user.id,
+        departmentKey,
+        certId: certId.trim() || undefined,
+      });
+      toast.success(`Marked a certificate as issued for ${person.user.name}`);
+      setOpen(false);
+      router.refresh();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setOpen(true)}>
+        Mark issued
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm tracking-normal">
+          <DialogHeader>
+            <DialogTitle>Certificate issued?</DialogTitle>
+            <DialogDescription>
+              Issue it in Admin → Certificates first. Marking it here uses up {STARS_PER_CERTIFICATE} of{" "}
+              {person.user.name}&apos;s stars.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void save();
+            }}
+            className="space-y-4"
+          >
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-gray-600">Certificate ID (optional)</span>
+              <Input value={certId} maxLength={100} onChange={(e) => setCertId(e.target.value)} />
+            </label>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                Mark issued
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 export function DepartmentView({ data }: { data: DepartmentPageData }) {
-  const { department, canManage, lists, archived, people, unassignedOpen } = data;
+  const { department, canManage, canIssueCertificates, lists, archived, people, unassignedOpen } = data;
+  const { upForGrabs, awaitingReview, myStanding } = data;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [creating, setCreating] = useState(searchParams.get("new") === "1" && canManage);
@@ -44,8 +153,20 @@ export function DepartmentView({ data }: { data: DepartmentPageData }) {
         )}
       </header>
 
+      {myStanding && <MyStars standing={myStanding} />}
+
+      {canManage && awaitingReview.length > 0 && <TaskSection title="Waiting for review" tasks={awaitingReview} />}
+
+      {upForGrabs.length > 0 && (
+        <TaskSection
+          title="Up for grabs"
+          tasks={upForGrabs}
+          hint={canManage ? undefined : "Claim one to make it yours. Tasks with stars count toward a certificate."}
+        />
+      )}
+
       <section>
-        <h2 className="mb-1 border-b border-gray-200 pb-1.5 text-sm font-semibold text-gray-800">Lists</h2>
+        <SectionHeading title="Lists" />
         {lists.length === 0 ? (
           <EmptyState
             title="No lists yet"
@@ -73,7 +194,7 @@ export function DepartmentView({ data }: { data: DepartmentPageData }) {
 
       {canManage && (
         <section className="mt-10">
-          <h2 className="mb-1 border-b border-gray-200 pb-1.5 text-sm font-semibold text-gray-800">Team</h2>
+          <SectionHeading title="Team" />
           {people.length === 0 ? (
             <p className="py-3 text-sm text-gray-500">No one has tasks assigned in this department yet.</p>
           ) : (
@@ -81,25 +202,37 @@ export function DepartmentView({ data }: { data: DepartmentPageData }) {
               <thead>
                 <tr className="text-left text-xs text-gray-500">
                   <th className="py-2 font-normal">Person</th>
-                  <th className="w-16 py-2 text-right font-normal">Open</th>
-                  <th className="w-20 py-2 text-right font-normal">Overdue</th>
-                  <th className="w-24 py-2 text-right font-normal">Done (7d)</th>
+                  <th className="w-14 py-2 text-right font-normal">Open</th>
+                  <th className="hidden w-20 py-2 text-right font-normal sm:table-cell">Overdue</th>
+                  <th className="hidden w-24 py-2 text-right font-normal sm:table-cell">Done (7d)</th>
+                  <th className="w-14 py-2 text-right font-normal">Stars</th>
                 </tr>
               </thead>
               <tbody>
                 {people.map((p) => (
                   <tr key={p.user.id} className="border-t border-gray-100">
                     <td className="py-2">
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                         <UserAvatar user={p.user} size={22} />
                         <span className="truncate">{p.user.name}</span>
+                        {p.certificatesDue > 0 && (
+                          <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                            Certificate due{p.certificatesDue > 1 ? ` ×${p.certificatesDue}` : ""}
+                          </span>
+                        )}
+                        {p.certificatesDue > 0 && canIssueCertificates && (
+                          <MarkIssuedButton person={p} departmentKey={department.key} />
+                        )}
                       </span>
                     </td>
                     <td className="py-2 text-right tabular-nums">{p.open}</td>
-                    <td className={`py-2 text-right tabular-nums ${p.overdue ? "font-medium text-red-600" : "text-gray-400"}`}>
+                    <td
+                      className={`hidden py-2 text-right tabular-nums sm:table-cell ${p.overdue ? "font-medium text-red-600" : "text-gray-400"}`}
+                    >
                       {p.overdue}
                     </td>
-                    <td className="py-2 text-right tabular-nums text-gray-600">{p.doneThisWeek}</td>
+                    <td className="hidden py-2 text-right tabular-nums text-gray-600 sm:table-cell">{p.doneThisWeek}</td>
+                    <td className={`py-2 text-right tabular-nums ${p.stars ? "text-amber-700" : "text-gray-400"}`}>{p.stars}</td>
                   </tr>
                 ))}
               </tbody>

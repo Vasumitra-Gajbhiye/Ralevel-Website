@@ -1,5 +1,6 @@
 /** Typed fetch wrappers for /api/tasks. Client-safe. Throws Error(message) on failure. */
 import type { Recurrence } from "./recurrence";
+import type { StarCount } from "./stars";
 import type { ListView, MemberOption, TaskDetailDTO } from "./types";
 
 async function call<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -23,6 +24,8 @@ export type TaskFields = {
   recurrence?: Recurrence | null;
   priority?: 1 | 2 | 3 | 4;
   sectionId?: string | null;
+  claimable?: boolean;
+  stars?: StarCount;
 };
 
 export const tasksApi = {
@@ -48,6 +51,16 @@ export const tasksApi = {
   setCompleted: (taskId: string, completed: boolean) =>
     call<{ id: string; completed: boolean; nextDueOn?: string }>("POST", `/items/${taskId}/complete`, { completed }),
   deleteTask: (taskId: string) => call<{ id: string }>("DELETE", `/items/${taskId}`),
+
+  claim: (taskId: string) => call<{ id: string }>("POST", `/items/${taskId}/claim`),
+  unclaim: (taskId: string) => call<{ id: string }>("DELETE", `/items/${taskId}/claim`),
+  submit: (taskId: string, input: { link?: string | null; note?: string }) =>
+    call<{ id: string }>("POST", `/items/${taskId}/submit`, input),
+  approve: (taskId: string) => call<{ id: string }>("POST", `/items/${taskId}/review`, { decision: "approve" }),
+  requestChanges: (taskId: string, comment: string) =>
+    call<{ id: string }>("POST", `/items/${taskId}/review`, { decision: "changes", comment }),
+  markCertificateIssued: (input: { userId: string; departmentKey: string; certId?: string }) =>
+    call<{ id: string }>("POST", "/certificates", input),
 
   addComment: (taskId: string, body: string) => call<{ id: string }>("POST", `/items/${taskId}/comments`, { body }),
   editComment: (commentId: string, body: string) => call<{ id: string }>("PATCH", `/comments/${commentId}`, { body }),

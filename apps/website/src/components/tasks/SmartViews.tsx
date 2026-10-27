@@ -1,10 +1,13 @@
 "use client";
 
+import type { MyStarsRow } from "@/lib/data/tasks/workspace";
 import { tasksApi } from "@/lib/tasks/client";
 import { formatDayHeading } from "@/lib/tasks/dates";
 import { getDepartment } from "@/lib/tasks/departments";
+import { STARS_PER_CERTIFICATE } from "@/lib/tasks/stars";
 import type { TaskDTO } from "@/lib/tasks/types";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Star } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { InlineAddTask } from "./AddTask";
@@ -111,7 +114,29 @@ export function UpcomingView({ overdue, days }: { overdue: TaskDTO[]; days: { ke
   );
 }
 
-export function MyTasksView({ tasks }: { tasks: TaskDTO[] }) {
+/** One muted line per department where you've earned stars, e.g. "Resources ★ 3 / 5". */
+function MyStarsLine({ stars }: { stars: MyStarsRow[] }) {
+  if (!stars.length) return null;
+  return (
+    <p className="-mt-3 mb-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+      {stars.map((row) => (
+        <Link key={row.key} href={`/tasks/d/${row.key}`} className="inline-flex items-center gap-1 hover:text-gray-800">
+          {row.name}
+          <Star className="h-3 w-3 fill-amber-400 text-amber-500" />
+          {row.due > 0 ? (
+            <span className="font-medium text-violet-700">certificate earned</span>
+          ) : (
+            <span className="tabular-nums">
+              {row.towardNext} / {STARS_PER_CERTIFICATE}
+            </span>
+          )}
+        </Link>
+      ))}
+    </p>
+  );
+}
+
+export function MyTasksView({ tasks, stars = [] }: { tasks: TaskDTO[]; stars?: MyStarsRow[] }) {
   const groups = new Map<string, { label: string; color: string; tasks: TaskDTO[] }>();
   for (const t of tasks) {
     if (!t.list) continue;
@@ -128,8 +153,12 @@ export function MyTasksView({ tasks }: { tasks: TaskDTO[] }) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">
       <PageTitle title="My tasks" subtitle={tasks.length ? `${plural(tasks.length, "task")} assigned to you` : undefined} />
+      <MyStarsLine stars={stars} />
       {groups.size === 0 ? (
-        <EmptyState title="Nothing is assigned to you" hint="When a department head assigns you a task, it shows up here." />
+        <EmptyState
+          title="Nothing is assigned to you"
+          hint="When a department head assigns you a task, or you claim one from your department's page, it shows up here."
+        />
       ) : (
         <div className="space-y-8">
           {[...groups.entries()].map(([id, group]) => (

@@ -17,12 +17,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { tasksApi, type TaskFields } from "@/lib/tasks/client";
 import { formatDue, istDayKey } from "@/lib/tasks/dates";
 import { formatRecurrence } from "@/lib/tasks/recurrence";
+import { STAR_CHOICES, starLabel, type StarCount } from "@/lib/tasks/stars";
 import type { TaskDetailDTO } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
-import { CalendarDays, Flag, Folder, Link2, MoreHorizontal, Rows3, Trash2, UserRound } from "lucide-react";
+import { CalendarDays, Flag, Folder, Hand, Link2, MoreHorizontal, Rows3, Star, Trash2, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -30,6 +32,7 @@ import { toast } from "sonner";
 import { ColorDot, DueLabel, PriorityFlag, TaskCheckbox, UserAvatar } from "./bits";
 import { ActivityList, AutoTextarea, CommentThread, SubtaskList } from "./DetailSections";
 import { AssigneePicker, DuePicker, PriorityPicker } from "./pickers";
+import { hasReviewBanner, ReviewBanner, SubmitDialog } from "./Review";
 import { useCompleteTask } from "./TaskRow";
 import { useListMembers, useTasksUI } from "./TasksContext";
 
@@ -133,6 +136,10 @@ function TaskDetailBody({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submitsInstead = !task.perms.canComplete && task.perms.canSubmit;
+  // Rewards and claiming are for one-off department tasks.
+  const canSetReward = canEdit && list.kind === "department" && !task.recurrence;
 
   const update = (patch: TaskFields & { listId?: string }) => run(() => tasksApi.updateTask(task.id, patch));
 
@@ -201,8 +208,9 @@ function TaskDetailBody({
             <TaskCheckbox
               priority={task.priority}
               checked={Boolean(task.completedAt)}
-              disabled={!task.perms.canAct}
+              disabled={!task.perms.canComplete && !submitsInstead}
               onChange={async (next) => {
+                if (submitsInstead) return setSubmitting(true);
                 if (await complete(task, next)) run(async () => undefined);
               }}
               label={task.title}
@@ -245,6 +253,12 @@ function TaskDetailBody({
             )}
           </div>
         </div>
+
+        {hasReviewBanner(task) && (
+          <div>
+            <ReviewBanner task={task} run={run} />
+          </div>
+        )}
 
         {/* Properties */}
         <div className="space-y-0.5 rounded-lg bg-gray-50/70 px-3 py-2">
@@ -330,6 +344,45 @@ function TaskDetailBody({
             </PropertyRow>
           )}
 
+          {canSetReward ? (
+            <>
+              <PropertyRow icon={Star} label="Reward">
+                <select
+                  value={task.stars}
+                  onChange={(e) => void update({ stars: Number(e.target.value) as StarCount })}
+                  aria-label="Star reward"
+                  className="-ml-1 rounded bg-transparent px-1 py-1 text-sm hover:bg-gray-100"
+                >
+                  {STAR_CHOICES.map((n) => (
+                    <option key={n} value={n}>
+                      {n ? `${"★".repeat(n)} ${starLabel(n)}` : "None"}
+                    </option>
+                  ))}
+                </select>
+              </PropertyRow>
+              <PropertyRow icon={Hand} label="Claiming">
+                <label className="inline-flex items-center gap-2">
+                  <Switch
+                    checked={task.claimable}
+                    onCheckedChange={(on) => void update({ claimable: on })}
+                    aria-label="Open for claiming"
+                  />
+                  <span className={task.claimable ? "text-gray-900" : "text-gray-400"}>
+                    {task.claimable ? "Open for claiming" : "Off"}
+                  </span>
+                </label>
+              </PropertyRow>
+            </>
+          ) : (
+            task.stars > 0 && (
+              <PropertyRow icon={Star} label="Reward">
+                <span className="text-amber-700">
+                  {"★".repeat(task.stars)} {starLabel(task.stars)}
+                </span>
+              </PropertyRow>
+            )
+          )}
+
           {moveTargets.length > 1 && (
             <PropertyRow icon={Folder} label="List">
               <select
@@ -361,6 +414,8 @@ function TaskDetailBody({
           <p className="text-xs text-gray-400">Completed {formatDue(istDayKey(new Date(task.completedAt)), null, todayKey)}</p>
         )}
       </div>
+
+      <SubmitDialog task={task} open={submitting} onOpenChange={setSubmitting} onDone={() => void run(async () => undefined)} />
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
