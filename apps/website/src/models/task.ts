@@ -15,6 +15,26 @@ const recurrenceSchema = new mongoose.Schema(
   { _id: false },
 );
 
+/** The assignee's hand-in on a task with a star reward, and where review stands. */
+const submissionSchema = new mongoose.Schema(
+  {
+    state: { type: String, enum: ["submitted", "changes_requested", "approved"], required: true },
+    at: { type: Date, required: true },
+    link: { type: String, default: null, maxlength: 2000 },
+    note: { type: String, default: "", maxlength: 2000 },
+  },
+  { _id: false },
+);
+
+/** The bot's "up for grabs" post in the department's Discord channel. */
+const discordPostSchema = new mongoose.Schema(
+  {
+    channelId: { type: String, required: true },
+    messageId: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 /**
  * A task or (with parentId) a subtask. `departmentKey` and `ownerId` are
  * copied from the list so permission checks and the Today/Upcoming/My Tasks
@@ -38,6 +58,13 @@ const taskSchema = new mongoose.Schema(
     recurrence: { type: recurrenceSchema, default: null },
     priority: { type: Number, enum: [1, 2, 3, 4], default: 4 },
 
+    /** Department members can take it themselves while it has no assignee. */
+    claimable: { type: Boolean, default: false },
+    /** Reward for the assignee; above 0 the task needs a head's approval to close. */
+    stars: { type: Number, enum: [0, 1, 2, 3], default: 0 },
+    submission: { type: submissionSchema, default: null },
+    discordPost: { type: discordPostSchema, default: null },
+
     order: { type: Number, default: 0 },
     completedAt: { type: Date, default: null },
     completedBy: { type: ObjectId, ref: "UserData", default: null },
@@ -56,5 +83,13 @@ taskSchema.index(
 taskSchema.index({ listId: 1, completedAt: 1, order: 1 });
 taskSchema.index({ parentId: 1, order: 1 });
 taskSchema.index({ departmentKey: 1, completedAt: 1, dueOn: 1 });
+taskSchema.index(
+  { departmentKey: 1, completedAt: 1, assigneeId: 1 },
+  { partialFilterExpression: { claimable: true } },
+);
+taskSchema.index(
+  { departmentKey: 1, "submission.state": 1 },
+  { partialFilterExpression: { "submission.state": "submitted" } },
+);
 
 export default mongoose.models.Task || mongoose.model("Task", taskSchema);

@@ -16,6 +16,13 @@ export const TASK_ACTIVITY_TYPES = [
   "moved",
   "recurrence_changed",
   "deleted",
+  "claimed",
+  "unclaimed",
+  "submitted",
+  "changes_requested",
+  "approved",
+  "stars_changed",
+  "claimable_changed",
 ] as const;
 
 export type TaskActivityType = (typeof TASK_ACTIVITY_TYPES)[number];

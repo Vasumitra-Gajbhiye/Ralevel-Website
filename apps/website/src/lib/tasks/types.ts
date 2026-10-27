@@ -1,6 +1,7 @@
 /** Client-safe DTOs for the /tasks workspace. */
-import type { TaskPerms } from "./permissions";
+import type { SubmissionState, TaskPerms } from "./permissions";
 import type { Recurrence } from "./recurrence";
+import type { StarCount } from "./stars";
 
 export type UserLite = {
   id: string;
@@ -53,9 +54,19 @@ export type TaskDTO = {
   subtaskCount: number;
   subtaskDone: number;
   createdById: string | null;
+  claimable: boolean;
+  stars: StarCount;
+  submission: SubmissionDTO | null;
   perms: TaskPerms;
   /** Present in cross-list views (Today, Upcoming, My Tasks). */
   list?: TaskListRef;
+};
+
+export type SubmissionDTO = {
+  state: SubmissionState;
+  at: string;
+  link: string | null;
+  note: string;
 };
 
 export type CommentDTO = {

@@ -24,6 +24,7 @@ export const recurrenceSchema = z
   .strict();
 
 const priority = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);
+const stars = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]);
 
 export const listCreateSchema = z
   .object({
@@ -63,6 +64,8 @@ const taskFields = {
   recurrence: recurrenceSchema.nullable(),
   priority,
   sectionId: objectId.nullable(),
+  claimable: z.boolean(),
+  stars,
 };
 
 export const taskCreateSchema = z
@@ -77,6 +80,8 @@ export const taskCreateSchema = z
     recurrence: taskFields.recurrence.optional(),
     priority: priority.optional(),
     sectionId: taskFields.sectionId.optional(),
+    claimable: taskFields.claimable.optional(),
+    stars: taskFields.stars.optional(),
   })
   .strict();
 
@@ -91,11 +96,44 @@ export const taskPatchSchema = z
     priority: priority.optional(),
     sectionId: taskFields.sectionId.optional(),
     listId: objectId.optional(),
+    claimable: taskFields.claimable.optional(),
+    stars: taskFields.stars.optional(),
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, "Nothing to update");
 
 export const completeSchema = z.object({ completed: z.boolean() }).strict();
+
+export const submitSchema = z
+  .object({
+    link: z
+      .string()
+      .trim()
+      .max(2000)
+      .refine((v) => !v || /^https?:\/\/\S+$/i.test(v), "Use a full link starting with https://")
+      .nullable()
+      .optional(),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+export const reviewSchema = z.discriminatedUnion("decision", [
+  z.object({ decision: z.literal("approve") }).strict(),
+  z
+    .object({
+      decision: z.literal("changes"),
+      comment: z.string().trim().min(1, "Say what needs changing").max(5000),
+    })
+    .strict(),
+]);
+
+export const certificateMarkSchema = z
+  .object({
+    userId: objectId,
+    departmentKey: z.enum(DEPARTMENT_KEYS as [string, ...string[]]),
+    certId: z.string().trim().max(100).optional(),
+  })
+  .strict();
 
 export const commentSchema = z
   .object({ body: z.string().trim().min(1, "Write something first").max(5000) })
@@ -105,3 +143,6 @@ export type TaskCreateInput = z.infer<typeof taskCreateSchema>;
 export type TaskPatchInput = z.infer<typeof taskPatchSchema>;
 export type ListCreateInput = z.infer<typeof listCreateSchema>;
 export type ListPatchInput = z.infer<typeof listPatchSchema>;
+export type SubmitInput = z.infer<typeof submitSchema>;
+export type ReviewInput = z.infer<typeof reviewSchema>;
+export type CertificateMarkInput = z.infer<typeof certificateMarkSchema>;
