@@ -3,7 +3,6 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import connectDB from "@/lib/mongodb";
 import EditorBlog from "@/models/editorBlogs";
 import mongoose from "mongoose";
-import { WRITER_CMS_ROLES } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 /* ================= GET BLOG ================= */
@@ -12,7 +11,7 @@ export async function GET(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    section: "blogs",
   });
   if (auth instanceof Response) return auth;
 
@@ -46,7 +45,7 @@ export async function PATCH(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    section: "blogs",
   });
   if (auth instanceof Response) return auth;
 

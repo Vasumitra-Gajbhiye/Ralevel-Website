@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminSchedulingList } from "@/lib/data/admin/scheduling";
 import { parsePaginationParams } from "@/lib/pagination";
 import AdminSchedulingClient from "./AdminSchedulingClient";
@@ -7,6 +8,9 @@ export default async function SchedulingPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("scheduling");
+  if (denied) return denied;
+
   const params = await searchParams;
   const { page, limit, skip } = parsePaginationParams(
     new URLSearchParams({ page: params.page ?? "1" })

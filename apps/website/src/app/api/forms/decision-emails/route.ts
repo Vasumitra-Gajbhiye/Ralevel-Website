@@ -1,3 +1,4 @@
+import { canAccessSection } from "@/lib/admin-access/server";
 import { enforceSameOrigin } from "@/lib/csrf";
 import {
   resolveDecisionEmailTemplates,
@@ -6,7 +7,8 @@ import {
 } from "@/lib/emails/decisionEmail";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import { canManageFormType, type Role } from "@/lib/roles";
+import { canManageForm } from "@/lib/forms/access";
+import type { Role } from "@/lib/roles";
 import FormIndex from "@/models/FormIndex";
 import { NextResponse } from "next/server";
 
@@ -20,6 +22,9 @@ export async function GET(req: Request) {
   const session = await getAuthSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!(await canAccessSection(session.userData?.roles, "forms"))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -62,7 +67,12 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "formType is required" }, { status: 400 });
   }
 
-  if (!canManageFormType(session.userData?.roles as Role[] | undefined, formType)) {
+  if (
+    !(await canManageForm(
+      session.userData?.roles as Role[] | undefined,
+      formType,
+    ))
+  ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

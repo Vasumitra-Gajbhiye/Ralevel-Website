@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 /* ---------------- SEARCH USERS BY EMAIL ---------------- */
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "access",
     rateLimit: { routeKey: "admin-access-search" },
   });
   if (auth instanceof Response) return auth;

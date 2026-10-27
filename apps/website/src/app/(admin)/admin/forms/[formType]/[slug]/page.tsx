@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { resolveInchargeMembers } from "@/lib/forms/incharge";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
@@ -19,6 +20,9 @@ export default async function AdminFormPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("forms");
+  if (denied) return denied;
+
   const { slug } = await params;
   const queryParams = await searchParams;
   await connectDB();

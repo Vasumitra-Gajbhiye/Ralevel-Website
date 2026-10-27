@@ -83,7 +83,7 @@ import { getAuthSession } from "@/lib/getAuthSession";
 // }
 
 import mongoDBConnect from "@/lib/mongodb";
-import { requireRoles } from "@/lib/requireRoles";
+import { requireSection } from "@/lib/admin-access/server";
 import TeamData from "@/models/teamData";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
@@ -134,7 +134,7 @@ export async function PUT(
   const session = await getAuthSession();
 
   try {
-    requireRoles(session, ["owner", "admin"]);
+    await requireSection(session, "team");
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });

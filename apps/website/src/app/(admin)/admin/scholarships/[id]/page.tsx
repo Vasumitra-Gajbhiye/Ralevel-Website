@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminScholarship, getUniversityOptions } from "@/lib/data/admin/scholarships";
 import { notFound } from "next/navigation";
 import ScholarshipEditor from "../_components/ScholarshipEditor";
@@ -7,6 +8,9 @@ export default async function EditScholarshipPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const denied = await guardSection("scholarships");
+  if (denied) return denied;
+
   const { id } = await params;
   const [scholarship, universities] = await Promise.all([
     getAdminScholarship(id),

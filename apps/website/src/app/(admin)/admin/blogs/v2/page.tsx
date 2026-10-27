@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { getAdminBlogsV2List } from "@/lib/data/admin/blogsV2";
 import { getWriterProfile } from "@/lib/data/admin/writerProfile";
@@ -16,6 +17,9 @@ export default async function BlogsV2Page({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const denied = await guardSection("blogs");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const params = await searchParams;
   const page = parsePage(params.page);

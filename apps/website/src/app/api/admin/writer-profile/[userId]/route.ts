@@ -4,7 +4,7 @@ import {
   getWriterProfile,
   updateWriterProfile,
 } from "@/lib/data/admin/writerProfile";
-import { isAdmin, WRITER_CMS_ROLES } from "@/lib/roles";
+import { isAdmin } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
   context: { params: Promise<{ userId: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    section: ["blogs", "all-blogs"],
     rateLimit: { routeKey: "admin-writer-profile-get-by-id" },
   });
   if (auth instanceof Response) return auth;
@@ -32,7 +32,7 @@ export async function PATCH(
   context: { params: Promise<{ userId: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    section: ["blogs", "all-blogs"],
   });
   if (auth instanceof Response) return auth;
 

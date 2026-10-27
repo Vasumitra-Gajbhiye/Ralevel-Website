@@ -1,7 +1,7 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { uploadWriterAvatarToCloudinary } from "@/lib/cloudinaryUpload";
 import { enforceSameOrigin } from "@/lib/csrf";
-import { isAdmin, WRITER_CMS_ROLES } from "@/lib/roles";
+import { isAdmin } from "@/lib/roles";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
@@ -10,7 +10,7 @@ const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_CMS_ROLES],
+    section: ["blogs", "all-blogs"],
   });
   if (auth instanceof Response) return auth;
 

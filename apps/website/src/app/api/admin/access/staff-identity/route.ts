@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "access",
   });
   if (auth instanceof Response) return auth;
 

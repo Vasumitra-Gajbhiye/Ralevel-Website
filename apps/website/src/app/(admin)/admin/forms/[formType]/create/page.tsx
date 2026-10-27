@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import NoAccess from "@/components/NoAccess";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
@@ -13,6 +14,9 @@ export default async function CreateFormPage({
 }: {
   params: Promise<{ formType: string }>;
 }) {
+  const denied = await guardSection("forms");
+  if (denied) return denied;
+
   const { formType } = await params;
   const session = await getAuthSession();
 

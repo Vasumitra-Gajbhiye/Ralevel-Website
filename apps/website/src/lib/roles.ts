@@ -167,7 +167,11 @@ export const FORMS_ACCESS_ROLES = [
   "resource_dep_head",
 ] as const satisfies readonly Role[];
 
-/** Roles that can open the /admin panel (layout entry gate). */
+/**
+ * Roles that can open /admin with the default page access. Page access is
+ * editable at /admin/permissions, so gate on `canEnterAdminPanel` from
+ * lib/admin-access/server instead; this is only a client-side first guess.
+ */
 export const ADMIN_PANEL_ROLES = [
   "owner",
   "admin",
@@ -260,6 +264,7 @@ export function hasAnyRole(
   return hasRequiredRole(userRoles, allowedRoles);
 }
 
+/** Default-access guess only; see ADMIN_PANEL_ROLES. */
 export function canAccessAdminPanel(userRoles?: Role[]) {
   return hasAnyRole(userRoles, ADMIN_PANEL_ROLES);
 }
@@ -271,14 +276,6 @@ export function isAdmin(userRoles?: Role[]) {
   return hasAnyRole(userRoles, ["owner", "admin"]);
 }
 
-export function hasResourceCmsAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, RESOURCE_CMS_ROLES);
-}
-
-export function canManageResourceAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, RESOURCE_ACCESS_MANAGE_ROLES);
-}
-
 export function stripResourceTeamRoles(roles: Role[]): Role[] {
   return roles.filter((r) => !RESOURCE_TEAM_ROLES.includes(r as ResourceTeamRole));
 }
@@ -288,14 +285,6 @@ export function mergeResourceTeamRole(
   assignedRole: ResourceTeamRole
 ): Role[] {
   return [...stripResourceTeamRoles(roles), assignedRole];
-}
-
-export function hasScholarshipCmsAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, SCHOLARSHIP_CMS_ROLES);
-}
-
-export function canManageScholarshipAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, SCHOLARSHIP_ACCESS_MANAGE_ROLES);
 }
 
 export function stripScholarshipTeamRoles(roles: Role[]): Role[] {
@@ -323,10 +312,6 @@ export function needsWriterRoleSelfGrant(userRoles?: Role[]) {
   return hasWriterCmsAccess(userRoles) && !hasWriterTeamRole(userRoles);
 }
 
-export function canManageWriterAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, WRITER_ACCESS_MANAGE_ROLES);
-}
-
 export function stripWriterTeamRoles(roles: Role[]): Role[] {
   return roles.filter((r) => !WRITER_TEAM_ROLES.includes(r as WriterTeamRole));
 }
@@ -336,10 +321,6 @@ export function mergeWriterTeamRole(
   assignedRole: WriterTeamRole
 ): Role[] {
   return [...stripWriterTeamRoles(roles), assignedRole];
-}
-
-export function hasFormsAccess(userRoles?: Role[]) {
-  return hasAnyRole(userRoles, FORMS_ACCESS_ROLES);
 }
 
 export function canManageFormType(

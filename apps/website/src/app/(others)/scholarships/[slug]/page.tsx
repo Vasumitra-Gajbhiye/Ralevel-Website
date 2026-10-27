@@ -1,3 +1,4 @@
+import { canAccessSection } from "@/lib/admin-access/server";
 import DeadlinePill from "@/components/scholarships/DeadlinePill";
 import DetailSection, { BulletList, Fact } from "@/components/scholarships/DetailSection";
 import EligibilityLine from "@/components/scholarships/EligibilityLine";
@@ -15,7 +16,6 @@ import {
 } from "@/lib/data/scholarships";
 import { getStudyPlans } from "@/lib/data/user-profile";
 import { getAuthSession } from "@/lib/getAuthSession";
-import { hasScholarshipCmsAccess } from "@/lib/roles";
 import {
   AID_BASIS_LABELS,
   COVER_LABELS,
@@ -98,7 +98,11 @@ export default async function ScholarshipPage({ params }: { params: Params }) {
 
   let scholarship = await getPublishedScholarship(slug);
   let preview = false;
-  if (!scholarship && session && hasScholarshipCmsAccess(session.userData.roles)) {
+  if (
+    !scholarship &&
+    session &&
+    (await canAccessSection(session.userData.roles, "scholarships"))
+  ) {
     scholarship = await getScholarshipForPreview(slug);
     preview = Boolean(scholarship);
   }

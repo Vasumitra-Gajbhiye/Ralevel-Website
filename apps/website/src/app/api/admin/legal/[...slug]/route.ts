@@ -8,7 +8,6 @@ import {
 import {
   isLegalPageSlug,
   joinLegalSlug,
-  LEGAL_ADMIN_ROLES,
   legalPublicPath,
 } from "@/lib/legal-pages";
 import { ensureLegalPages } from "@/lib/legal-pages/ensure";
@@ -41,7 +40,7 @@ export async function GET(
   context: { params: Promise<{ slug: string[] }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...LEGAL_ADMIN_ROLES],
+    section: "legal",
     rateLimit: { routeKey: "admin-legal-get" },
   });
   if (auth instanceof Response) return auth;
@@ -65,7 +64,7 @@ export async function PATCH(
   context: { params: Promise<{ slug: string[] }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...LEGAL_ADMIN_ROLES],
+    section: "legal",
   });
   if (auth instanceof Response) return auth;
 
@@ -119,7 +118,7 @@ export async function POST(
   context: { params: Promise<{ slug: string[] }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...LEGAL_ADMIN_ROLES],
+    section: "legal",
   });
   if (auth instanceof Response) return auth;
 

@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { getAdminBlogV2ById } from "@/lib/data/admin/blogsV2";
 import WriterRoleGate from "@/components/blogs-v2/WriterRoleGate";
@@ -10,6 +11,9 @@ export default async function BlogV2EditPage({
 }: {
   params: Promise<{ blogId: string }>;
 }) {
+  const denied = await guardSection("blogs");
+  if (denied) return denied;
+
   const session = await getAuthSession();
   const { blogId } = await params;
   const roles = session!.userData.roles;

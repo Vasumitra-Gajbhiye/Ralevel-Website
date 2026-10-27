@@ -11,17 +11,10 @@ import { firstIssue } from "@/lib/validation/scholarships";
 import ScheduleItem from "@/models/scheduleItem";
 import { NextResponse } from "next/server";
 
-const SCHEDULING_READ_ROLES = [
-  "owner",
-  "admin",
-  "informative_team",
-  "info_dep_head",
-] as const;
-
 /* ================= GET ================= */
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...SCHEDULING_READ_ROLES],
+    section: "scheduling",
     rateLimit: { routeKey: "admin-scheduling-list" },
   });
   if (auth instanceof Response) return auth;
@@ -38,7 +31,7 @@ export async function GET(req: Request) {
 /* ================= POST ================= */
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin", "informative_team"],
+    section: "scheduling",
   });
   if (auth instanceof Response) return auth;
 
@@ -54,7 +47,7 @@ export async function POST(req: Request) {
 /* ================= PATCH ================= */
 export async function PATCH(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin", "informative_team"],
+    section: "scheduling",
   });
   if (auth instanceof Response) return auth;
 
@@ -82,7 +75,7 @@ export async function PATCH(req: Request) {
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin", "informative_team"],
+    section: "scheduling",
   });
   if (auth instanceof Response) return auth;
 

@@ -14,8 +14,6 @@ import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-const APPLY_CARD_ADMIN_ROLES = ["owner", "admin"] as const;
-
 function revalidateApplySurfaces() {
   revalidatePath("/apply");
 }
@@ -37,7 +35,7 @@ function asOptionalString(value: unknown): string | undefined {
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...APPLY_CARD_ADMIN_ROLES],
+    section: "apply",
     rateLimit: { routeKey: "admin-apply-list" },
   });
   if (auth instanceof Response) return auth;
@@ -48,7 +46,7 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...APPLY_CARD_ADMIN_ROLES],
+    section: "apply",
   });
   if (auth instanceof Response) return auth;
 

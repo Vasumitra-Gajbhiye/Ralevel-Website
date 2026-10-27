@@ -7,7 +7,6 @@ import { invalidateUserCache } from "@/lib/redis-cache";
 import {
   isAdmin,
   mergeWriterTeamRole,
-  WRITER_ACCESS_MANAGE_ROLES,
   WRITER_TEAM_ROLES,
   stripWriterTeamRoles,
   type Role,
@@ -27,7 +26,7 @@ function isWriterTeamRole(role: string): role is WriterTeamRole {
 /* ================= GET ================= */
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_ACCESS_MANAGE_ROLES],
+    section: "writers",
     rateLimit: { routeKey: "admin-writer-access-list" },
   });
   if (auth instanceof Response) return auth;
@@ -44,7 +43,7 @@ export async function GET(req: Request) {
 /* ================= POST / PATCH ================= */
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_ACCESS_MANAGE_ROLES],
+    section: "writers",
   });
   if (auth instanceof Response) return auth;
 
@@ -106,7 +105,7 @@ export async function PATCH(req: Request) {
 /* ================= DELETE ================= */
 export async function DELETE(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...WRITER_ACCESS_MANAGE_ROLES],
+    section: "writers",
   });
   if (auth instanceof Response) return auth;
 

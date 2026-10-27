@@ -1,7 +1,6 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { uploadImageToCloudinary } from "@/lib/cloudinaryUpload";
 import { enforceSameOrigin } from "@/lib/csrf";
-import { RESOURCE_CMS_ROLES } from "@/lib/roles";
 import type { UploadThumbnailSection } from "@/types/resources2";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
@@ -19,7 +18,7 @@ const THUMBNAIL_SECTIONS = new Set<UploadThumbnailSection>([
 
 export async function POST(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...RESOURCE_CMS_ROLES],
+    section: "resource-cms",
   });
   if (auth instanceof Response) return auth;
 

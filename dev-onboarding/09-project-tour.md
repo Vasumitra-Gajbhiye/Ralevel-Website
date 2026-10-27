@@ -38,7 +38,8 @@ The folder names in brackets, like `(others)`, are **route groups**. They organi
 1. **Clerk** handles sign-in (`/sign-in`, `/sign-up`).
 2. On the server, `getAuthSession()` (`lib/getAuthSession.ts`) gives you the signed-in user, their roles and their `UserData` id. The first time someone signs in, `ensureUserData()` creates their `UserData` record in MongoDB.
 3. Roles are stored on the user's `UserData` and copied to Clerk's user metadata. The role list is in `lib/roles.ts`.
-4. **Always check roles on the server** (`requireRoles`, or the role groups in `lib/roles.ts`). Hiding a button isn't access control.
+4. Which roles can open which `/admin` page is **page access**, editable by owners and admins at `/admin/permissions`. The pages and their default roles are in `lib/admin-access/sections.ts`.
+5. **Always check access on the server.** For admin pages and their APIs, check page access (`guardSection`, `authorizeAdminApi(req, { section })`, `requireSectionAction`). Use role checks (`requireRoles`, the role groups in `lib/roles.ts`) only for rules that aren't about opening a page. Hiding a button isn't access control. [07](07-admin-access.md#adding-a-new-admin-page) has the details.
 
 ## Data
 

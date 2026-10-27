@@ -2,7 +2,6 @@ import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { getGlobalBlogReviewHistory } from "@/lib/blogs-v2/history";
 import connectDB from "@/lib/mongodb";
 import { parsePaginationParams } from "@/lib/pagination";
-import { BLOG_REVIEW_ROLES } from "@/lib/roles";
 import type { BlogV2ReviewAction } from "@/types/blogV2";
 import { NextResponse } from "next/server";
 
@@ -10,7 +9,7 @@ const GLOBAL_HISTORY_PAGE_SIZE = 20;
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    roles: [...BLOG_REVIEW_ROLES],
+    section: "all-blogs",
   });
   if (auth instanceof Response) return auth;
 

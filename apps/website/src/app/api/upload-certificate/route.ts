@@ -57,7 +57,7 @@ import { getAuthSession } from "@/lib/getAuthSession";
 // }
 
 // app/api/upload-certificate/route.ts
-import { requireRoles } from "@/lib/requireRoles";
+import { requireSection } from "@/lib/admin-access/server";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -73,7 +73,7 @@ cloudinary.config({
 export async function POST(req: NextRequest) {
   const session = await getAuthSession();
   try {
-    requireRoles(session, ["owner", "admin"]);
+    await requireSection(session, "certificates");
   } catch {
     return new Response("Forbidden", { status: 403 });
   }

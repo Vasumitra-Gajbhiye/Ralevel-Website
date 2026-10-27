@@ -3,7 +3,8 @@ import type { DevUser } from "@/components/tasks/TasksSidebar";
 import { getSidebarData } from "@/lib/data/tasks/workspace";
 import { getWritableLists } from "@/lib/data/tasks/lists";
 import connectDB from "@/lib/mongodb";
-import { canAccessAdminPanel, isAdmin, isStaff } from "@/lib/roles";
+import { canEnterAdminPanel } from "@/lib/admin-access/server";
+import { isAdmin, isStaff } from "@/lib/roles";
 import { devImpersonationAllowed, getTasksContext } from "@/lib/tasks/actor";
 import { istTodayKey } from "@/lib/tasks/dates";
 import { departmentsForRoles } from "@/lib/tasks/departments";
@@ -45,7 +46,7 @@ export default async function TasksLayout({ children }: { children: React.ReactN
     id: actor.id,
     name: ctx.name,
     isAdmin: isAdmin(actor.roles),
-    canAccessAdmin: canAccessAdminPanel(actor.roles),
+    canAccessAdmin: await canEnterAdminPanel(actor.roles),
     impersonating: ctx.impersonating,
   };
 

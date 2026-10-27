@@ -7,17 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  BLOG_REVIEW_ROLES,
-  FORMS_ACCESS_ROLES,
-  hasAnyRole,
-  RESOURCE_ACCESS_MANAGE_ROLES,
-  RESOURCE_CMS_ROLES,
-  SCHOLARSHIP_CMS_ROLES,
-  WRITER_ACCESS_MANAGE_ROLES,
-  WRITER_CMS_ROLES,
-  type Role,
-} from "@/lib/roles";
+import type { AdminNavLink } from "@/lib/admin-access/sections";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -34,10 +24,10 @@ function isLegalEditorPath(pathname: string | null): boolean {
 }
 
 function AdminSidebarNav({
-  roles,
+  nav,
   onNavigate,
 }: {
-  roles: Role[];
+  nav: AdminNavLink[];
   onNavigate?: () => void;
 }) {
   const linkClass = "block px-3 py-2 rounded hover:bg-gray-100";
@@ -47,111 +37,25 @@ function AdminSidebarNav({
       <a href="/tasks" className={linkClass} onClick={onNavigate}>
         Tasks
       </a>
-      {hasAnyRole(roles, WRITER_CMS_ROLES) && (
-        <a href="/admin/blogs/v2" className={linkClass} onClick={onNavigate}>
-          Blogs
-        </a>
-      )}
-      {hasAnyRole(roles, BLOG_REVIEW_ROLES) && (
-        <a href="/admin/all-blogs" className={linkClass} onClick={onNavigate}>
-          All Blogs
-        </a>
-      )}
-
-      {hasAnyRole(roles, WRITER_ACCESS_MANAGE_ROLES) && (
-        <a href="/admin/writers" className={linkClass} onClick={onNavigate}>
-          Writers
-        </a>
-      )}
-
-      {hasAnyRole(roles, ["owner", "admin"]) && (
-        <a href="/admin/access" className={linkClass} onClick={onNavigate}>
-          Access
-        </a>
-      )}
-      {hasAnyRole(roles, RESOURCE_ACCESS_MANAGE_ROLES) && (
-        <a href="/admin/resource" className={linkClass} onClick={onNavigate}>
-          Resource Dept.
-        </a>
-      )}
-      {hasAnyRole(roles, FORMS_ACCESS_ROLES) && (
-        <a href="/admin/forms" className={linkClass} onClick={onNavigate}>
-          Form submission
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin"]) && (
+      {nav.map((link) => (
         <a
-          href="/admin/certificates"
+          key={link.href}
+          href={link.href}
           className={linkClass}
           onClick={onNavigate}
         >
-          Certificates
+          {link.label}
         </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin"]) && (
-        <a href="/admin/team" className={linkClass} onClick={onNavigate}>
-          Team
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin"]) && (
-        <a href="/admin/legal" className={linkClass} onClick={onNavigate}>
-          Legal pages
-        </a>
-      )}
-      {hasAnyRole(roles, ["owner", "admin"]) && (
-        <a href="/admin/apply" className={linkClass} onClick={onNavigate}>
-          Apply cards
-        </a>
-      )}
-
-      {hasAnyRole(roles, [
-        "owner",
-        "admin",
-        "informative_team",
-        "info_dep_head",
-      ]) && (
-        <a href="/admin/scheduling" className={linkClass} onClick={onNavigate}>
-          Scheduling
-        </a>
-      )}
-
-      {hasAnyRole(roles, ["owner", "admin", "mod_dep_head"]) && (
-        <a href="/admin/qotd" className={linkClass} onClick={onNavigate}>
-          Discord QOTD
-        </a>
-      )}
-      {hasAnyRole(roles, SCHOLARSHIP_CMS_ROLES) && (
-        <a href="/admin/scholarships" className={linkClass} onClick={onNavigate}>
-          Scholarships
-        </a>
-      )}
-      {hasAnyRole(roles, RESOURCE_CMS_ROLES) && (
-        <>
-          <a
-            href="/admin/resource-cms"
-            className={linkClass}
-            onClick={onNavigate}
-          >
-            Resource CMS
-          </a>
-          <a
-            href="/admin/resource-cms/history"
-            className={linkClass}
-            onClick={onNavigate}
-          >
-            CMS History
-          </a>
-        </>
-      )}
+      ))}
     </nav>
   );
 }
 
 export default function AdminLayoutShell({
-  roles,
+  nav,
   children,
 }: {
-  roles: Role[];
+  nav: AdminNavLink[];
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -174,7 +78,7 @@ export default function AdminLayoutShell({
             <SheetTitle className="sr-only">Admin navigation</SheetTitle>
             <div className="px-4 py-6">
               <h2 className="text-lg font-semibold mb-6">Admin</h2>
-              <AdminSidebarNav roles={roles} onNavigate={closeSidebar} />
+              <AdminSidebarNav nav={nav} onNavigate={closeSidebar} />
             </div>
           </SheetContent>
         </Sheet>
@@ -183,7 +87,7 @@ export default function AdminLayoutShell({
 
       <aside className="hidden md:block w-64 shrink-0 border-r bg-white px-4 py-6">
         <h2 className="text-lg font-semibold mb-6">Admin</h2>
-        <AdminSidebarNav roles={roles} />
+        <AdminSidebarNav nav={nav} />
       </aside>
 
       <main

@@ -1,3 +1,4 @@
+import { canAccessSection } from "@/lib/admin-access/server";
 import DetailSection, { BulletList, Fact } from "@/components/scholarships/DetailSection";
 import Markdown from "@/components/scholarships/Markdown";
 import ScholarshipRow from "@/components/scholarships/ScholarshipRow";
@@ -9,7 +10,6 @@ import {
   getUniversityForPreview,
 } from "@/lib/data/scholarships";
 import { getAuthSession } from "@/lib/getAuthSession";
-import { hasScholarshipCmsAccess } from "@/lib/roles";
 import {
   AID_BASIS_LABELS,
   AID_FORM_LABELS,
@@ -43,7 +43,11 @@ export default async function UniversityPage({ params }: { params: Params }) {
 
   let university = await getPublishedUniversity(slug);
   let preview = false;
-  if (!university && session && hasScholarshipCmsAccess(session.userData.roles)) {
+  if (
+    !university &&
+    session &&
+    (await canAccessSection(session.userData.roles, "scholarships"))
+  ) {
     university = await getUniversityForPreview(slug);
     preview = Boolean(university);
   }

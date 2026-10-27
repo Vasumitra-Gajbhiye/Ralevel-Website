@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import {
   getCachedResourceSubjects,
   getResourcesHomepage,
@@ -5,6 +6,9 @@ import {
 import HomepageEditorClient from "./HomepageEditorClient";
 
 export default async function ResourcesHomepageAdminPage() {
+  const denied = await guardSection("resource-cms");
+  if (denied) return denied;
+
   const [config, subjects] = await Promise.all([
     getResourcesHomepage(),
     getCachedResourceSubjects(),

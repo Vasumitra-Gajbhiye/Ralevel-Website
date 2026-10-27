@@ -2,7 +2,8 @@ import { enforceSameOrigin } from "@/lib/csrf";
 import { normalizeInchargeNicknames } from "@/lib/forms/incharge";
 import { getAuthSession } from "@/lib/getAuthSession";
 import connectDB from "@/lib/mongodb";
-import { canManageFormType, type Role } from "@/lib/roles";
+import { canManageForm } from "@/lib/forms/access";
+import type { Role } from "@/lib/roles";
 import Form from "@/models/Form";
 import { NextResponse } from "next/server";
 
@@ -41,7 +42,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Form not found" }, { status: 404 });
   }
 
-  if (!canManageFormType(roles, form.formType)) {
+  if (!(await canManageForm(roles, form.formType))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

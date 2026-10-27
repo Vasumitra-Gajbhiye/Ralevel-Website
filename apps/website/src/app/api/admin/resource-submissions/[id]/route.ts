@@ -12,7 +12,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    roles: ["owner", "admin"],
+    section: "resource-submissions",
   });
   if (auth instanceof Response) return auth;
 

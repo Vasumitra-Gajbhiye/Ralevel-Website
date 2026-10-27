@@ -1,3 +1,4 @@
+import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminResourceEditorData } from "@/lib/data/admin/resource-cms";
 import { notFound } from "next/navigation";
 import ResourceEditorClient from "./ResourceEditorClient";
@@ -7,6 +8,9 @@ export default async function ResourceEditorPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const denied = await guardSection("resource-cms");
+  if (denied) return denied;
+
   const { slug } = await params;
   const data = await getAdminResourceEditorData(slug);
 

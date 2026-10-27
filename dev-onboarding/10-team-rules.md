@@ -20,7 +20,7 @@
 Ask the owner **before** you:
 
 - touch `.github/`, the `Dockerfile`s or `docker-compose` files
-- change auth or roles (`proxy.ts`, `lib/roles.ts`, `lib/superAdmin.ts`, `lib/getAuthSession.ts`)
+- change auth, roles or page access (`proxy.ts`, `lib/roles.ts`, `lib/superAdmin.ts`, `lib/getAuthSession.ts`, `lib/adminApiAuth.ts`, `lib/admin-access/`)
 - change payments (Stripe code)
 - add or upgrade a dependency
 
