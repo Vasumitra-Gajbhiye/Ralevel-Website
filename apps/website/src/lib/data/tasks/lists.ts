@@ -1,5 +1,7 @@
 /** List pages and department overviews. Server-only. */
 import connectDB from "@/lib/mongodb";
+import { isAdmin } from "@/lib/roles";
+import { departmentStandings, type StarStanding } from "@/lib/tasks/awards";
 import { istTodayKey } from "@/lib/tasks/dates";
 import { getDepartment, isHeadOf, isMemberRoleSet, type DepartmentConfig } from "@/lib/tasks/departments";
 import { canManageList, canViewList, type TasksActor } from "@/lib/tasks/permissions";
@@ -19,7 +21,7 @@ import Task from "@/models/task";
 import TaskList from "@/models/taskList";
 import TaskSection from "@/models/taskSection";
 import { isValidObjectId, Types } from "mongoose";
-import { subtaskStatsFor } from "./shared";
+import { serializeCrossListTasks, subtaskStatsFor } from "./shared";
 
 export type ListPageData = {
   list: TaskListDTO;
@@ -31,6 +33,8 @@ export type ListPageData = {
 };
 
 const COMPLETED_LIMIT = 100;
+
+const OPEN_TOP_LEVEL = { parentId: null, completedAt: null };
 
 export async function getListDoc(listId: string): Promise<TaskListDoc | null> {
   if (!isValidObjectId(listId)) return null;
@@ -91,16 +95,29 @@ export type DepartmentPersonRow = {
   open: number;
   overdue: number;
   doneThisWeek: number;
+  stars: number;
+  certificatesDue: number;
 };
 
 export type DepartmentPageData = {
   department: Pick<DepartmentConfig, "key" | "name" | "color">;
   canManage: boolean;
+  /** Owners and admins mark certificates as issued. */
+  canIssueCertificates: boolean;
   lists: DepartmentListRow[];
   archived: DepartmentListRow[];
+  /** Open tasks anyone in the department can claim. */
+  upForGrabs: TaskDTO[];
+  /** Heads only: hand-ins waiting for approval, oldest first. */
+  awaitingReview: TaskDTO[];
   people: DepartmentPersonRow[];
+  /** Open tasks with no assignee that aren't up for grabs. */
   unassignedOpen: number;
+  myStanding: StarStanding | null;
 };
+
+const UP_FOR_GRABS_LIMIT = 20;
+const REVIEW_LIMIT = 50;
 
 export async function getDepartmentPage(actor: TasksActor, key: string): Promise<DepartmentPageData | null> {
   const dept = getDepartment(key);
@@ -114,8 +131,9 @@ export async function getDepartmentPage(actor: TasksActor, key: string): Promise
   const lists = await TaskList.find({ kind: "department", departmentKey: key, ...(canManage ? {} : { archivedAt: null }) })
     .sort({ order: 1, createdAt: 1 })
     .lean<TaskListDoc[]>();
+  const activeListIds = lists.filter((l) => !l.archivedAt).map((l) => l._id);
 
-  const [listCounts, peopleCounts] = await Promise.all([
+  const [listCounts, peopleCounts, grabDocs, reviewDocs, standings] = await Promise.all([
     Task.aggregate<{ _id: Types.ObjectId; open: number; overdue: number }>([
       { $match: { listId: { $in: lists.map((l) => l._id) }, parentId: null, completedAt: null } },
       {
@@ -127,7 +145,13 @@ export async function getDepartmentPage(actor: TasksActor, key: string): Promise
       },
     ]),
     canManage
-      ? Task.aggregate<{ _id: Types.ObjectId | null; open: number; overdue: number; doneThisWeek: number }>([
+      ? Task.aggregate<{
+          _id: Types.ObjectId | null;
+          open: number;
+          overdue: number;
+          doneThisWeek: number;
+          unclaimable: number;
+        }>([
           {
             $match: {
               departmentKey: key,
@@ -149,10 +173,24 @@ export async function getDepartmentPage(actor: TasksActor, key: string): Promise
                 },
               },
               doneThisWeek: { $sum: { $cond: [{ $ne: ["$completedAt", null] }, 1, 0] } },
+              unclaimable: {
+                $sum: { $cond: [{ $and: [{ $eq: ["$completedAt", null] }, { $ne: ["$claimable", true] }] }, 1, 0] },
+              },
             },
           },
         ])
       : Promise.resolve([]),
+    Task.find({ listId: { $in: activeListIds }, claimable: true, assigneeId: null, ...OPEN_TOP_LEVEL })
+      .sort({ dueOn: 1, priority: 1, createdAt: 1 })
+      .limit(UP_FOR_GRABS_LIMIT)
+      .lean<TaskDoc[]>(),
+    canManage
+      ? Task.find({ departmentKey: key, "submission.state": "submitted", ...OPEN_TOP_LEVEL })
+          .sort({ "submission.at": 1 })
+          .limit(REVIEW_LIMIT)
+          .lean<TaskDoc[]>()
+      : Promise.resolve([] as TaskDoc[]),
+    departmentStandings(key),
   ]);
 
   const countOf = new Map(listCounts.map((r) => [String(r._id), r]));
@@ -165,23 +203,51 @@ export async function getDepartmentPage(actor: TasksActor, key: string): Promise
     archived: Boolean(l.archivedAt),
   });
 
-  const assigned = peopleCounts.filter((r) => r._id);
-  const users = await resolveUsers(assigned.map((r) => String(r._id)));
-  const people = assigned
-    .map((r) => {
-      const user = users.get(String(r._id));
-      return user ? { user, open: r.open, overdue: r.overdue, doneThisWeek: r.doneThisWeek } : null;
+  // Heads see everyone with recent tasks or any stars.
+  const countsBy = new Map(peopleCounts.filter((r) => r._id).map((r) => [String(r._id), r]));
+  const personIds = canManage ? [...new Set([...countsBy.keys(), ...standings.keys()])] : [];
+  const [users, upForGrabs, awaitingReview] = await Promise.all([
+    resolveUsers(personIds),
+    serializeCrossListTasks(actor, grabDocs),
+    serializeCrossListTasks(actor, reviewDocs),
+  ]);
+  const people = personIds
+    .map((id): DepartmentPersonRow | null => {
+      const user = users.get(id);
+      if (!user) return null;
+      const counts = countsBy.get(id);
+      const standing = standings.get(id);
+      return {
+        user,
+        open: counts?.open ?? 0,
+        overdue: counts?.overdue ?? 0,
+        doneThisWeek: counts?.doneThisWeek ?? 0,
+        stars: standing?.stars ?? 0,
+        certificatesDue: standing?.due ?? 0,
+      };
     })
     .filter((r): r is DepartmentPersonRow => r !== null)
-    .sort((a, b) => b.overdue - a.overdue || b.open - a.open || a.user.name.localeCompare(b.user.name));
+    .sort(
+      (a, b) =>
+        b.certificatesDue - a.certificatesDue ||
+        b.overdue - a.overdue ||
+        b.open - a.open ||
+        b.stars - a.stars ||
+        a.user.name.localeCompare(b.user.name),
+    );
 
+  const submittedAt = (t: TaskDTO) => t.submission?.at ?? "";
   return {
     department: { key: dept.key, name: dept.name, color: dept.color },
     canManage,
+    canIssueCertificates: isAdmin(actor.roles),
     lists: lists.filter((l) => !l.archivedAt).map(toRow),
     archived: lists.filter((l) => l.archivedAt).map(toRow),
+    upForGrabs,
+    awaitingReview: awaitingReview.sort((a, b) => submittedAt(a).localeCompare(submittedAt(b))),
     people,
-    unassignedOpen: peopleCounts.find((r) => !r._id)?.open ?? 0,
+    unassignedOpen: peopleCounts.find((r) => !r._id)?.unclaimable ?? 0,
+    myStanding: standings.get(actor.id) ?? null,
   };
 }
 
