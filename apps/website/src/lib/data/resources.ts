@@ -7,6 +7,10 @@ type ResourceMeta = {
   subject: string;
 };
 
+// Public reads must never include the CMS working copy: `draft` holds
+// unpublished content and the email of the last staff member who saved it.
+const PUBLIC_RESOURCE_PROJECTION = { draft: 0 } as const;
+
 export async function getCachedResourceSlugs() {
   return cachedQuery(
     ["resources", "slugs"],
@@ -33,10 +37,12 @@ export async function getCachedResourceMetadata(slug: string) {
 
 export async function getCachedResourceBySlug(slug: string) {
   return cachedQuery(
-    ["resources", "slug", slug],
+    ["resources", "slug", "public", slug],
     async () => {
       await connectDB();
-      const resource = await resources2Data.findOne({ slug }).lean();
+      const resource = await resources2Data
+        .findOne({ slug }, PUBLIC_RESOURCE_PROJECTION)
+        .lean();
       return resource;
     },
     { revalidate: 3600, tags: ["resources", `resource:${slug}`] },
@@ -45,10 +51,12 @@ export async function getCachedResourceBySlug(slug: string) {
 
 export async function getCachedResource2ById(id: string) {
   return cachedQuery(
-    ["resources2", "id", id],
+    ["resources2", "id", "public", id],
     async () => {
       await connectDB();
-      const doc = await resources2Data.findById(id).lean();
+      const doc = await resources2Data
+        .findById(id, PUBLIC_RESOURCE_PROJECTION)
+        .lean();
       return doc ?? null;
     },
     { revalidate: 3600, tags: ["resources"] },
