@@ -14,6 +14,8 @@ type SectionEditorProps = {
   slug: string;
   items: Record<string, unknown>[];
   onChange: (items: Record<string, unknown>[]) => void;
+  /** Hide add/edit/delete, e.g. while the subject is in review. */
+  readOnly?: boolean;
 };
 
 const SECTION_TITLES: Record<EditableSection, string> = {
@@ -95,6 +97,7 @@ export default function SectionEditor({
   slug,
   items,
   onChange,
+  readOnly = false,
 }: SectionEditorProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | undefined>();
@@ -136,23 +139,27 @@ export default function SectionEditor({
             {items.length} item{items.length === 1 ? "" : "s"}
           </p>
         </div>
-        <Button size="sm" onClick={openAdd}>
-          <Plus className="h-4 w-4" />
-          Add item
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="h-4 w-4" />
+            Add item
+          </Button>
+        )}
       </div>
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center">
           <p className="text-sm text-slate-500">No items yet.</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={openAdd}
-          >
-            Add first item
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={openAdd}
+            >
+              Add first item
+            </Button>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -195,6 +202,7 @@ export default function SectionEditor({
                       </a>
                     </div>
                   </div>
+                  {!readOnly && (
                   <div className="flex shrink-0 items-center gap-1">
                     <Button
                       variant="ghost"
@@ -213,6 +221,7 @@ export default function SectionEditor({
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
+                  )}
                 </div>
               );
             })}

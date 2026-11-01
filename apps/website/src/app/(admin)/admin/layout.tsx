@@ -2,6 +2,7 @@ import { canEnterAdmin, canOpenAdminPath, sectionsForRoles } from "@/lib/admin-a
 import { getAdminSection, matchAdminSection } from "@/lib/admin-access/sections";
 import { getAdminAccessMap } from "@/lib/admin-access/server";
 import { getAuthSession } from "@/lib/getAuthSession";
+import { countRequestsNeedingReview } from "@/lib/data/admin/resource-change-requests";
 import NoAccess from "@/components/NoAccess";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -27,9 +28,17 @@ export default async function AdminLayout({
   const allowed = !pathname || canOpenAdminPath(accessMap, roles, pathname);
   const section = matchAdminSection(pathname);
 
-  const nav = sectionsForRoles(accessMap, roles).flatMap(
-    (key) => getAdminSection(key).nav,
-  );
+  const sections = sectionsForRoles(accessMap, roles);
+  const nav = sections.flatMap((key) => getAdminSection(key).nav);
+
+  // Reviewers see how many resource change requests are waiting.
+  if (sections.includes("resource-publish")) {
+    const waiting = await countRequestsNeedingReview().catch(() => 0);
+    if (waiting > 0) {
+      const index = nav.findIndex((link) => link.href === "/admin/resource-cms/requests");
+      if (index >= 0) nav[index] = { ...nav[index], badge: waiting };
+    }
+  }
 
   return (
     <AdminLayoutShell nav={nav}>

@@ -3,6 +3,17 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  diffCMSSections,
+  extractCMSSections,
+  groupResourceCmsChanges,
+  summarizeChanges,
+} from "@/lib/resource-cms/diff";
+import {
+  draftEditMode,
+  type ChangeRequestViewer,
+} from "@/lib/resource-cms/requests/rules";
+import type { OpenResourceChangeRequest } from "@/types/resourceChangeRequests";
 import type {
   EditableSection,
   ResourceCMSEditorData,
@@ -13,7 +24,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import NoteDialog from "../components/NoteDialog";
+import RequestStatusBadge from "../components/RequestStatusBadge";
 import SectionEditor from "../components/SectionEditor";
+import SubmitForReviewDialog from "../components/SubmitForReviewDialog";
 
 const SECTIONS: { id: EditableSection; label: string }[] = [
   { id: "syllabus", label: "Syllabus" },
@@ -51,10 +65,65 @@ function normalizeDraft(draft: ResourceDraft): ResourceDraft {
   };
 }
 
+/** Reads the error from a failed response; a 409 means the page is out of date. */
+async function failure(res: Response, fallback: string) {
+  const data = await res.json().catch(() => ({}));
+  return { message: (data as { error?: string }).error ?? fallback, conflict: res.status === 409 };
+}
+
+function RequestBanner({
+  openRequest,
+  mode,
+}: {
+  openRequest: OpenResourceChangeRequest;
+  mode: ReturnType<typeof draftEditMode>;
+}) {
+  const href = `/admin/resource-cms/requests/${openRequest.number}`;
+  const link = (
+    <Link href={href} className="font-medium text-blue-700 hover:underline">
+      Request #{openRequest.number}
+    </Link>
+  );
+
+  if (openRequest.status === "changes_requested" && mode === "author") {
+    return (
+      <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
+        <p className="font-medium">
+          Changes requested on {link}
+          {openRequest.latestFeedback && <> by {openRequest.latestFeedback.by}</>}
+        </p>
+        {openRequest.latestFeedback?.body && (
+          <p className="mt-2 whitespace-pre-wrap">{openRequest.latestFeedback.body}</p>
+        )}
+        <p className="mt-2 text-orange-800">Edit, save, then resubmit.</p>
+      </div>
+    );
+  }
+
+  const text =
+    mode === "reviewer"
+      ? openRequest.status === "in_review"
+        ? <>{link} by {openRequest.authorName} is waiting for review. Your saves are added to it.</>
+        : <>{link} is back with {openRequest.authorName} for changes.</>
+      : openRequest.status === "in_review"
+        ? <>{link} by {openRequest.authorName} is in review, so this subject is read-only for now.</>
+        : <>{openRequest.authorName} is revising {link}, so this subject is read-only for now.</>;
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+      {text}
+    </div>
+  );
+}
+
 export default function ResourceEditorClient({
   initialData,
+  openRequest,
+  viewer,
 }: {
   initialData: ResourceCMSEditorData;
+  openRequest: OpenResourceChangeRequest | null;
+  viewer: ChangeRequestViewer;
 }) {
   const router = useRouter();
   const [activeSection, setActiveSection] =
@@ -70,9 +139,36 @@ export default function ResourceEditorClient({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+
+  // Keep local state in step with the server after router.refresh().
+  useEffect(() => {
+    const next = normalizeDraft(initialData.draft);
+    setDraft(next);
+    setSavedSignature(draftSignature(next));
+    setHasUnpublishedChanges(initialData.hasUnpublishedChanges);
+  }, [initialData]);
+
+  const mode = draftEditMode(
+    openRequest
+      ? {
+          status: openRequest.status,
+          authorUserId: openRequest.authorUserId,
+          approvingAt: openRequest.approvingAt,
+        }
+      : null,
+    viewer,
+  );
+  const readOnly = mode === "locked";
 
   const currentSignature = useMemo(() => draftSignature(draft), [draft]);
-  const isDirty = currentSignature !== savedSignature;
+  const isDirty = !readOnly && currentSignature !== savedSignature;
+
+  const pendingChanges = useMemo(() => {
+    const raw = diffCMSSections(initialData.live, extractCMSSections(draft));
+    return { grouped: groupResourceCmsChanges(raw), summary: summarizeChanges(raw) };
+  }, [initialData.live, draft]);
 
   useEffect(() => {
     function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -122,16 +218,23 @@ export default function ResourceEditorClient({
         }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to save draft");
+        const { message, conflict } = await failure(res, "Failed to save draft");
+        toast.error(message);
+        // Someone submitted or reviewed meanwhile: show the current state.
+        if (conflict) router.refresh();
+        return false;
       }
 
+      const data = await res.json();
       const nextDraft = normalizeDraft(data.draft);
       setDraft(nextDraft);
       setSavedSignature(draftSignature(nextDraft));
       setHasUnpublishedChanges(true);
-      toast.success("Draft saved");
+      toast.success(mode === "reviewer" && openRequest?.status === "in_review"
+        ? `Saved and added to request #${openRequest.number}`
+        : "Draft saved");
+      if (mode === "reviewer") router.refresh();
       return true;
     } catch (error) {
       toast.error(
@@ -143,15 +246,15 @@ export default function ResourceEditorClient({
     }
   }
 
+  /** Saves unsaved edits first; returns false if that fails or is cancelled. */
+  async function saveIfDirty(action: string): Promise<boolean> {
+    if (!isDirty) return true;
+    if (!confirm(`You have unsaved changes. Save them and ${action}?`)) return false;
+    return saveDraft();
+  }
+
   async function publishDraft() {
-    if (isDirty) {
-      const shouldContinue = confirm(
-        "You have unsaved local changes. Save draft before publishing?",
-      );
-      if (!shouldContinue) return;
-      const saved = await saveDraft();
-      if (!saved) return;
-    }
+    if (!(await saveIfDirty("publish"))) return;
 
     if (
       !confirm(
@@ -168,11 +271,14 @@ export default function ResourceEditorClient({
         { method: "POST" },
       );
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to publish");
+        const { message, conflict } = await failure(res, "Failed to publish");
+        toast.error(message);
+        if (conflict) router.refresh();
+        return;
       }
 
+      const data = await res.json();
       setHasUnpublishedChanges(false);
       setSavedSignature(currentSignature);
       toast.success(`Published — live at ${data.liveUrl}`);
@@ -184,6 +290,46 @@ export default function ResourceEditorClient({
     }
   }
 
+  async function openSubmit() {
+    if (!(await saveIfDirty("submit them for review"))) return;
+    if (pendingChanges.grouped.length === 0) {
+      toast.info("The draft matches the live page, so there's nothing to submit.");
+      return;
+    }
+    setSubmitOpen(true);
+  }
+
+  async function openResubmit() {
+    if (!(await saveIfDirty("resubmit"))) return;
+    setResubmitOpen(true);
+  }
+
+  async function resubmit(note: string) {
+    if (!openRequest) return;
+    setIsPublishing(true);
+    try {
+      const res = await fetch(
+        `/api/admin/resource-cms/requests/${openRequest.number}/resubmit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note }),
+        },
+      );
+      if (!res.ok) {
+        const { message } = await failure(res, "Couldn't resubmit");
+        toast.error(message);
+        return;
+      }
+      toast.success(`Request #${openRequest.number} is back in review`);
+      setResubmitOpen(false);
+      router.push(`/admin/resource-cms/requests/${openRequest.number}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
+  const busy = isSaving || isPublishing;
   const sectionItems = draft[activeSection] as Record<string, unknown>[];
 
   return (
@@ -199,7 +345,9 @@ export default function ResourceEditorClient({
                 <h1 className="text-2xl font-semibold text-slate-900">
                   {initialData.subject}
                 </h1>
-                {hasUnpublishedChanges ? (
+                {openRequest ? (
+                  <RequestStatusBadge status={openRequest.status} />
+                ) : hasUnpublishedChanges ? (
                   <Badge variant="secondary">Unpublished changes</Badge>
                 ) : (
                   <Badge variant="outline">Published</Badge>
@@ -226,19 +374,43 @@ export default function ResourceEditorClient({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={saveDraft}
-              disabled={!isDirty || isSaving || isPublishing}
-            >
-              {isSaving ? "Saving..." : "Save draft"}
-            </Button>
-            <Button onClick={publishDraft} disabled={isSaving || isPublishing}>
-              {isPublishing ? "Publishing..." : "Publish"}
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="outline"
+                onClick={saveDraft}
+                disabled={!isDirty || busy}
+              >
+                {isSaving ? "Saving..." : "Save draft"}
+              </Button>
+            )}
+            {openRequest ? (
+              mode === "author" ? (
+                <Button onClick={openResubmit} disabled={busy}>
+                  Resubmit
+                </Button>
+              ) : (
+                <Button asChild variant={mode === "reviewer" ? "default" : "outline"}>
+                  <Link href={`/admin/resource-cms/requests/${openRequest.number}`}>
+                    {mode === "reviewer" && openRequest.status === "in_review"
+                      ? "Review request"
+                      : `View request #${openRequest.number}`}
+                  </Link>
+                </Button>
+              )
+            ) : viewer.canPublish ? (
+              <Button onClick={publishDraft} disabled={busy}>
+                {isPublishing ? "Publishing..." : "Publish"}
+              </Button>
+            ) : (
+              <Button onClick={openSubmit} disabled={busy}>
+                Submit for review
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
+      {openRequest && <RequestBanner openRequest={openRequest} mode={mode} />}
 
       <div className="flex flex-col gap-6">
         <aside className="lg:w-52">
@@ -268,9 +440,30 @@ export default function ResourceEditorClient({
             slug={initialData.slug}
             items={sectionItems}
             onChange={(items) => updateSection(activeSection, items)}
+            readOnly={readOnly}
           />
         </div>
       </div>
+
+      <SubmitForReviewDialog
+        open={submitOpen}
+        onOpenChange={setSubmitOpen}
+        slug={initialData.slug}
+        subject={initialData.subject}
+        changes={pendingChanges.grouped}
+        suggestedTitle={pendingChanges.summary}
+      />
+
+      <NoteDialog
+        open={resubmitOpen}
+        onOpenChange={setResubmitOpen}
+        title={`Resubmit request #${openRequest?.number ?? ""}`}
+        description="Your saved draft goes back to the reviewer. Say what you changed."
+        placeholder="What did you change? (optional)"
+        confirmLabel="Resubmit"
+        busy={isPublishing}
+        onConfirm={resubmit}
+      />
     </div>
   );
 }

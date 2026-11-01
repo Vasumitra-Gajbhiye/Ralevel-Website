@@ -46,6 +46,22 @@ The folder names in brackets, like `(others)`, are **route groups**. They organi
 - **MongoDB through Mongoose.** Call `connectDB()` from `lib/mongodb.tsx`, then use a model from `models/`.
 - **Redis** (optional) caches some reads and enforces rate limits (`lib/redis*.ts`, `lib/rateLimit.ts`). Locally it's off, and everything still works without it.
 
+## Resource CMS and change requests
+
+Resource subject pages (`/resources/[slug]`) are edited at `/admin/resource-cms`.
+- **The draft:** each subject is one `resources2datas` document holding the live sections and a working `draft`.
+- **Staff changes go through review.** A staff member's draft becomes a **change request** (`models/resourceChangeRequest.ts`), with a timeline in `models/resourceChangeRequestEvent.ts`. Both are kept forever.
+- **Approving:** someone with **Resource publishing** access approves the request, which publishes it.
+- **One request per subject:** only one can be open per subject at a time, and its draft is locked while it's in review.
+
+Where the code is:
+- **Rules:** `lib/resource-cms/requests/rules.ts`, pure functions shared by the API and the UI.
+- **Workflow:** `lib/data/admin/resource-change-requests.ts`.
+- **API:** `app/api/admin/resource-cms/requests/`.
+- **Pages:** `app/(admin)/admin/resource-cms/requests/`.
+- **Diffs:** `lib/resource-cms/diff.ts`.
+- **Staff guide:** `docs/guides/resource-cms-review.md`.
+
 ## Files and images
 
 - **Images** come from Cloudinary. Build image URLs with the helpers in `lib/cloudinary.ts`.

@@ -28,6 +28,11 @@ const resourceCmsRevisionSchema = new mongoose.Schema(
       ref: "ResourceCmsRevision",
     },
     message: { type: String },
+    /** The change request this publish or draft change came from, if any. */
+    requestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ResourceChangeRequest",
+    },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

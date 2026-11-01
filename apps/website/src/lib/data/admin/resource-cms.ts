@@ -6,6 +6,7 @@ import type {
   AdminResourceSubject,
   ResourceCmsActor,
   ResourceCMSEditorData,
+  ResourceCMSSections,
   ResourceDraft,
 } from "@/types/resources2";
 
@@ -253,6 +254,7 @@ export async function getAdminResourceEditorData(
     hasUnpublishedChanges: Boolean(doc.hasUnpublishedChanges),
     publishedAt: toIsoString(doc.publishedAt),
     draft,
+    live: extractCMSSections(doc),
   };
 }
 
@@ -315,6 +317,9 @@ export async function saveResourceCMSDraft(
   options?: {
     actor?: ResourceCmsActor;
     skipRevisionLog?: boolean;
+    /** Shown in CMS History, e.g. "Restored from request #12". */
+    message?: string;
+    requestId?: string;
   },
 ): Promise<{
   slug: string;
@@ -350,6 +355,8 @@ export async function saveResourceCMSDraft(
       actor: options.actor,
       before: beforeSections,
       after: afterSections,
+      message: options.message,
+      requestId: options.requestId,
     });
   }
 
@@ -367,12 +374,16 @@ export async function publishResourceCMSDraft(
   slug: string,
   draft: ResourceDraft,
   actor: ResourceCmsActor,
+  options?: { message?: string; requestId?: string },
 ): Promise<{
   slug: string;
   subject: string;
   hasUnpublishedChanges: false;
   publishedAt: string;
   liveUrl: string;
+  revisionId: string;
+  liveBefore: ResourceCMSSections;
+  liveAfter: ResourceCMSSections;
 } | null> {
   await connectDB();
 
@@ -404,12 +415,14 @@ export async function publishResourceCMSDraft(
   );
 
   const { recordPublishRevision } = await import("./resource-cms-revisions");
-  await recordPublishRevision({
+  const revisionId = await recordPublishRevision({
     slug,
     subject: existing.subject,
     actor,
     liveBefore,
     liveAfter,
+    message: options?.message,
+    requestId: options?.requestId,
   });
 
   return {
@@ -418,5 +431,52 @@ export async function publishResourceCMSDraft(
     hasUnpublishedChanges: false,
     publishedAt: publishedAt.toISOString(),
     liveUrl: `/resources/${slug}`,
+    revisionId,
+    liveBefore,
+    liveAfter,
   };
+}
+
+/**
+ * Throws away the working draft so it matches the live page again (used when
+ * a change request is rejected). The old draft stays in CMS History.
+ */
+export async function resetResourceCMSDraftToLive(
+  slug: string,
+  actor: ResourceCmsActor,
+  options?: { message?: string; requestId?: string },
+): Promise<boolean> {
+  await connectDB();
+
+  const existing = await getResourceCMSDocSnapshot(slug);
+  if (!existing) return false;
+
+  const before = extractCMSSections(resolveCMSDraft(existing));
+  const live = buildDraftFromLive(existing);
+
+  await resources2Data.updateOne(
+    { slug },
+    {
+      $set: {
+        draft: toDraftDocument({
+          ...live,
+          updatedBy: { userId: actor.userId, email: actor.email },
+        }),
+        hasUnpublishedChanges: false,
+      },
+    },
+  );
+
+  const { recordDraftSaveRevision } = await import("./resource-cms-revisions");
+  await recordDraftSaveRevision({
+    slug,
+    subject: existing.subject,
+    actor,
+    before,
+    after: extractCMSSections(live),
+    message: options?.message,
+    requestId: options?.requestId,
+  });
+
+  return true;
 }

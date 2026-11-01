@@ -1,6 +1,15 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { enforceSameOrigin } from "@/lib/csrf";
 import { restoreResourceCMSRevision } from "@/lib/data/admin/resource-cms-revisions";
+import {
+  assertDraftEditable,
+  recordReviewerEdit,
+} from "@/lib/data/admin/resource-change-requests";
+import { changeRequestErrorResponse } from "@/lib/resource-cms/requests/errors";
+import {
+  actorFromSession,
+  viewerFromSession,
+} from "@/lib/resource-cms/requests/route";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -16,6 +25,13 @@ export async function POST(
   if (csrfError) return csrfError;
 
   const { slug } = await context.params;
+
+  let editMode;
+  try {
+    ({ mode: editMode } = await assertDraftEditable(slug, await viewerFromSession(auth)));
+  } catch (error) {
+    return changeRequestErrorResponse(error);
+  }
 
   let body: unknown;
   try {
@@ -59,6 +75,10 @@ export async function POST(
 
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  if (editMode === "reviewer") {
+    await recordReviewerEdit(slug, actorFromSession(auth));
   }
 
   return NextResponse.json(result);

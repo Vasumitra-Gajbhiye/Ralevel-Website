@@ -6,7 +6,12 @@ import {
   publishResourceCMSDraft,
   resolveCMSDraft,
 } from "@/lib/data/admin/resource-cms";
+import {
+  getOpenChangeRequest,
+  logDirectPublish,
+} from "@/lib/data/admin/resource-change-requests";
 import connectDB from "@/lib/mongodb";
+import { actorFromSession } from "@/lib/resource-cms/requests/route";
 import type { ResourceDraft } from "@/types/resources2";
 import { NextResponse } from "next/server";
 
@@ -15,7 +20,7 @@ export async function POST(
   context: { params: Promise<{ slug: string }> },
 ) {
   const auth = await authorizeAdminApi(req, {
-    section: "resource-cms",
+    section: "resource-publish",
   });
   if (auth instanceof Response) return auth;
 
@@ -29,6 +34,19 @@ export async function POST(
 
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // While a request is open the draft belongs to it: approve or reject it.
+  const open = await getOpenChangeRequest(slug);
+  if (open) {
+    return NextResponse.json(
+      {
+        error: `Request #${open.number} is open for this subject. Approve or reject it instead.`,
+        code: "open_request_exists",
+        requestNumber: open.number,
+      },
+      { status: 409 },
+    );
   }
 
   const draft: ResourceDraft = {
@@ -60,5 +78,18 @@ export async function POST(
 
   revalidateDataTags("resources", `resource:${slug}`);
 
-  return NextResponse.json(result);
+  await logDirectPublish({
+    slug,
+    actor: actorFromSession(auth),
+    liveBefore: result.liveBefore,
+    liveAfter: result.liveAfter,
+  });
+
+  return NextResponse.json({
+    slug: result.slug,
+    subject: result.subject,
+    hasUnpublishedChanges: result.hasUnpublishedChanges,
+    publishedAt: result.publishedAt,
+    liveUrl: result.liveUrl,
+  });
 }

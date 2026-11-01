@@ -133,6 +133,8 @@ export async function recordDraftSaveRevision(params: {
   actor: ResourceCmsActor;
   before: ResourceCMSSections;
   after: ResourceCMSSections;
+  message?: string;
+  requestId?: string;
 }): Promise<void> {
   const beforeHash = contentHash(params.before);
   const afterHash = contentHash(params.after);
@@ -152,22 +154,27 @@ export async function recordDraftSaveRevision(params: {
     snapshotScope: "draft",
     snapshot: params.after,
     changes,
+    message: params.message,
+    requestId: params.requestId,
   });
 }
 
+/** Records a publish and returns the new revision's id. */
 export async function recordPublishRevision(params: {
   slug: string;
   subject: string;
   actor: ResourceCmsActor;
   liveBefore: ResourceCMSSections;
   liveAfter: ResourceCMSSections;
-}): Promise<void> {
+  message?: string;
+  requestId?: string;
+}): Promise<string> {
   await connectDB();
 
   const afterHash = contentHash(params.liveAfter);
   const changes = diffCMSSections(params.liveBefore, params.liveAfter);
 
-  await ResourceCmsRevision.create({
+  const revision = await ResourceCmsRevision.create({
     slug: params.slug,
     subject: params.subject,
     kind: "edit",
@@ -177,6 +184,8 @@ export async function recordPublishRevision(params: {
     snapshotScope: "live",
     snapshot: params.liveAfter,
     changes,
+    message: params.message,
+    requestId: params.requestId,
   });
 
   await createBackupIfNeeded({
@@ -185,6 +194,8 @@ export async function recordPublishRevision(params: {
     actor: params.actor,
     liveAfter: params.liveAfter,
   });
+
+  return String(revision._id);
 }
 
 export async function recordRestoreRevision(params: {

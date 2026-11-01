@@ -119,6 +119,10 @@ export type AdminResourceSubject = {
   publishedAt?: string;
   draftUpdatedAt?: string;
   updatedAt: string;
+  openRequest?: {
+    number: number;
+    status: "in_review" | "changes_requested" | "approved" | "rejected" | "withdrawn";
+  } | null;
 };
 
 export type ResourceCMSEditorData = {
@@ -129,6 +133,8 @@ export type ResourceCMSEditorData = {
   hasUnpublishedChanges: boolean;
   publishedAt?: string;
   draft: ResourceDraft;
+  /** The live sections, normalized, for diffing against the draft. */
+  live: ResourceCMSSections;
 };
 
 export type ResourceCMSSections = {

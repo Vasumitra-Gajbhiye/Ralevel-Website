@@ -51,8 +51,8 @@ Your local database starts with no saved page access, so every page uses these d
 | `owner`, `admin` | Every page, including Page access |
 | `writer_dep_head` | Blogs, All Blogs, Writers, Form submission |
 | `senior_writer`, `writer` | Blogs |
-| `resource_dep_head` | Resource Dept., Form submission, Resource CMS, Resource publishing (the live resources homepage) |
-| `resource_staff` | Resource CMS (subject pages and history, not the resources homepage) |
+| `resource_dep_head` | Resource Dept., Form submission, Resource CMS, Resource publishing (approve change requests, publish without review, edit the resources homepage) |
+| `resource_staff` | Resource CMS (edit subject pages and submit them for review; see `docs/guides/resource-cms-review.md`) |
 | `scholarship_dep_head` | Scholarships, Scholarship team |
 | `scholarship_staff` | Scholarships |
 | `mod_dep_head` | Form submission, Discord QOTD |
