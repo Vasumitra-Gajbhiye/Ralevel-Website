@@ -151,7 +151,7 @@ export const LEGACY_API_RULES: LegacyApiRule[] = [
   { route: "api/admin/resource-cms/[slug]/restore", methods: ["POST"], roles: RESOURCE_CMS, section: "resource-cms" },
   { route: "api/admin/resource-cms/history", methods: ["GET"], roles: RESOURCE_CMS, section: "resource-cms" },
   { route: "api/admin/resource-cms/history/[id]", methods: ["GET"], roles: RESOURCE_CMS, section: "resource-cms" },
-  { route: "api/admin/resource-cms/homepage", methods: ["GET", "PUT"], roles: RESOURCE_CMS, section: "resource-cms" },
+  { route: "api/admin/resource-cms/homepage", methods: ["GET", "PUT"], roles: RESOURCE_CMS, section: "resource-publish" },
   { route: "api/admin/resource-cms/upload-thumbnail", methods: ["POST"], roles: RESOURCE_CMS, section: "resource-cms" },
 
   { route: "app/(admin)/admin/certificates/actions.ts", methods: ["create", "update", "delete"], roles: OWNER_ADMIN, section: "certificates" },

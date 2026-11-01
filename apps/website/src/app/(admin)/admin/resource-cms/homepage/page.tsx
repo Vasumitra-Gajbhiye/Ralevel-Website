@@ -6,7 +6,7 @@ import {
 import HomepageEditorClient from "./HomepageEditorClient";
 
 export default async function ResourcesHomepageAdminPage() {
-  const denied = await guardSection("resource-cms");
+  const denied = await guardSection("resource-publish");
   if (denied) return denied;
 
   const [config, subjects] = await Promise.all([

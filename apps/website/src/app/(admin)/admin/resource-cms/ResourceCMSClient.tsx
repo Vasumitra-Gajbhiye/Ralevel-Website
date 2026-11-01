@@ -7,9 +7,11 @@ import SubjectList from "./components/SubjectList";
 export default function ResourceCMSClient({
   initialSubjects,
   pagination,
+  canEditHomepage,
 }: {
   initialSubjects: AdminResourceSubject[];
   pagination: PaginationMeta;
+  canEditHomepage: boolean;
 }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -23,13 +25,17 @@ export default function ResourceCMSClient({
           >
             View history
           </a>
-          {" · "}
-          <a
-            href="/admin/resource-cms/homepage"
-            className="text-blue-600 hover:underline"
-          >
-            Edit resources page
-          </a>
+          {canEditHomepage && (
+            <>
+              {" · "}
+              <a
+                href="/admin/resource-cms/homepage"
+                className="text-blue-600 hover:underline"
+              >
+                Edit resources page
+              </a>
+            </>
+          )}
         </p>
       </div>
 

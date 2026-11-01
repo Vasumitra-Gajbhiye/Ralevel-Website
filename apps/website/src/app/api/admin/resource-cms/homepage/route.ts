@@ -102,7 +102,7 @@ async function parsePopularSlugs(raw: unknown): Promise<string[]> {
 
 export async function GET(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    section: "resource-cms",
+    section: "resource-publish",
     rateLimit: { routeKey: "admin-resource-cms-homepage" },
   });
   if (auth instanceof Response) return auth;
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   const auth = await authorizeAdminApi(req, {
-    section: "resource-cms",
+    section: "resource-publish",
   });
   if (auth instanceof Response) return auth;
 

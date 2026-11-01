@@ -28,6 +28,10 @@ const sectionRoles = (section: AdminSectionKey | AdminSectionKey[]) =>
 // The only intended differences from the old hardcoded rules.
 const RESOURCE_SUBMISSIONS_PAGE = /^\/admin\/forms\/resource(\/|$)/;
 const SCHEDULING_WRITERS_GAINED: Role[] = ["info_dep_head"];
+// The live resources homepage moved to "Resource publishing" (no staff).
+const RESOURCE_HOMEPAGE_PAGE = /^\/admin\/resource-cms\/homepage(\/|$)/;
+const RESOURCE_HOMEPAGE_API = "api/admin/resource-cms/homepage";
+const RESOURCE_HOMEPAGE_LOSERS: Role[] = ["resource_staff"];
 
 describe("registry defaults match the old hardcoded access", () => {
   const pages = adminPagePaths();
@@ -59,9 +63,16 @@ describe("registry defaults match the old hardcoded access", () => {
       "resource_dep_head",
       "writer_dep_head",
     ];
-    const expected = pages
-      .filter((path) => RESOURCE_SUBMISSIONS_PAGE.test(path))
-      .flatMap((path) => losers.map((role) => `${path} ${role} true→false`));
+    const expected = [
+      ...pages
+        .filter((path) => RESOURCE_SUBMISSIONS_PAGE.test(path))
+        .flatMap((path) => losers.map((role) => `${path} ${role} true→false`)),
+      ...pages
+        .filter((path) => RESOURCE_HOMEPAGE_PAGE.test(path))
+        .flatMap((path) =>
+          RESOURCE_HOMEPAGE_LOSERS.map((role) => `${path} ${role} true→false`),
+        ),
+    ];
     expect(differences.sort()).toEqual(expected.sort());
   });
 
@@ -97,7 +108,9 @@ describe("registry defaults match the old hardcoded access", () => {
         rule.route === "api/admin/scheduling" && !rule.methods.includes("GET");
       const expected = isSchedulingWrite
         ? sortRoles([...rule.roles, ...SCHEDULING_WRITERS_GAINED])
-        : sortRoles(rule.roles);
+        : rule.route === RESOURCE_HOMEPAGE_API
+          ? sortRoles(rule.roles.filter((role) => !RESOURCE_HOMEPAGE_LOSERS.includes(role)))
+          : sortRoles(rule.roles);
       expect(sectionRoles(rule.section), `${rule.route} ${rule.methods}`).toEqual(
         expected,
       );
