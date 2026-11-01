@@ -69,7 +69,7 @@ const Profile = ({
       viewport={{ once: true, amount: 0.3 }}
       whileHover={{ y: -6, transition: { duration: 0.3 } }}
       className={`relative flex flex-col items-center bg-gradient-to-b ${gradient} 
-        p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 w-[260px] overflow-hidden group`}
+        p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 w-[260px] h-full overflow-hidden group`}
     >
       <motion.div
         className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 blur-xl"
@@ -125,12 +125,14 @@ const Profile = ({
         <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-800 z-10 text-center">
+      <h2 className="w-full text-lg font-semibold text-gray-800 z-10 text-center break-words">
         {name}
       </h2>
-      <h3 className="text-sm text-gray-700 mb-4 z-10 font-medium">{title}</h3>
+      <h3 className="w-full text-sm text-gray-700 mb-4 z-10 font-medium text-center break-words">
+        {title}
+      </h3>
 
-      <div className="flex gap-3 z-10">
+      <div className="mt-auto flex justify-center gap-3 z-10">
         <motion.a
           href={`https://discord.com/users/${discordId}`}
           target="_blank"
