@@ -45,6 +45,11 @@ function AdminSidebarNav({
           onClick={onNavigate}
         >
           {link.label}
+          {link.badge ? (
+            <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
+              {link.badge}
+            </span>
+          ) : null}
         </a>
       ))}
     </nav>

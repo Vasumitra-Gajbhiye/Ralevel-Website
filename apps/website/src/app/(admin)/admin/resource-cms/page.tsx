@@ -1,5 +1,10 @@
 import { guardSection } from "@/lib/admin-access/page-guard";
 import { getAdminResourceSubjectsList } from "@/lib/data/admin/resource-cms";
+import {
+  countRequestsNeedingReview,
+  getOpenRequestStatuses,
+  listMyOpenRequests,
+} from "@/lib/data/admin/resource-change-requests";
 import { getAuthSession } from "@/lib/getAuthSession";
 import { parsePaginationParams } from "@/lib/pagination";
 import { canPublishResources } from "@/lib/resource-cms/access";
@@ -22,13 +27,25 @@ export default async function ResourceCMSPage({
     getAdminResourceSubjectsList({ page, limit, skip }),
     getAuthSession(),
   ]);
-  const canEditHomepage = await canPublishResources(session?.userData.roles);
+  const canPublish = await canPublishResources(session?.userData.roles);
+
+  const [openBySlug, needsReview, myRequests] = await Promise.all([
+    getOpenRequestStatuses(data.map((subject) => subject.slug)),
+    canPublish ? countRequestsNeedingReview() : Promise.resolve(0),
+    !canPublish && session ? listMyOpenRequests(session.userData.id) : Promise.resolve([]),
+  ]);
+  const subjects = data.map((subject) => ({
+    ...subject,
+    openRequest: openBySlug[subject.slug] ?? null,
+  }));
 
   return (
     <ResourceCMSClient
-      initialSubjects={data}
+      initialSubjects={subjects}
       pagination={pagination}
-      canEditHomepage={canEditHomepage}
+      canEditHomepage={canPublish}
+      needsReview={needsReview}
+      myRequests={myRequests}
     />
   );
 }

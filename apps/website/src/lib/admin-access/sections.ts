@@ -25,7 +25,12 @@ export const ADMIN_AREAS = [
 
 export type AdminArea = (typeof ADMIN_AREAS)[number]["key"];
 
-export type AdminNavLink = { label: string; href: string };
+export type AdminNavLink = {
+  label: string;
+  href: string;
+  /** Count shown next to the link (set at render time, never in the registry). */
+  badge?: number;
+};
 
 export type AdminSectionLock =
   | { kind: "fixed"; note: string }
@@ -217,26 +222,33 @@ const SECTION_LIST = [
   {
     key: "resource-cms",
     label: "Resource CMS",
-    description: "Edit resource pages and restore old versions.",
+    description:
+      "Edit resource pages, send changes for review, and restore old versions.",
     area: "content",
     prefixes: ["/admin/resource-cms"],
     nav: [
       { label: "Resource CMS", href: "/admin/resource-cms" },
+      { label: "Change requests", href: "/admin/resource-cms/requests" },
       { label: "CMS History", href: "/admin/resource-cms/history" },
     ],
     defaultRoles: RESOURCE_CMS_ROLES,
+    inPageRules: [
+      "Without Resource publishing, changes go live only after someone approves them.",
+      "While a request is in review, its subject can't be edited (comments still work).",
+    ],
   },
   {
     key: "resource-publish",
     label: "Resource publishing",
     description:
-      "Edit the live resources page: featured cards and popular subjects.",
+      "Approve, reject or request changes on resource edits, publish without review, and edit the resources homepage.",
     area: "content",
     prefixes: ["/admin/resource-cms/homepage"],
     nav: [],
     defaultRoles: RESOURCE_ACCESS_MANAGE_ROLES,
     requires: "resource-cms",
-    risk: "can change the live resources page",
+    risk: "can publish resource page changes without review",
+    inPageRules: ["Nobody can approve their own request, except owners and admins."],
   },
   {
     key: "permissions",

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ListPagination } from "@/components/ui/list-pagination";
 import type { AdminResourceSubject } from "@/types/resources2";
 import { useRouter } from "next/navigation";
+import RequestStatusBadge from "./RequestStatusBadge";
 
 type SubjectListProps = {
   subjects: AdminResourceSubject[];
@@ -55,7 +56,9 @@ export default function SubjectList({
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">/{subject.slug}</p>
               </div>
-              {subject.hasUnpublishedChanges ? (
+              {subject.openRequest ? (
+                <RequestStatusBadge status={subject.openRequest.status} />
+              ) : subject.hasUnpublishedChanges ? (
                 <Badge variant="secondary">Unpublished changes</Badge>
               ) : (
                 <Badge variant="outline">Published</Badge>

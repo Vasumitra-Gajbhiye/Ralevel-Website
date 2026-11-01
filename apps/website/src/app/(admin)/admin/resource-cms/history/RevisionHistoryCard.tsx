@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import type { ResourceCmsRevisionDetail } from "@/types/resources2";
 import { format } from "date-fns";
 import Link from "next/link";
+import ChangeList from "../components/ChangeList";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -32,34 +33,6 @@ function actionLabel(action: string, kind: string): string {
     default:
       return action;
   }
-}
-
-function ValueBlock({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "before" | "after";
-}) {
-  const isEmpty = !value.trim();
-  return (
-    <div
-      className={
-        tone === "before"
-          ? "rounded-md border border-red-100 bg-red-50/70 p-3"
-          : "rounded-md border border-emerald-100 bg-emerald-50/70 p-3"
-      }
-    >
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-      <p className="whitespace-pre-wrap break-words text-sm text-slate-800">
-        {isEmpty ? "(empty)" : value}
-      </p>
-    </div>
-  );
 }
 
 export default function RevisionHistoryCard({
@@ -165,66 +138,7 @@ export default function RevisionHistoryCard({
                 : "No content changes recorded."}
             </p>
           ) : (
-            <div className="space-y-4">
-              {groupedChanges.map((change, index) => (
-                <div
-                  key={index}
-                  className="rounded-lg border border-slate-100 bg-slate-50/50 p-4"
-                >
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{change.sectionLabel}</Badge>
-                    {change.type === "added" && (
-                      <Badge className="bg-emerald-600">Added</Badge>
-                    )}
-                    {change.type === "removed" && (
-                      <Badge variant="destructive">Removed</Badge>
-                    )}
-                    {change.type === "modified" && (
-                      <Badge variant="secondary">Updated</Badge>
-                    )}
-                    <span className="font-medium text-slate-900">
-                      {change.label}
-                    </span>
-                  </div>
-
-                  {change.type === "modified" && (
-                    <div className="space-y-3">
-                      {change.fields.map((field) => (
-                        <div key={field.field} className="space-y-2">
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            {field.fieldLabel}
-                          </p>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <ValueBlock
-                              label="Before"
-                              value={field.before}
-                              tone="before"
-                            />
-                            <ValueBlock
-                              label="After"
-                              value={field.after}
-                              tone="after"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {change.type === "added" && (
-                    <p className="text-sm text-slate-600">
-                      A new item was added to this section.
-                    </p>
-                  )}
-
-                  {change.type === "removed" && (
-                    <p className="text-sm text-slate-600">
-                      This item was removed from the section.
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+            <ChangeList changes={groupedChanges} />
           )}
         </div>
       </article>
@@ -235,7 +149,8 @@ export default function RevisionHistoryCard({
             <AlertDialogTitle>Restore to draft?</AlertDialogTitle>
             <AlertDialogDescription>
               This will replace the current draft for {revision.subject}. The
-              live site will not change until you publish from the editor.
+              live site won&apos;t change until the draft is published or a
+              change request for it is approved.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

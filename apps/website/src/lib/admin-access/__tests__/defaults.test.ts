@@ -30,7 +30,12 @@ const RESOURCE_SUBMISSIONS_PAGE = /^\/admin\/forms\/resource(\/|$)/;
 const SCHEDULING_WRITERS_GAINED: Role[] = ["info_dep_head"];
 // The live resources homepage moved to "Resource publishing" (no staff).
 const RESOURCE_HOMEPAGE_PAGE = /^\/admin\/resource-cms\/homepage(\/|$)/;
-const RESOURCE_HOMEPAGE_API = "api/admin/resource-cms/homepage";
+// Publishing (the homepage, and publishing a subject without review) moved
+// to "Resource publishing"; staff submit changes for review instead.
+const RESOURCE_PUBLISH_APIS = [
+  "api/admin/resource-cms/homepage",
+  "api/admin/resource-cms/[slug]/publish",
+];
 const RESOURCE_HOMEPAGE_LOSERS: Role[] = ["resource_staff"];
 
 describe("registry defaults match the old hardcoded access", () => {
@@ -90,8 +95,12 @@ describe("registry defaults match the old hardcoded access", () => {
 
   it("shows the same sidebar links, plus Page access for owners and admins", () => {
     for (const role of ROLES) {
-      const before = LEGACY_SIDEBAR.filter((link) => link.roles.includes(role)).map(
-        (link) => link.href,
+      const before = LEGACY_SIDEBAR.filter((link) => link.roles.includes(role)).flatMap(
+        (link) =>
+          // New page, shown to everyone with Resource CMS.
+          link.href === "/admin/resource-cms"
+            ? [link.href, "/admin/resource-cms/requests"]
+            : [link.href],
       );
       const after = sectionsForRoles(DEFAULT_ACCESS_MAP, [role]).flatMap((key) =>
         getAdminSection(key).nav.map((link) => link.href),
@@ -108,7 +117,7 @@ describe("registry defaults match the old hardcoded access", () => {
         rule.route === "api/admin/scheduling" && !rule.methods.includes("GET");
       const expected = isSchedulingWrite
         ? sortRoles([...rule.roles, ...SCHEDULING_WRITERS_GAINED])
-        : rule.route === RESOURCE_HOMEPAGE_API
+        : RESOURCE_PUBLISH_APIS.includes(rule.route)
           ? sortRoles(rule.roles.filter((role) => !RESOURCE_HOMEPAGE_LOSERS.includes(role)))
           : sortRoles(rule.roles);
       expect(sectionRoles(rule.section), `${rule.route} ${rule.methods}`).toEqual(

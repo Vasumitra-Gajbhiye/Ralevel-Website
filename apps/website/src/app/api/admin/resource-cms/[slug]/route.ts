@@ -8,7 +8,16 @@ import {
   resolveCMSDraft,
   saveResourceCMSDraft,
 } from "@/lib/data/admin/resource-cms";
+import {
+  assertDraftEditable,
+  recordReviewerEdit,
+} from "@/lib/data/admin/resource-change-requests";
 import connectDB from "@/lib/mongodb";
+import { changeRequestErrorResponse } from "@/lib/resource-cms/requests/errors";
+import {
+  actorFromSession,
+  viewerFromSession,
+} from "@/lib/resource-cms/requests/route";
 import {
   validateFullResourceCMSDraft,
   validateResourceCMSDraftPayload,
@@ -56,6 +65,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  let editMode;
+  try {
+    ({ mode: editMode } = await assertDraftEditable(slug, await viewerFromSession(auth)));
+  } catch (error) {
+    return changeRequestErrorResponse(error);
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -99,6 +115,11 @@ export async function PATCH(
   });
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // A publisher's save while a request is in review becomes the proposal.
+  if (editMode === "reviewer") {
+    await recordReviewerEdit(slug, actorFromSession(auth));
   }
 
   return NextResponse.json(result);
@@ -150,6 +171,13 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  let editMode;
+  try {
+    ({ mode: editMode } = await assertDraftEditable(slug, await viewerFromSession(auth)));
+  } catch (error) {
+    return changeRequestErrorResponse(error);
+  }
+
   const result = await saveResourceCMSDraft(slug, nextDraft, {
     actor: {
       userId: auth.userData.id,
@@ -158,6 +186,11 @@ export async function PUT(
   });
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // A publisher's save while a request is in review becomes the proposal.
+  if (editMode === "reviewer") {
+    await recordReviewerEdit(slug, actorFromSession(auth));
   }
 
   return NextResponse.json(result);
