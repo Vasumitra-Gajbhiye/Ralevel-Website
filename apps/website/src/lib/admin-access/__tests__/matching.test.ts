@@ -12,6 +12,8 @@ describe("matchAdminSection", () => {
     expect(keyFor("/admin/resource")).toBe("resource-team");
     expect(keyFor("/admin/resource-cms")).toBe("resource-cms");
     expect(keyFor("/admin/resource-cms/history")).toBe("resource-cms");
+    expect(keyFor("/admin/resource-cms/homepage")).toBe("resource-publish");
+    expect(keyFor("/admin/resource-cms/accounting")).toBe("resource-cms");
     expect(keyFor("/admin/scholarships/team")).toBe("scholarship-team");
     expect(keyFor("/admin/scholarships/teams")).toBe("scholarships");
     expect(keyFor("/admin/scholarships/universities/new")).toBe("scholarships");

@@ -1,6 +1,7 @@
 import { authorizeAdminApi } from "@/lib/adminApiAuth";
 import { uploadImageToCloudinary } from "@/lib/cloudinaryUpload";
 import { enforceSameOrigin } from "@/lib/csrf";
+import { canPublishResources } from "@/lib/resource-cms/access";
 import type { UploadThumbnailSection } from "@/types/resources2";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
@@ -40,6 +41,14 @@ export async function POST(req: Request) {
 
     if (!THUMBNAIL_SECTIONS.has(section as UploadThumbnailSection)) {
       return NextResponse.json({ error: "Invalid section" }, { status: 400 });
+    }
+
+    // Featured-card images belong to the live resources page.
+    if (
+      section === "featured" &&
+      !(await canPublishResources(auth.userData.roles))
+    ) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (!ALLOWED_MIME_TYPES.has(file.type)) {

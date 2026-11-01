@@ -217,7 +217,7 @@ const SECTION_LIST = [
   {
     key: "resource-cms",
     label: "Resource CMS",
-    description: "Edit resource pages and the resources homepage, and restore old versions.",
+    description: "Edit resource pages and restore old versions.",
     area: "content",
     prefixes: ["/admin/resource-cms"],
     nav: [
@@ -225,6 +225,18 @@ const SECTION_LIST = [
       { label: "CMS History", href: "/admin/resource-cms/history" },
     ],
     defaultRoles: RESOURCE_CMS_ROLES,
+  },
+  {
+    key: "resource-publish",
+    label: "Resource publishing",
+    description:
+      "Edit the live resources page: featured cards and popular subjects.",
+    area: "content",
+    prefixes: ["/admin/resource-cms/homepage"],
+    nav: [],
+    defaultRoles: RESOURCE_ACCESS_MANAGE_ROLES,
+    requires: "resource-cms",
+    risk: "can change the live resources page",
   },
   {
     key: "permissions",

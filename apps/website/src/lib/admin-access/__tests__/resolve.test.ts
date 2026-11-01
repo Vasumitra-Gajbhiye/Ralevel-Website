@@ -49,6 +49,18 @@ describe("resolveAccessMap", () => {
     expect(map["scholarship-team"]).toEqual(["owner", "admin"]);
   });
 
+  it("only lets Resource CMS roles publish resources", () => {
+    expect(DEFAULT_ACCESS_MAP["resource-publish"]).toEqual([
+      "owner",
+      "admin",
+      "resource_dep_head",
+    ]);
+    const map = resolveAccessMap({
+      "resource-publish": ["owner", "admin", "resource_dep_head", "helper"],
+    });
+    expect(map["resource-publish"]).toEqual(["owner", "admin", "resource_dep_head"]);
+  });
+
   it("can't remove owner", () => {
     expect(resolveAccessMap({ team: [] }).team).toEqual(["owner"]);
   });
