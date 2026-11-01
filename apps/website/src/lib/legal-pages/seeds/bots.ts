@@ -137,7 +137,7 @@ Depending on which features you use, we may process:
 - **Confessions:** confession text, optional attachments, and the author's Discord ID (kept for staff review; not shown publicly as the author).
 - **Polls:** poll content and vote choices linked to Discord user IDs.
 - **Tasks, stickies, and helpers:** staff-created content, assignees, submission links, and related audit metadata.
-- **Message content (limited):** the Bot may read messages in real time for features such as reputation detection or moderation. Ordinary chat content is generally not stored long-term as full message history for XP; XP systems primarily store counts and related stats.
+- **Message content:** the Bot reads messages in real time only to: detect thank-you messages for reputation, relay messages in modmail and moderator-DM conversations, apply moderator /purge filters, and decide when to repost sticky messages. Message text is processed in memory and is never stored or logged. Message text is never used to train machine learning or AI models.
 
 ## 3. How we use your data
 
@@ -150,9 +150,21 @@ Depending on which features you use, we may process:
 
 ## 4. Data storage and security
 
-Durable bot data is stored in MongoDB. Short-lived activity data (for example pending XP counters) may be held in Redis. Some information also exists in Discord itself (messages, roles, DMs). We use standard security measures, though no online system is entirely risk-free. Certificate legal name and email are treated as sensitive and are intended for authorized staff workflows only.
+Durable bot data is stored in MongoDB Atlas, which encrypts data at rest. Short-lived activity data (for example pending XP counters) may be held in Redis. Some information also exists in Discord itself (messages, roles, DMs). Access to the staff dashboard is limited to authorized staff and is protected by Clerk authentication. We use standard security measures, though no online system is entirely risk-free. Certificate legal name and email are treated as sensitive and are intended for authorized staff workflows only.
 
-## 5. Third-party services
+## 5. Data retention
+
+How long we keep data depends on what it is:
+
+- **Message text:** not stored.
+- **Pending XP counters:** deleted automatically after 7 days.
+- **XP, message counts, rank, reputation, and poll votes:** kept until you delete them with /privacy delete-my-data or ask us to delete them.
+- **Moderation records and tickets:** warnings, verbal warnings, notes, moderation logs, kicks, bans, moderation points, and modmail / moderator-DM ticket records are kept permanently, including after you leave the server, so that moderation history carries over if you rejoin. This is necessary for community safety. /privacy delete-my-data does not remove them; you can still ask us, and staff will review the request.
+- **Confessions and certificate details:** kept until you ask us to delete them.
+
+Leaving the server does not delete your data automatically; use /privacy delete-my-data or contact us.
+
+## 6. Third-party services
 
 The Bot relies on third-party platforms with their own privacy policies:
 
@@ -162,23 +174,28 @@ The Bot relies on third-party platforms with their own privacy policies:
 - **Clerk** — authentication for the staff dashboard (authorized operators only)
 - External appeal or form providers, if linked from the server for specific workflows
 
-## 6. Access and sharing
+## 7. Access and sharing
 
 Public-facing bot features may display limited information (for example XP or reputation leaderboards). Moderators and authorized staff can access moderation records, confession authorship, certificate details, and dashboard data as needed to run the community. We do not sell personal data.
 
-## 7. Your rights
+## 8. Your rights
 
-You may request access, correction, or deletion of personal data processed by the Bot by contacting us. We may need to verify your Discord identity. Some records (for example moderation history) may be retained where necessary for community safety or legal reasons. Leaving the server does not automatically erase all stored records.
+You can manage some of your data yourself with the **/privacy** command in the server:
 
-## 8. Children's privacy
+- **/privacy message-content off:** stops the Bot from reading your messages for reputation and sticky-message timing. The Bot still relays modmail you send it and still applies moderator /purge filters. Use **/privacy message-content on** to turn it back on.
+- **/privacy delete-my-data:** immediately deletes your XP, message count, reputation, and poll votes. It does not remove moderation records, modmail tickets, confessions, or certificate details (see Data retention).
+
+For anything else, including access, correction, or deletion of other personal data, contact us by email (see Contact below). We may need to verify your Discord identity. Some records (for example moderation history) are retained for community safety, as described in Data retention.
+
+## 9. Children's privacy
 
 The Bot is intended for users who meet Discord's age requirements (generally 13+). We do not knowingly collect personal data from children under 13. If you believe we have such data, contact us to request removal.
 
-## 9. Changes to this policy
+## 10. Changes to this policy
 
 We may update this Privacy Policy from time to time. The “Last updated” date above will reflect changes. Continued use of the Bot after updates means you acknowledge the revised policy.
 
-## 10. Contact
+## 11. Contact
 
 For privacy requests or questions about the r/alevel Bot, contact the r/alevel team:
 
