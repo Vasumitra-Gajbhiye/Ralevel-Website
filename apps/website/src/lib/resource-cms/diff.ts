@@ -177,73 +177,211 @@ function stringifyValue(value: unknown): string {
   return String(normalized);
 }
 
-function itemsEqual(
-  section: EditableSection,
-  beforeItem: Record<string, unknown>,
-  afterItem: Record<string, unknown>,
-): boolean {
-  return SECTION_FIELDS[section].every(
-    (field) =>
-      stringifyValue(beforeItem[field]) === stringifyValue(afterItem[field]),
+/**
+ * Fields that identify an item. Two changed items in the same spot that share
+ * one of these are shown as one edited item rather than a remove and an add.
+ */
+const IDENTITY_FIELDS: Record<EditableSection, readonly string[]> = {
+  syllabus: ["title", "link"],
+  notes: ["title", "link"],
+  worksheets: ["title", "link"],
+  tools: ["name", "url"],
+  books: ["title", "buy"],
+  youtubeChannel: ["channel", "channelUrl"],
+  youtubePlaylist: ["title", "playlistUrl"],
+};
+
+function itemKey(section: EditableSection, item: Record<string, unknown>) {
+  return JSON.stringify(
+    SECTION_FIELDS[section].map((field) => stringifyValue(item[field])),
   );
 }
 
+/** Index pairs [before, after] of the longest run of identical items, in order. */
+function longestCommonItems(
+  beforeKeys: string[],
+  afterKeys: string[],
+): [number, number][] {
+  const n = beforeKeys.length;
+  const m = afterKeys.length;
+  // lengths[i][j] = LCS length of beforeKeys[i..] and afterKeys[j..]
+  const lengths: number[][] = Array.from({ length: n + 1 }, () =>
+    new Array<number>(m + 1).fill(0),
+  );
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      lengths[i][j] =
+        beforeKeys[i] === afterKeys[j]
+          ? lengths[i + 1][j + 1] + 1
+          : Math.max(lengths[i + 1][j], lengths[i][j + 1]);
+    }
+  }
+
+  const pairs: [number, number][] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (beforeKeys[i] === afterKeys[j]) {
+      pairs.push([i, j]);
+      i++;
+      j++;
+    } else if (lengths[i + 1][j] >= lengths[i][j + 1]) {
+      i++;
+    } else {
+      j++;
+    }
+  }
+  return pairs;
+}
+
+function sharedIdentity(
+  section: EditableSection,
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): boolean {
+  return IDENTITY_FIELDS[section].some((field) => {
+    const value = stringifyValue(a[field]);
+    return value !== "" && value === stringifyValue(b[field]);
+  });
+}
+
+function equalFieldCount(
+  section: EditableSection,
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): number {
+  return SECTION_FIELDS[section].filter(
+    (field) => stringifyValue(a[field]) === stringifyValue(b[field]),
+  ).length;
+}
+
+/**
+ * Within one gap between unchanged items, pair each removed item with the most
+ * similar added item that shares a title or link. Returns after → before.
+ */
+function pairEditedItems(
+  section: EditableSection,
+  beforeItems: Record<string, unknown>[],
+  afterItems: Record<string, unknown>[],
+  beforeIdx: number[],
+  afterIdx: number[],
+): Map<number, number> {
+  const candidates: { b: number; a: number; score: number }[] = [];
+  for (const b of beforeIdx) {
+    for (const a of afterIdx) {
+      if (!sharedIdentity(section, beforeItems[b], afterItems[a])) continue;
+      candidates.push({
+        b,
+        a,
+        score: equalFieldCount(section, beforeItems[b], afterItems[a]),
+      });
+    }
+  }
+  // Best matches first; ties keep document order.
+  candidates.sort((x, y) => y.score - x.score || x.a - y.a || x.b - y.b);
+
+  const pairs = new Map<number, number>();
+  const usedBefore = new Set<number>();
+  for (const { b, a } of candidates) {
+    if (pairs.has(a) || usedBefore.has(b)) continue;
+    pairs.set(a, b);
+    usedBefore.add(b);
+  }
+  return pairs;
+}
+
+function fieldChanges(
+  section: EditableSection,
+  index: number,
+  beforeItem: Record<string, unknown>,
+  afterItem: Record<string, unknown>,
+): ResourceCmsChange[] {
+  const label =
+    getItemLabel(afterItem, index) || getItemLabel(beforeItem, index);
+  const changes: ResourceCmsChange[] = [];
+  for (const field of SECTION_FIELDS[section]) {
+    if (IGNORED_ITEM_FIELDS.has(field)) continue;
+    const before = stringifyValue(beforeItem[field]);
+    const after = stringifyValue(afterItem[field]);
+    if (before !== after) {
+      changes.push({
+        type: "field_changed",
+        section,
+        index,
+        field,
+        label,
+        before,
+        after,
+      });
+    }
+  }
+  return changes;
+}
+
+/**
+ * Item-level diff for one section. Unchanged items are matched by content, so
+ * adding or removing one item doesn't make every later item look edited.
+ * Indexes are positions in `after` (or in `before` for removed items).
+ */
 function diffSectionItems(
   section: EditableSection,
   beforeItems: Record<string, unknown>[],
   afterItems: Record<string, unknown>[],
 ): ResourceCmsChange[] {
+  const anchors = longestCommonItems(
+    beforeItems.map((item) => itemKey(section, item)),
+    afterItems.map((item) => itemKey(section, item)),
+  );
+  // Sentinel so the gap after the last unchanged item is handled too.
+  anchors.push([beforeItems.length, afterItems.length]);
+
   const changes: ResourceCmsChange[] = [];
-  const maxLen = Math.max(beforeItems.length, afterItems.length);
+  let prevBefore = 0;
+  let prevAfter = 0;
 
-  for (let index = 0; index < maxLen; index++) {
-    const beforeItem = beforeItems[index];
-    const afterItem = afterItems[index];
+  for (const [anchorBefore, anchorAfter] of anchors) {
+    const beforeIdx: number[] = [];
+    const afterIdx: number[] = [];
+    for (let i = prevBefore; i < anchorBefore; i++) beforeIdx.push(i);
+    for (let j = prevAfter; j < anchorAfter; j++) afterIdx.push(j);
 
-    if (beforeItem === undefined && afterItem !== undefined) {
-      changes.push({
-        type: "item_added",
+    if (beforeIdx.length > 0 || afterIdx.length > 0) {
+      const edited = pairEditedItems(
         section,
-        index,
-        label: getItemLabel(afterItem, index),
-      });
-      continue;
-    }
+        beforeItems,
+        afterItems,
+        beforeIdx,
+        afterIdx,
+      );
+      const pairedBefore = new Set(edited.values());
 
-    if (afterItem === undefined && beforeItem !== undefined) {
-      changes.push({
-        type: "item_removed",
-        section,
-        index,
-        label: getItemLabel(beforeItem, index),
-      });
-      continue;
-    }
-
-    if (!beforeItem || !afterItem) continue;
-
-    if (itemsEqual(section, beforeItem, afterItem)) continue;
-
-    const label =
-      getItemLabel(afterItem, index) || getItemLabel(beforeItem, index);
-
-    for (const field of SECTION_FIELDS[section]) {
-      if (IGNORED_ITEM_FIELDS.has(field)) continue;
-
-      const beforeValue = stringifyValue(beforeItem[field]);
-      const afterValue = stringifyValue(afterItem[field]);
-      if (beforeValue !== afterValue) {
+      for (const b of beforeIdx) {
+        if (pairedBefore.has(b)) continue;
         changes.push({
-          type: "field_changed",
+          type: "item_removed",
           section,
-          index,
-          field,
-          label,
-          before: beforeValue,
-          after: afterValue,
+          index: b,
+          label: getItemLabel(beforeItems[b], b),
         });
       }
+
+      for (const a of afterIdx) {
+        const b = edited.get(a);
+        if (b === undefined) {
+          changes.push({
+            type: "item_added",
+            section,
+            index: a,
+            label: getItemLabel(afterItems[a], a),
+          });
+        } else {
+          changes.push(...fieldChanges(section, a, beforeItems[b], afterItems[a]));
+        }
+      }
     }
+
+    prevBefore = anchorBefore + 1;
+    prevAfter = anchorAfter + 1;
   }
 
   return changes;
