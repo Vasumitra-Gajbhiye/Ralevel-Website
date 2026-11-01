@@ -136,6 +136,7 @@ Depending on which features you use, we may process:
 - **Certificates:** Discord identity, certificate type/status, and — when you submit them — legal full name and email for delivery.
 - **Confessions:** confession text, optional attachments, and the author's Discord ID (kept for staff review; not shown publicly as the author).
 - **Polls:** poll content and vote choices linked to Discord user IDs.
+- **Privacy settings:** whether you've opted out of message-content processing with /privacy, and when you last used /privacy delete-my-data.
 - **Tasks, stickies, and helpers:** staff-created content, assignees, submission links, and related audit metadata.
 - **Message content:** the Bot reads messages in real time only to: detect thank-you messages for reputation, relay messages in modmail and moderator-DM conversations, apply moderator /purge filters, and decide when to repost sticky messages. Message text is processed in memory and is never stored or logged. Message text is never used to train machine learning or AI models.
 
@@ -161,6 +162,7 @@ How long we keep data depends on what it is:
 - **XP, message counts, rank, reputation, and poll votes:** kept until you delete them with /privacy delete-my-data or ask us to delete them.
 - **Moderation records and tickets:** warnings, verbal warnings, notes, moderation logs, kicks, bans, moderation points, and modmail / moderator-DM ticket records are kept permanently, including after you leave the server, so that moderation history carries over if you rejoin. This is necessary for community safety. /privacy delete-my-data does not remove them; you can still ask us, and staff will review the request.
 - **Confessions and certificate details:** kept until you ask us to delete them.
+- **Privacy settings:** kept so your choices stay in effect, including after /privacy delete-my-data. Ask us if you want them removed.
 
 Leaving the server does not delete your data automatically; use /privacy delete-my-data or contact us.
 
